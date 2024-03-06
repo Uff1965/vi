@@ -32,47 +32,46 @@ namespace
 
 	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
-		using base_t = ch::duration<double>;
-		constexpr explicit duration_t(const base_t& r) : base_t{ r } {}
-		using base_t::base_t;
+		constexpr explicit duration_t(const ch::duration<double>& r) : ch::duration<double>{ r } {}
+		using ch::duration<double>::duration;
 
-		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
 		friend constexpr [[nodiscard]] duration_t operator*(const duration_t& d, T f)
 		{
 			return duration_t{ d.count() * f };
 		}
 
-		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
 		friend constexpr [[nodiscard]] duration_t operator*(T f, const duration_t& d)
 		{
 			return d * f;
 		}
 
-		friend constexpr double [[nodiscard]] operator/(const duration_t& l, const duration_t& r)
-		{
-			return l.count() / r.count();
-		}
-
-		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
 		friend constexpr [[nodiscard]] duration_t operator/(const duration_t& d, T f)
 		{
 			return duration_t{ d.count() / f };
 		}
+
+		friend constexpr [[nodiscard]] double operator/(const duration_t& l, const duration_t& r)
+		{
+			return l.count() / r.count();
+		}
+
+		friend [[nodiscard]] std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1);
+
+		friend [[nodiscard]] bool operator<(duration_t l, duration_t r)
+		{
+			return l.count() < r.count() && to_string(l) != to_string(r);
+		}
 	};
-
-	[[nodiscard]] std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1);
-
-	inline [[nodiscard]] bool operator<(duration_t l, duration_t r)
-	{
-		return l.count() < r.count() && to_string(l) != to_string(r);
-	}
 
 	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
 	{
 		return os << to_string(d);
 	}
 
-	double round(double num, unsigned char prec, unsigned char dec = 1)
+	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
 		if (num < 5e-12 || prec == 0 || prec <= dec) {
 			assert(num < 5e-12);
@@ -253,9 +252,11 @@ VI_OPTIMIZE_OFF
 	{
 		auto wait_for_the_time_to_change = []
 		{
-			std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-			[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks(); // Preloading a function into cache
-			[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
+			{
+				std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+				[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks(); // Preloading a function into cache
+				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
+			}
 
 			auto last = ch::steady_clock::now();
 			for (const auto s = last; s == last; last = ch::steady_clock::now())
@@ -280,7 +281,7 @@ VI_OPTIMIZE_OFF
 		static constexpr auto EXT = 10U;
 
 		static auto foo = [] {
-			auto itm = vi_tmItem("", 1);
+			auto itm = vi_tmItem("fadsf dsf asdf", 1);
 			const auto s = vi_tmGetTicks();
 			vi_tmAdd(itm, s);
 		};
@@ -458,14 +459,22 @@ VI_OPTIMIZE_ON
 	struct meterage_format_t
 	{
 		const traits_t& traits_;
-		const vi_tmLogSTR fn_;
+		const vi_tmLogSTR_t fn_;
 		void* const data_;
-		std::size_t& n_;
+		std::size_t number_len_{0};
+		mutable std::size_t n_{ 0 };
 
-		meterage_format_t(std::size_t& n, traits_t& traits, vi_tmLogSTR fn, void* data) :traits_{ traits }, fn_{ fn }, data_{ data }, n_{ n } {}
+		meterage_format_t(traits_t& traits, vi_tmLogSTR_t fn, void* data)
+			:traits_{ traits }, fn_{ fn }, data_{ data }
+		{
+			if(auto size = traits_.meterages_.size(); size >= 1)
+				number_len_ = 1 + std::floor(std::log10(size));
+		}
 
 		int operator ()(int init_t, const traits_t::itm_t& i) const
 		{
+			n_++;
+
 			std::ostringstream str;
 			struct thousands_sep_facet_t final : std::numpunct<char>
 			{
@@ -474,22 +483,23 @@ VI_OPTIMIZE_ON
 			};
 			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t));
 
-			constexpr auto clearance = 1;
-			str << std::setw(traits_.max_len_name_) << std::setfill(n_++ % clearance ? ' ' : '.') << std::left << i.name_ << ": ";
+			const char fill = '.'; // (n_ - 1) % 3 ? ' ' : '.';
+			str << std::setw(number_len_) << n_ << ". ";
+			str << std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.name_ << ": ";
 			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [";
 			str << std::setw(traits_.max_len_total_) << i.total_txt_ << " / ";
 			str << std::setw(traits_.max_len_amount_) << i.amount_ << "]";
 			str << "\n";
 
 			auto result = str.str();
-			assert(traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
+			assert(number_len_ + 2 + traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
 
 			return init_t + fn_(result.c_str(), data_);
 		}
 	};
 } // namespace {
 
-VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR fn, void* data, std::uint32_t flags)
+VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
 	traits_t traits;
 	vi_tmResults(collector_meterages, &traits);
@@ -517,6 +527,5 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR fn, void* data, std::uint32_t f
 	auto s = str.str();
 	ret += fn(s.c_str(), data);
 
-	std::size_t n = 0;
-	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, meterage_format_t{ n, traits, fn, data });
+	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, meterage_format_t{ traits, fn, data });
 }

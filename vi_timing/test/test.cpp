@@ -19,7 +19,7 @@ const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF
 const auto _dummy1 = _set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
 #endif
 
-VI_TM_INIT("Timing report:", reinterpret_cast<vi_tmLogSTR>(&std::fputs), stdout, 0xE0);
+VI_TM_INIT("Timing report:", reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), stdout, 0xE0);
 VI_TM("*** Global ***");
 
 int main()
@@ -29,17 +29,29 @@ int main()
 	vi_tm::warming();
 
 	{
-		VI_TM("xxx1");
-
-		VI_TM("xxx2");
-
-		volatile auto xxx = 777;
-
-		VI_TM("xxx3", 1'000'000);
-		for (int n = 0; n < 1'000'000; ++n)
+		constexpr auto CNT = 1'000'000;
+		volatile int dummy = 0;
 		{
-			VI_TM("xxx3_inner");
-			xxx = 777;
+			VI_TM("SELF_EXT", CNT);
+			for (int n = 0; n < CNT; ++n)
+			{
+				VI_TM("SELF_INT");
+				dummy = 0;
+			}
+		}
+
+		{
+			VI_TM("SELF_EXT_2", CNT * 11);
+			for (int n = 0; n < CNT; ++n)
+			{
+				{ VI_TM("SELF_INT_2"); dummy = 0; }
+
+				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
+				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
+				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
+				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
+				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
+			}
 		}
 	}
 
