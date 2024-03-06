@@ -19,7 +19,7 @@ const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF
 const auto _dummy1 = _set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
 #endif
 
-VI_TM_INIT(reinterpret_cast<vi_tmLogSTR>(&std::fputs), stdout, 0x60);
+VI_TM_INIT("Timing report:", reinterpret_cast<vi_tmLogSTR>(&std::fputs), stdout, 0xE0);
 VI_TM("*** Global ***");
 
 int main()
@@ -33,19 +33,22 @@ int main()
 
 		VI_TM("xxx2");
 
+		volatile auto xxx = 777;
 
 		VI_TM("xxx3", 1'000'000);
 		for (int n = 0; n < 1'000'000; ++n)
 		{
 			VI_TM("xxx3_inner");
-			volatile auto _ = std::sin(n);
+			xxx = 777;
 		}
 	}
 
-	VI_TM_REPORT(reinterpret_cast<vi_tmLogSTR>(&std::fputs), stdout, 0x60);
-	VI_TM_REPORT();
-	VI_TM_CLEAR;
-
 	foo();
 	std::cout << "Hello World!\n";
+
+	endl(std::cout);
+
+#ifdef VI_TM_DISABLE
+	vi_tm::report();
+#endif
 }

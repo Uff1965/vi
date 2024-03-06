@@ -56,25 +56,15 @@ void vi_tmWarming(int all, std::size_t ms)
 
 std::atomic<vi_tmTicks_t>* vi_tmItem(const char* name, std::size_t amount)
 {
-	auto result = &item_t::s_dummy;
-	if (name)
-	{
-		std::scoped_lock lg(item_t::s_instance_guard);
+	if (!name)
+		return &item_t::s_dummy;
 
-		auto& ret = item_t::s_instance[name];
-		ret.calls_cnt_++;
-		ret.amount_ += amount;
-		result = &ret.time_total_;
-	}
-
-	return result;
-}
-
-void vi_tmClear(void)
-{
 	std::scoped_lock lg(item_t::s_instance_guard);
-	item_t::s_instance.clear();
-	item_t::s_dummy = 0U;
+
+	auto& ret = item_t::s_instance[name];
+	ret.calls_cnt_++;
+	ret.amount_ += amount;
+	return &ret.time_total_;
 }
 
 int vi_tmResults(vi_tmLogRAW fn, void* data)
@@ -85,7 +75,7 @@ int vi_tmResults(vi_tmLogRAW fn, void* data)
 	for (const auto& [name, inst] : item_t::s_instance)
 	{
 		assert(inst.calls_cnt_ && inst.amount_ >= inst.calls_cnt_);
-		if (0 == fn(name.c_str(), inst.time_total_, inst.amount_, inst.calls_cnt_, data))
+		if (!name.empty() && 0 == fn(name.c_str(), inst.time_total_, inst.amount_, inst.calls_cnt_, data))
 		{
 			result = 0;
 			break;
@@ -94,3 +84,10 @@ int vi_tmResults(vi_tmLogRAW fn, void* data)
 
 	return result;
 }
+
+//void vi_tmClear(void)
+//{
+//	std::scoped_lock lg(item_t::s_instance_guard);
+//	item_t::s_instance.clear();
+//	item_t::s_dummy = 0U;
+//}

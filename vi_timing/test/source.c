@@ -5,10 +5,58 @@
 
 #include <vi/timing.h>
 
+#include <threads.h>
+
 void foo(void)
 {
-	vi_tmAtomicTicks_t* const tm = vi_tmItem("foo", 1);
-	const vi_tmTicks_t s = vi_tmGetTicks();
+	{
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("foo", 1);
+		const vi_tmTicks_t s = vi_tmGetTicks();
+		vi_tmAdd(tm, s);
+	}
 
-	vi_tmAdd(tm, vi_tmGetTicks() - s);
+	{
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 10s", 1);
+		const vi_tmTicks_t s = vi_tmGetTicks();
+
+		thrd_sleep(&(struct timespec) { .tv_sec = 10 }, NULL);
+
+		vi_tmAdd(tm, s);
+	}
+
+	{
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 10ms", 1);
+		const vi_tmTicks_t s = vi_tmGetTicks();
+
+		thrd_sleep(&(struct timespec) { .tv_nsec = 10'000'000 }, NULL);
+
+		vi_tmAdd(tm, s);
+	}
+
+	{
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 170ms", 1);
+		const vi_tmTicks_t s = vi_tmGetTicks();
+
+		thrd_sleep(&(struct timespec) { .tv_nsec = 170'000'000 }, NULL);
+
+		vi_tmAdd(tm, s);
+	}
+
+	{
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 15ms", 1);
+		const vi_tmTicks_t s = vi_tmGetTicks();
+
+		thrd_sleep(&(struct timespec) { .tv_nsec = 15'000'000 }, NULL);
+
+		vi_tmAdd(tm, s);
+	}
+
+	{
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 31ms", 1);
+		const vi_tmTicks_t s = vi_tmGetTicks();
+
+		thrd_sleep(&(struct timespec) { .tv_nsec = 31'000'000 }, NULL);
+
+		vi_tmAdd(tm, s);
+	}
 }

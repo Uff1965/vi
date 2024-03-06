@@ -1,5 +1,5 @@
-﻿#ifndef __VI_TIMING_VI_TIMING_H__
-#	define __VI_TIMING_VI_TIMING_H__ 0.1
+﻿#ifndef VI_TIMING_VI_TIMING_H
+#	define VI_TIMING_VI_TIMING_H 0.1
 #	pragma once
 
 #if defined(_WIN32)
@@ -16,6 +16,7 @@
 #	include <atomic>
 #	include <cstdint>
 #	include <cstdio>
+#	include <string>
 #else
 #	include <stdatomic.h>
 #	include <stdint.h>
@@ -123,16 +124,17 @@ extern "C" {
 		vi_tmSortAscending = 0x10,
 		vi_tmShowOverhead = 0x20,
 		vi_tmShowUnit = 0x40,
+		vi_tmShowDuration = 0x80,
 	};
 
 	VI_TM_API void VI_TM_CALL vi_tmWarming(int all, VI_STD(size_t) ms); // Superfluous for Intel
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW fn, void* data);
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR fn, void* data, VI_STD(uint32_t) flags);
-	VI_TM_API void VI_TM_CALL vi_tmClear(void);
 
 	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
-	static inline void vi_tmAdd(vi_tmAtomicTicks_t* mem, vi_tmTicks_t value) VI_NOEXCEPT {
-		VI_STD(atomic_fetch_add_explicit)(mem, value, VI_MEMORY_ORDER(memory_order_relaxed));
+	static inline void vi_tmAdd(vi_tmAtomicTicks_t* mem, vi_tmTicks_t start) VI_NOEXCEPT {
+		const auto end = vi_tmGetTicks();
+		VI_STD(atomic_fetch_add_explicit)(mem, end - start, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
 #ifdef __cplusplus
 } // extern "C" {
@@ -149,11 +151,6 @@ namespace vi_tm
 		return vi_tmReport(fn, data, flags);
 	}
 
-	inline void clear(void)
-	{
-		vi_tmClear();
-	}
-
 	class timer_t
 	{
 		vi_tmAtomicTicks_t* time_;
@@ -161,34 +158,44 @@ namespace vi_tm
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
-		timer_t(const char* name, std::size_t amount = 1) noexcept : time_{ vi_tmItem(name, amount) }, start_{ vi_tmGetTicks() } { }
-		~timer_t() noexcept { vi_tmAdd(time_, vi_tmGetTicks() - start_); }
+		timer_t(const char* name, std::size_t amount = 1) noexcept : time_{ vi_tmItem(name, amount) }, start_{ vi_tmGetTicks() } {}
+		~timer_t() noexcept { vi_tmAdd(time_, start_); }
 	};
 
 	class init_t
 	{
+		std::string title_;
 		vi_tmLogSTR cb_;
 		void* data_;
 		std::uint32_t flags_;
 	public:
-		init_t(vi_tmLogSTR fn = reinterpret_cast<vi_tmLogSTR>(&std::fputs), void* data = stdout, std::uint32_t flags = 0) :cb_{ fn }, data_{ data }, flags_{ flags } {}
-		~init_t() { report(); }
+		init_t(const char* title = "Timing report:", vi_tmLogSTR fn = reinterpret_cast<vi_tmLogSTR>(&std::fputs), void* data = stdout, std::uint32_t flags = 0)
+			:title_{ title + std::string{"\n"}}, cb_{fn}, data_{data}, flags_{flags}
+		{/**/}
+
+		~init_t()
+		{
+			if (!title_.empty())
+			{
+				cb_(title_.c_str(), data_);
+			}
+
+			report(cb_, data_, flags_);
+		}
 	};
 
 #	if defined(VI_TM_DISABLE)
-#		define VI_TM_INIT(...) VI_MAKE_VAR(int, _dummy){(__VA_ARGS__, 0)}
-#		define VI_TM(...) VI_MAKE_VAR(int, _dummy){(__VA_ARGS__, 0)}
+#		define VI_TM_INIT(...) int VI_MAKE_VAR_NAME(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#		define VI_TM(...) int VI_MAKE_VAR_NAME(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #		define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
-#		define VI_TM_CLEAR ((void)0)
 #	else
-#		define VI_TM_INIT(...) VI_MAKE_VAR(vi_tm::init_t, init)(__VA_ARGS__)
-#		define VI_TM(...) VI_MAKE_VAR(vi_tm::timer_t, var) (__VA_ARGS__)
+#		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_VAR_NAME(_vi_tm_init_)(__VA_ARGS__)
+#		define VI_TM(...) vi_tm::timer_t VI_MAKE_VAR_NAME(_vi_tm_variable_) (__VA_ARGS__)
 #		define VI_TM_REPORT(...) vi_tm::report(__VA_ARGS__)
-#		define VI_TM_CLEAR vi_tm::clear()
 #	endif
 
 #	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 } // namespace vi_tm {
 #endif // #ifdef __cplusplus
 
-#endif // #ifndef __VI_TIMING_VI_TIMING_H__
+#endif // #ifndef VI_TIMING_VI_TIMING_H

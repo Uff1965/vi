@@ -10,7 +10,6 @@
 #		define CM_TM_FUNC ((void)0)
 #		define CM_TM_INIT(s, ...)
 #		define CM_TM_REPORT(...) ((void)0)
-#		define CM_TM_CLEAR ((void)0)
 #	endif
 
 #endif // #ifndef _CM_TIMING_PROXY_H_

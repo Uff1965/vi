@@ -11,6 +11,7 @@
 #include <numeric>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -20,114 +21,235 @@ namespace
 	namespace ch = std::chrono;
 	using namespace std::literals;
 
-	std::string time_format(ch::duration<double> s)
+	constexpr auto operator""_ps(long double v) noexcept { return ch::duration<double, std::pico>(v); };
+	constexpr auto operator""_ps(unsigned long long v) noexcept { return ch::duration<double, std::pico>(v); };
+	constexpr auto operator""_ks(long double v) noexcept { return ch::duration<double, std::kilo>(v); };
+	constexpr auto operator""_ks(unsigned long long v) noexcept { return ch::duration<double, std::kilo>(v); };
+	constexpr auto operator""_Ms(long double v) noexcept { return ch::duration<double, std::mega>(v); };
+	constexpr auto operator""_Ms(unsigned long long v) noexcept { return ch::duration<double, std::mega>(v); };
+	constexpr auto operator""_Gs(long double v) noexcept { return ch::duration<double, std::giga>(v); };
+	constexpr auto operator""_Gs(unsigned long long v) noexcept { return ch::duration<double, std::giga>(v); };
+
+	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
-		constexpr unsigned int SEC_MINUTE = 60;
-		constexpr unsigned int SEC_HOUR = 60 * SEC_MINUTE;
-		constexpr unsigned int SEC_DAY = 24 * SEC_HOUR;
+		using base_t = ch::duration<double>;
+		constexpr explicit duration_t(const base_t& r) : base_t{ r } {}
+		using base_t::base_t;
 
-		auto sec = s.count();
-		if (sec < .0)
+		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+		friend constexpr [[nodiscard]] duration_t operator*(const duration_t& d, T f)
 		{
-			sec = .0;
+			return duration_t{ d.count() * f };
 		}
 
-		std::string result(std::size("ddddDhhHmmMss.sS."), '\0');
-		size_t len = 0;
-
-		if (1e-6 > sec)
+		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+		friend constexpr [[nodiscard]] duration_t operator*(T f, const duration_t& d)
 		{
-			len = snprintf(result.data(), result.size(), "%.1fns", sec * 1e9);
-		}
-		else if (1e-3 > sec)
-		{
-			len = snprintf(result.data(), result.size(), "%.1fus", sec * 1e6);
-		}
-		else if (1.0 > sec)
-		{
-			len = snprintf(result.data(), result.size(), "%.1fms", sec * 1e3);
-		}
-		else if (SEC_MINUTE > sec)
-		{
-			len = snprintf(result.data(), result.size(), "%.1fs ", sec);
-		}
-		else
-		{
-			auto integral_part = static_cast<int>(std::round(sec));
-
-			if (SEC_DAY <= integral_part)
-			{
-				len += std::snprintf(result.data(), result.size(), "%iD", integral_part / SEC_DAY);
-			}
-			integral_part %= SEC_DAY;
-
-			if (len || SEC_HOUR <= integral_part)
-			{
-				len += std::snprintf(result.data() + len, result.size() - len, (len ? "%02ih" : "%ih"), integral_part / SEC_HOUR);
-			}
-			integral_part %= SEC_HOUR;
-
-			if ((100 * SEC_DAY > sec) && (len || SEC_MINUTE <= integral_part))
-			{
-				len += std::snprintf(result.data() + len, result.size() - len, (len ? "%02im" : "%im"), integral_part / SEC_MINUTE);
-			}
-			integral_part %= SEC_MINUTE;
-
-			if (SEC_DAY > sec)
-			{
-				len += snprintf(result.data() + len, result.size() - len, "%02is", integral_part);
-			}
+			return d * f;
 		}
 
-		result.resize(len);
+		friend constexpr double [[nodiscard]] operator/(const duration_t& l, const duration_t& r)
+		{
+			return l.count() / r.count();
+		}
+
+		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+		friend constexpr [[nodiscard]] duration_t operator/(const duration_t& d, T f)
+		{
+			return duration_t{ d.count() / f };
+		}
+	};
+
+	[[nodiscard]] std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1);
+
+	inline [[nodiscard]] bool operator<(duration_t l, duration_t r)
+	{
+		return l.count() < r.count() && to_string(l) != to_string(r);
+	}
+
+	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
+	{
+		return os << to_string(d);
+	}
+
+	double round(double num, unsigned char prec, unsigned char dec = 1)
+	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
+		if (num < 5e-12 || prec == 0 || prec <= dec) {
+			assert(num < 5e-12);
+			return num;
+		}
+
+		const auto exp = static_cast<signed char>(std::floor(std::log10(num)));
+		if (const auto n = 1 + dec + (12 + exp) % 3; prec > n)
+		{
+			prec = static_cast<unsigned char>(n);
+		}
+
+		const auto factor = std::max(10e-12, std::pow(10.0, exp - (prec - 1))); // The lower limit of accuracy is 0.01ns.
+		return std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) / factor) * factor;
+	}
+
+	std::string to_string( duration_t sec, unsigned char precision, unsigned char dec)
+	{
+		sec = duration_t{ round(sec.count(), precision, dec) };
+
+		auto prn = [sec, dec](const char* u, double e) {
+			std::stringstream ss;
+			ss << std::fixed << std::setprecision(dec) << sec.count() * e << u;
+			return ss.str();
+			};
+
+		std::string result;
+		if (10_ps > sec)			{ result = prn("ps", 1.0); }
+		else if (999.95_ps > sec)	{ result = prn("ps", 1e12); }
+		else if (999.95ns > sec)	{ result = prn("ns", 1e9); }
+		else if (999.95us > sec)	{ result = prn("us", 1e6); }
+		else if (999.95ms > sec)	{ result = prn("ms", 1e3); }
+		else if (999.95s > sec)		{ result = prn("s ", 1e0); }
+		else if (999.95_ks > sec)	{ result = prn("ks", 1e-3); }
+		else if (999.95_Ms > sec)	{ result = prn("Ms", 1e-6); }
+		else						{ result = prn("Gs", 1e-9); }
+
 		return result;
-
-	} // time_format(double sec)
+	}
 
 #ifndef NDEBUG
-	static const bool test_time_format = []
-	{
-		static constexpr struct { double t; const char* s; } itms[] =
+	const auto unit_test_to_string = []
 		{
-			{.0,			              "0.0ns"},
-			{1e-12,			              "0.0ns"},
-			{10e-12,		              "0.0ns"},
-			{100e-12,		              "0.1ns"},
-			{1.049e-9,		              "1.0ns"},
-			{1.050e-9,		              "1.1ns"},
-			{10e-9,			             "10.0ns"},
-			{100e-9,		            "100.0ns"},
-			{1e-6,			              "1.0us"},
-			{10e-6,			             "10.0us"},
-			{100e-6,		            "100.0us"},
-			{1e-3,			              "1.0ms"},
-			{10e-3,			             "10.0ms"},
-			{100e-3,		            "100.0ms"},
-			{1,				              "1.0s "},
-			{60,			              "1m00s"},
-			{1 * 60 * 60 - 1,		             "59m59s"},
-			{1 * 60 * 60,		           "1h00m00s"},
-			{1 * 60 * 60 + 0.1,	           "1h00m00s"},
-			{24 * 60 * 60 - 1,	          "23h59m59s"},
-			{24 * 60 * 60,		           "1D00h00m"},
-			{24 * 60 * 60 + 59,	           "1D00h00m"},
-			{10 * 24 * 60 * 60,	          "10D00h00m"},
-			{((100 * 24) * 60) * 60 - 1,      "99D23h59m"},
-			{((100 * 24) * 60) * 60,          "100D00h"},
-			{((100 * 24) * 60 + 59) * 60,       "100D00h"},
-		};
+			struct I { duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; };
+			static constexpr I samples[] = {
+				{1234567.89s, "1.2Ms", 9, 1},
+				{123456.789s, "123.457ks", 9, 3},
+				{0, "0.0ps"},
+				{0.1_ps, "0.0ps"},
+				{1_ps, "0.0ps"}, // The lower limit of accuracy is 10ps.
+				{10_ps, "10.0ps"},
+				{100_ps, "100.0ps"},
+				{1ns, "1.0ns"},
+				{10ns, "10.0ns"},
+				{100ns, "100.0ns"},
+				{1us, "1.0us"},
+				{10us, "10.0us"},
+				{100us, "100.0us"},
+				{1ms, "1.0ms"},
+				{10ms, "10.0ms"},
+				{100ms, "100.0ms"},
+				{1s, "1.0s "},
+				{10s, "10.0s "},
+				{100s, "100.0s "},
+				{1min, "60.0s "},
+				{1h, "3.6ks"},
 
-		for (const auto& v : itms)
-		{
-			auto s = time_format(ch::duration<double>(v.t));
-			assert(s == v.s);
-		}
+				{4.999999999999_ps, "0ps", 1, 0},
+				{4.999999999999_ps, "0.0ps", 2},
+				{4.999999999999_ps, "0.0ps", 3},
+				{4.999999999999_ps, "0.0ps", 4},
+				{5.000000000000_ps, "10ps", 1, 0},
+				{5.000000000000_ps, "10.0ps", 2},
+				{5.000000000000_ps, "10.0ps", 3},
+				{5.000000000000_ps, "10.0ps", 4},
 
-		return true;
-	}();
-#endif
+				{4.499999999999ns, "4ns", 1, 0},
+				{4.499999999999ns, "4.5ns", 2},
+				{4.499999999999ns, "4.5ns", 3},
+				{4.499999999999ns, "4.5ns", 4},
+				{4.999999999999ns, "5ns", 1, 0},
+				{4.999999999999ns, "5.0ns", 2},
+				{4.999999999999ns, "5.0ns", 3},
+				{4.999999999999ns, "5.0ns", 4},
+				{5.000000000000ns, "5ns", 1, 0},
+				{5.000000000000ns, "5.0ns", 2},
+				{5.000000000000ns, "5.0ns", 3},
+				{5.000000000000ns, "5.0ns", 4},
 
-	ch::duration<double> seconds_per_tick()
+				{123.4ns, "100ns", 1, 0},
+				{123.4ns, "120.0ns", 2},
+				{123.4ns, "123.0ns", 3},
+				{123.4ns, "123.4ns", 4},
+
+				{4.999999999999_ps, "0ps", 1, 0},
+				{4.999999999999_ps, "0.0ps", 2, 1},
+				{4.999999999999_ps, "0.00ps", 3, 2},
+				{4.999999999999_ps, "0.00ps", 4, 2},
+				{5.000000000000_ps, "10.00ps", 3, 2},
+				{5.000000000000_ps, "10.00ps", 4, 2},
+
+				{4.499999999999ns, "4.5ns", 2, 1},
+				{4.499999999999ns, "4.50ns", 3, 2},
+				{4.499999999999ns, "4.50ns", 4, 2},
+				{4.999999999999ns, "5ns", 1, 0},
+				{4.999999999999ns, "5.0ns", 2, 1},
+				{4.999999999999ns, "5.00ns", 3, 2},
+				{4.999999999999ns, "5.00ns", 4, 2},
+				{5.000000000000ns, "5ns", 1, 0},
+				{5.000000000000ns, "5.0ns", 2, 1},
+				{5.000000000000ns, "5.00ns", 3, 2},
+				{5.000000000000ns, "5.00ns", 4, 2},
+
+				{123.4ns, "100ns", 1, 0},
+				{123.4ns, "120.0ns", 2, 1},
+				{123.4ns, "123.00ns", 3, 2},
+				{123.4ns, "123.40ns", 4, 2},
+
+				//**********************************
+				{0.0_ps, "0.0ps"},
+				{0.123456789us, "123.5ns", 4},
+				{1.23456789s, "1s ", 1, 0},
+				{1.23456789s, "1.2s ", 3},
+				{1.23456789s, "1.2s "},
+				{1.23456789us, "1.2us"},
+				{1004.4ns, "1.0us", 2},
+				{12.3456789s, "10s ", 1, 0},
+				{12.3456789s, "12.3s ", 3},
+				{12.3456789us, "12.3us", 3},
+				{12.3456s, "12.0s "},
+				{12.34999999ms, "10ms", 1, 0},
+				{12.34999999ms, "12.3ms", 3},
+				{12.34999999ms, "12.3ms", 4},
+				{12.4999999ms, "12.0ms"},
+				{12.4999999ms, "12.5ms", 3},
+				{12.5000000ms, "13.0ms"},
+				{123.456789ms, "123.0ms", 3},
+				{123.456789us, "120.0us"},
+				{123.4999999ms, "123.5ms", 4},
+				{1234.56789us, "1.2ms"},
+				{1s, "1.0s "},
+				{245.0_ps, "250.0ps"},
+				{49.999_ps, "50.0ps"},
+				{50.0_ps, "50.0ps"},
+				{9.49999_ps, "10.0ps"},
+				{9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
+				{9.999ns, "10.0ns"},
+				{99.49999_ps, "100.0ps"},
+				{99.4999ns, "99.0ns"},
+				{99.4ms, "99.0ms"},
+				{99.5_ps, "100.0ps"},
+				{99.5ms, "100.0ms"},
+				{99.5ns, "100.0ns"},
+				{99.5us, "100.0us"},
+				{99.999_ps, "100.0ps"},
+				{999.0_ps, "1.0ns"},
+				{999.45ns, "1us", 1, 0},
+				{999.45ns, "1.0us", 2},
+				{999.45ns, "999.0ns", 3},
+				{999.45ns, "999.5ns", 4},
+				{999.45ns, "999.45ns", 5, 2},
+				{999.55ns, "1.0us", 3},
+				{99ms, "99.0ms"},
+			};
+
+			for (auto& i : samples)
+			{
+				const auto str = to_string(i.sec_, i.precision_, i.dec_);
+				assert(i.res_ == str);
+			}
+
+			return 0;
+		}();
+#endif // #ifndef NDEBUG
+
+VI_OPTIMIZE_OFF
+	duration_t seconds_per_tick()
 	{
 		auto wait_for_the_time_to_change = []
 		{
@@ -136,7 +258,7 @@ namespace
 			[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
 
 			auto last = ch::steady_clock::now();
-			for (const auto first = ch::steady_clock::now(); first >= last; last = ch::steady_clock::now())
+			for (const auto s = last; s == last; last = ch::steady_clock::now())
 			{/**/}
 
 			return std::tuple{ vi_tmGetTicks(), last };
@@ -149,10 +271,56 @@ namespace
 		{/**/}
 		const auto [tick2, time2] = wait_for_the_time_to_change();
 
-		return ch::duration<double>(time2 - time1) / (tick2 - tick1);
+		return duration_t(time2 - time1) / (tick2 - tick1);
 	}
 
-	double overhead_ticks()
+	duration_t duration()
+	{
+		static constexpr auto CNT = 10'000U;
+		static constexpr auto EXT = 10U;
+
+		static auto foo = [] {
+			auto itm = vi_tmItem("", 1);
+			const auto s = vi_tmGetTicks();
+			vi_tmAdd(itm, s);
+		};
+
+		auto pure = [] {
+			std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+
+			auto b = ch::steady_clock::now();
+			for (const auto s = b; s == b; b = ch::steady_clock::now())
+			{/**/}
+
+			for (size_t cnt = CNT; cnt; --cnt)
+			{ 
+				foo();
+			}
+			return ch::steady_clock::now() - b;
+		};
+
+		auto dirty = [] {
+			std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+
+			auto b = ch::steady_clock::now();
+			for (const auto s = b; s == b; b = ch::steady_clock::now())
+			{/**/}
+
+			for (size_t cnt = CNT; cnt; --cnt)
+			{ 
+				foo();
+
+				// EXT calls
+				foo(); foo(); foo(); foo(); foo();
+				foo(); foo(); foo(); foo(); foo();
+			}
+			return ch::steady_clock::now() - b;
+		};
+
+		return duration_t(dirty() - pure()) / (EXT * CNT);
+	}
+
+	double measurement_cost()
 	{
 		static constexpr auto CNT = 10'000U;
 		static constexpr auto EXT = 10U;
@@ -181,29 +349,27 @@ namespace
 				e = vi_tmGetTicks(); //-V761
 
 				// EXT calls
-				e = vi_tmGetTicks();	e = vi_tmGetTicks();
-				e = vi_tmGetTicks();	e = vi_tmGetTicks();
-				e = vi_tmGetTicks();	e = vi_tmGetTicks();
-				e = vi_tmGetTicks();	e = vi_tmGetTicks();
-				e = vi_tmGetTicks();	e = vi_tmGetTicks();
+				e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+				e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 			}
 			return e - s;
 		};
 
 		return static_cast<double>(dirty() - pure()) / (EXT * CNT);
 	}
+VI_OPTIMIZE_ON
 
 	struct traits_t
 	{
 		struct itm_t
 		{
-			const char* name_{}; // Name
+			std::string_view name_; // Name
 			vi_tmTicks_t total_{}; // Total ticks duration
 			std::size_t amount_{}; // Number of measured units
 			std::size_t calls_cnt_{}; // To account for overheads
 
-			ch::duration<double> total_time_{}; // seconds
-			ch::duration<double> average_{}; // seconds
+			duration_t total_time_{}; // seconds
+			duration_t average_{}; // seconds
 			std::string total_txt_;
 			std::string average_txt_;
 			itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : name_{ n }, total_{ t }, amount_{ a }, calls_cnt_{ c } {}
@@ -211,8 +377,9 @@ namespace
 
 		std::vector<itm_t> meterages_;
 
-		const ch::duration<double> tick_duration_ = seconds_per_tick();
-		const double overheads_ = overhead_ticks(); // ticks
+		const duration_t tick_duration_ = seconds_per_tick();
+		const duration_t duration_ = duration(); // duration one measerement. [sec].
+		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
 		std::size_t max_len_name_{};
 		std::size_t max_len_total_{};
@@ -228,9 +395,9 @@ namespace
 
 		auto& itm = v.meterages_.emplace_back(name, time, amount, calls_cnt);
 
-		v.max_len_name_ = std::max(v.max_len_name_, strlen(itm.name_));
+		v.max_len_name_ = std::max(v.max_len_name_, itm.name_.length());
 
-		if (const auto total_over_ticks = v.overheads_ * itm.calls_cnt_; itm.total_ > total_over_ticks)
+		if (const auto total_over_ticks = v.measurement_cost_ * itm.calls_cnt_; itm.total_ > total_over_ticks)
 		{
 			itm.total_time_ = (itm.total_ - total_over_ticks) * v.tick_duration_;
 			itm.average_ = itm.total_time_ / itm.amount_;
@@ -240,10 +407,10 @@ namespace
 			// Leave zeros.
 		}
 
-		itm.total_txt_ = time_format(itm.total_time_);
+		itm.total_txt_ = to_string(itm.total_time_);
 		v.max_len_total_ = std::max(v.max_len_total_, itm.total_txt_.length());
 
-		itm.average_txt_ = time_format(itm.average_);
+		itm.average_txt_ = to_string(itm.average_);
 		v.max_len_average_ = std::max(v.max_len_average_, itm.average_txt_.length());
 
 		if (itm.amount_ > v.max_amount_)
@@ -271,7 +438,7 @@ namespace
 			switch (flags_ & static_cast<uint32_t>(vi_tmSortMask))
 			{
 			case static_cast<uint32_t>(vi_tmSortByName):
-				result = desc ? (strcmp(l.name_, r.name_) > 0) : (strcmp(l.name_, r.name_) < 0);
+				result = desc ? (l.name_ > r.name_) : (l.name_ < r.name_);
 				break;
 			case static_cast<uint32_t>(vi_tmSortByAmount):
 				result = desc ? (l.amount_ > r.amount_) : (l.amount_ < r.amount_);
@@ -307,13 +474,15 @@ namespace
 			};
 			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t));
 
-			str << std::setfill(n_++ % 2 ? ' ' : '.') << std::left << std::setw(traits_.max_len_name_) << i.name_ << ": ";
-			str << std::setfill(' ') << std::right << std::setw(traits_.max_len_total_) << i.total_txt_ << " / ";
-			str << std::setw(traits_.max_len_amount_) << i.amount_ << " = ";
-			str << std::setw(traits_.max_len_average_) << i.average_txt_ << "\n";
+			constexpr auto clearance = 1;
+			str << std::setw(traits_.max_len_name_) << std::setfill(n_++ % clearance ? ' ' : '.') << std::left << i.name_ << ": ";
+			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [";
+			str << std::setw(traits_.max_len_total_) << i.total_txt_ << " / ";
+			str << std::setw(traits_.max_len_amount_) << i.amount_ << "]";
+			str << "\n";
 
 			auto result = str.str();
-			assert(traits_.max_len_name_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 3 + traits_.max_len_average_ + 1 == result.size());
+			assert(traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
 
 			return init_t + fn_(result.c_str(), data_);
 		}
@@ -330,10 +499,19 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR fn, void* data, std::uint32_t f
 	int ret = 0;
 	std::ostringstream str;
 	if (flags & static_cast<uint32_t>(vi_tmShowOverhead))
-		str << "Timer overhead: " << time_format(traits.tick_duration_ * traits.overheads_) << " per measurement. ";
+	{
+		str << "Measurement cost: " << traits.tick_duration_ * traits.measurement_cost_ << " per measurement. ";
+	}
+
+	if (flags & static_cast<uint32_t>(vi_tmShowDuration))
+	{
+		str << "Duration: " << traits.duration_ << ". ";
+	}
 
 	if (flags & static_cast<uint32_t>(vi_tmShowUnit))
-		str << "One tick corresponds: " << time_format(traits.tick_duration_) << ". ";
+	{
+		str << "One tick corresponds: " << traits.tick_duration_ << ". ";
+	}
 
 	str << '\n';
 	auto s = str.str();

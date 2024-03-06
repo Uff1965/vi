@@ -6,8 +6,8 @@ set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
 cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_TIMING_ROOT_DIR)
 cmake_path(SET VI_SOURCE_DIR ${PROJECT_SOURCE_DIR})
-cmake_path(SET VI_INTERFACE_DIR ${VI_TIMING_ROOT_DIR})
-cmake_path(APPEND VI_TIMING_ROOT_DIR "lib" OUTPUT_VARIABLE VI_OUT_DIR)
+cmake_path(SET VI_INTERFACE_DIR ${VI_ROOT_DIR})
+cmake_path(APPEND VI_ROOT_DIR "lib" OUTPUT_VARIABLE VI_OUT_DIR)
 
 ### Files #####################################################################
 set(FILE_GROUP
@@ -27,10 +27,6 @@ list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
-#[[
-add_dependencies(vi_timing_test vi_timing)
-]]
-
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
   C_STANDARD 17
@@ -47,13 +43,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 ### Compiler ##################################################################
-#[[
-target_include_directories(${PROJECT_NAME}
-PUBLIC
-  ${VI_INTERFACE_DIR}
-)
-]]
-
 target_compile_definitions(${PROJECT_NAME}
 PRIVATE
   $<$<CONFIG:Debug>:_DEBUG> # Microsoft debug RTL
