@@ -5,7 +5,7 @@
 
 #include <cassert>
 #include <chrono>
-#include <map>
+#include <unordered_map>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -15,15 +15,27 @@ using namespace std::literals;
 
 namespace
 {
-	struct item_t
+	class item_t
 	{
+	public:
+		using container_t = std::unordered_map<std::string, item_t>;
+	protected:
+		static inline std::mutex s_instance_guard;
+		static inline container_t s_instance;
+	public:
 		std::atomic<vi_tmTicks_t> time_total_{ 0 };
 		std::size_t amount_{ 0 };
 		std::size_t calls_cnt_{ 0 };
 
-		static inline std::mutex s_instance_guard;
-		static inline std::map<std::string, item_t, std::less<>> s_instance;
 		static inline decltype(time_total_) s_dummy{ 0 };
+
+		class instance_proxy
+		{
+			std::scoped_lock<std::mutex> lg_{ item_t::s_instance_guard };
+		public:
+			operator container_t& () const noexcept { return s_instance; }
+		};
+		static instance_proxy instance() { return {}; }
 	};
 }
 
@@ -59,9 +71,9 @@ std::atomic<vi_tmTicks_t>* vi_tmItem(const char* name, std::size_t amount)
 	if (!name)
 		return &item_t::s_dummy;
 
-	std::scoped_lock lg(item_t::s_instance_guard);
+	item_t::container_t& inst = item_t::instance();
 
-	auto& ret = item_t::s_instance[name];
+	auto& ret = inst[name];
 	ret.calls_cnt_++;
 	ret.amount_ += amount;
 	return &ret.time_total_;
@@ -69,10 +81,10 @@ std::atomic<vi_tmTicks_t>* vi_tmItem(const char* name, std::size_t amount)
 
 int vi_tmResults(vi_tmLogRAW fn, void* data)
 {
-	std::scoped_lock lg(item_t::s_instance_guard);
+	item_t::container_t &inst = item_t::instance();
 
 	auto result = -1;
-	for (const auto& [name, inst] : item_t::s_instance)
+	for (const auto& [name, inst] : inst)
 	{
 		assert(inst.calls_cnt_ && inst.amount_ >= inst.calls_cnt_);
 		if (!name.empty() && 0 == fn(name.c_str(), inst.time_total_, inst.amount_, inst.calls_cnt_, data))
@@ -87,7 +99,7 @@ int vi_tmResults(vi_tmLogRAW fn, void* data)
 
 //void vi_tmClear(void)
 //{
-//	std::scoped_lock lg(item_t::s_instance_guard);
-//	item_t::s_instance.clear();
+//	item_t::container_t& inst = item_t::instance();
+//	inst.clear();
 //	item_t::s_dummy = 0U;
 //}

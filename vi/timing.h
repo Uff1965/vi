@@ -133,7 +133,7 @@ extern "C" {
 
 	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
 	static inline void vi_tmAdd(vi_tmAtomicTicks_t* mem, vi_tmTicks_t start) VI_NOEXCEPT {
-		const auto end = vi_tmGetTicks();
+		const vi_tmTicks_t end = vi_tmGetTicks();
 		VI_STD(atomic_fetch_add_explicit)(mem, end - start, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
 #ifdef __cplusplus
