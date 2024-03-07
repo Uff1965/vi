@@ -30,27 +30,9 @@ namespace
 
 	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
-		constexpr explicit duration_t(const ch::duration<double>& r) : ch::duration<double>{ r } {}
 		using ch::duration<double>::duration;
-
-		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
-		friend constexpr [[nodiscard]] duration_t operator*(const duration_t& d, T f)
-		{	return duration_t{ d.count() * f };
-		}
-
-		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
-		friend constexpr [[nodiscard]] duration_t operator*(T f, const duration_t& d)
-		{	return d * f;
-		}
-
-		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
-		friend constexpr [[nodiscard]] duration_t operator/(const duration_t& d, T f)
-		{	return duration_t{ d.count() / f };
-		}
-
-		friend constexpr [[nodiscard]] double operator/(const duration_t& l, const duration_t& r)
-		{	return l.count() / r.count();
-		}
+		template<typename T>
+		constexpr explicit duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
 
 		friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1);
 
@@ -65,43 +47,44 @@ namespace
 
 	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
-		if (num < 5e-12 || prec == 0 || prec <= dec) {
-			assert(num < 5e-12);
-			return num;
-		}
-
-		const auto exp = static_cast<signed char>(std::floor(std::log10(num)));
-		if (const auto n = 1 + dec + (12 + exp) % 3; prec > n)
+		double result;
+		if (num >= 5e-12 && prec != 0 && prec > dec)
 		{
-			prec = static_cast<unsigned char>(n);
-		}
+			const auto exp = static_cast<signed char>(std::ceil(std::log10(num)));
+			if (const auto n = 1 + dec + (11 + exp) % 3; prec > n)
+			{
+				prec = static_cast<unsigned char>(n);
+			}
 
-		const auto factor = std::max(10e-12, std::pow(10.0, exp - (prec - 1))); // The lower limit of accuracy is 0.01ns.
-		return std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) / factor) * factor;
+			const auto factor = std::max(10e-12, std::pow(10.0, exp - prec)); // The lower limit of accuracy is 0.01ns.
+			result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) / factor) * factor;
+		}
+		else
+		{
+			assert(num < 5e-12);
+			result = num;
+		}
+		return result;
 	}
 
 	[[nodiscard]] std::string to_string( duration_t sec, unsigned char precision, unsigned char dec)
 	{
 		sec = duration_t{ round(sec.count(), precision, dec) };
 
-		auto prn = [sec, dec](const char* u, double e)
-		{	std::stringstream ss;
-			ss << std::fixed << std::setprecision(dec) << sec.count() * e << u;
-			return ss.str();
-		};
+		std::pair<std::string_view, double> k;
+		if (10_ps > sec)			{ k = {"ps", 1.0}; }
+		else if (999.95_ps > sec)	{ k = {"ps", 1e12}; }
+		else if (999.95ns > sec)	{ k = {"ns", 1e9}; }
+		else if (999.95us > sec)	{ k = {"us", 1e6}; }
+		else if (999.95ms > sec)	{ k = {"ms", 1e3}; }
+		else if (999.95s > sec)		{ k = {"s ", 1e0}; }
+		else if (999.95_ks > sec)	{ k = {"ks", 1e-3}; }
+		else if (999.95_Ms > sec)	{ k = {"Ms", 1e-6}; }
+		else						{ k = {"Gs", 1e-9}; }
 
-		std::string result;
-		if (10_ps > sec)			{ result = prn("ps", 1.0); }
-		else if (999.95_ps > sec)	{ result = prn("ps", 1e12); }
-		else if (999.95ns > sec)	{ result = prn("ns", 1e9); }
-		else if (999.95us > sec)	{ result = prn("us", 1e6); }
-		else if (999.95ms > sec)	{ result = prn("ms", 1e3); }
-		else if (999.95s > sec)		{ result = prn("s ", 1e0); }
-		else if (999.95_ks > sec)	{ result = prn("ks", 1e-3); }
-		else if (999.95_Ms > sec)	{ result = prn("Ms", 1e-6); }
-		else						{ result = prn("Gs", 1e-9); }
-
-		return result;
+		std::ostringstream ss;
+		ss << std::fixed << std::setprecision(dec) << sec.count() * k.second << k.first;
+		return ss.str();
 	}
 
 #ifndef NDEBUG
@@ -109,6 +92,8 @@ namespace
 	{
 		struct I { duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; };
 		static constexpr I samples[] = {
+			{10.1ms, "10.0ms"},
+			{10.01ms, "10.0ms"},
 			{1234567.89s, "1.2Ms", 9, 1},
 			{123456.789s, "123.457ks", 9, 3},
 			{0, "0.0ps"},
@@ -229,7 +214,7 @@ namespace
 VI_OPTIMIZE_OFF
 	duration_t seconds_per_tick()
 	{
-		auto wait_for_the_time_to_change = []
+		auto wait_for_the_time_changed = []
 		{
 			{
 				std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
@@ -237,6 +222,7 @@ VI_OPTIMIZE_OFF
 				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
 			}
 
+			// Are waiting for the start of a new time interval.
 			auto last = ch::steady_clock::now();
 			for (const auto s = last; s == last; last = ch::steady_clock::now())
 			{/**/}
@@ -244,12 +230,11 @@ VI_OPTIMIZE_OFF
 			return std::tuple{ vi_tmGetTicks(), last };
 		};
 
-		const auto [tick1, time1] = wait_for_the_time_to_change();
-		// Load the thread at 100% for 'interval'.
-		constexpr auto interval = 256ms;
-		for (auto stop = time1 + interval; ch::steady_clock::now() < stop;)
+		const auto [tick1, time1] = wait_for_the_time_changed();
+		// Load the thread at 100% for 256ms.
+		for (auto stop = time1 + 256ms; ch::steady_clock::now() < stop;)
 		{/**/}
-		const auto [tick2, time2] = wait_for_the_time_to_change();
+		const auto [tick2, time2] = wait_for_the_time_changed();
 
 		return duration_t(time2 - time1) / (tick2 - tick1);
 	}
@@ -257,31 +242,32 @@ VI_OPTIMIZE_OFF
 	duration_t duration()
 	{
 		static constexpr auto CNT = 10'000U;
-		static constexpr auto EXT = 10U;
 
-		static auto foo = [] {
+		auto foo = [] {
 			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmAdd()' further apart.
 			const auto s = vi_tmGetTicks();
 			auto itm = vi_tmItem("", 1);
 			vi_tmAdd(itm, s);
 		};
 
-		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		auto b = ch::steady_clock::now();
-		for (const auto s = b; s == b; b = ch::steady_clock::now())
-		{/**/}
+		auto start = [] {
+			std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+			// Are waiting for the start of a new time interval.
+			auto last = ch::steady_clock::now();
+			for (const auto s = last; s == last; last = ch::steady_clock::now())
+			{/**/}
+			return last;
+		};
 
+		auto b = start();
 		for (size_t cnt = CNT; cnt; --cnt)
 		{ 
 			foo();
 		}
 		const auto pure = ch::steady_clock::now() - b;
 
-		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		b = ch::steady_clock::now();
-		for (const auto s = b; s == b; b = ch::steady_clock::now())
-		{/**/}
-
+		b = start();
+		static constexpr auto EXT = 10U;
 		for (size_t cnt = CNT; cnt; --cnt)
 		{ 
 			foo();
@@ -298,10 +284,8 @@ VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{
 		constexpr auto CNT = 10'000U;
-		constexpr auto EXT = 10U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-
 		volatile auto e = vi_tmGetTicks(); // Preloading a function into cache
 		auto s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
@@ -310,8 +294,8 @@ VI_OPTIMIZE_OFF
 		}
 		const auto pure = e - s;
 
+		constexpr auto EXT = 10U;
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-
 		e = vi_tmGetTicks(); // Preloading a function into cache
 		s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
@@ -327,6 +311,11 @@ VI_OPTIMIZE_OFF
 		return static_cast<double>(dirty - pure) / (EXT * CNT);
 	}
 VI_OPTIMIZE_ON
+
+	constexpr std::string_view title_name_ = "Name";
+	constexpr std::string_view title_average_ = "Average";
+	constexpr std::string_view title_total_ = "Total";
+	constexpr std::string_view title_amount_ = "Amount";
 
 	struct traits_t
 	{
@@ -349,16 +338,16 @@ VI_OPTIMIZE_ON
 		const duration_t tick_duration_ = seconds_per_tick();
 		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
-		std::size_t max_len_name_{};
-		std::size_t max_len_total_{};
-		std::size_t max_len_average_{};
-		std::size_t max_len_amount_{};
+		std::size_t max_len_name_{ title_name_.length()};
+		std::size_t max_len_total_{ title_total_.length() };
+		std::size_t max_len_average_{ title_average_.length() };
+		std::size_t max_len_amount_{ title_amount_.length() };
 	};
 
-	int collector_meterages(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* tr)
+	int collector_meterages(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* _traits)
 	{
-		assert(tr);
-		auto& traits = *static_cast<traits_t*>(tr);
+		assert(_traits);
+		auto& traits = *static_cast<traits_t*>(_traits);
 		assert(calls_cnt && amount >= calls_cnt);
 
 		auto& itm = traits.meterages_.emplace_back(name, total, amount, calls_cnt);
@@ -437,8 +426,24 @@ VI_OPTIMIZE_ON
 		{
 			if (auto size = traits_.meterages_.size(); size >= 1)
 			{
-				number_len_ = 1U + static_cast<int>(std::floor(std::log10(size)));
+				number_len_ = 1 + static_cast<int>(std::floor(std::log10(size)));
 			}
+		}
+
+		int header() const
+		{
+			std::ostringstream str;
+			str << std::setw(number_len_) << "#" << "  ";
+			str << std::setw(traits_.max_len_name_) << std::left << title_name_ << ": ";
+			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << title_average_ << " [";
+			str << std::setw(traits_.max_len_total_) << title_total_ << " / ";
+			str << std::setw(traits_.max_len_amount_) << title_amount_ << "]";
+			str << "\n";
+
+			auto result = str.str();
+			assert(number_len_ + 2 + traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
+
+			return fn_(result.c_str(), data_);
 		}
 
 		int operator ()(int init, const traits_t::itm_t& i) const
@@ -451,7 +456,7 @@ VI_OPTIMIZE_ON
 				char do_thousands_sep() const override { return '\''; }
 				std::string do_grouping() const override { return "\x3"; }
 			};
-			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t));
+			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t)); //-V2511
 
 			const char fill = '.'; // (n_ - 1) % 3 ? ' ' : '.';
 			str << std::setw(number_len_) << n_ << ". ";
@@ -496,6 +501,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t
 	str << '\n';
 	auto s = str.str();
 	ret += fn(s.c_str(), data);
-
-	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, meterage_format_t{ traits, fn, data });
+	meterage_format_t mf{ traits, fn, data };
+	ret == mf.header();
+	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }

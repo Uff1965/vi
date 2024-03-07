@@ -22,19 +22,16 @@
 using namespace std::literals;
 namespace ch = std::chrono;
 
-namespace
+struct item_t
 {
-	struct item_t
-	{
-		std::atomic<vi_tmTicks_t> time_total_{ 0 };
-		std::size_t amount_{ 0 };
-		std::size_t calls_cnt_{ 0 };
+	std::atomic<vi_tmTicks_t> time_total_{ 0 };
+	std::size_t amount_{ 0 };
+	std::size_t calls_cnt_{ 0 };
 
-		static inline std::mutex s_instance_guard;
-		static inline CONTAINER s_instance;
-		static inline decltype(time_total_) s_dummy{ 0 };
-	};
-}
+	static inline std::mutex s_instance_guard;
+	static inline CONTAINER s_instance;
+	static inline decltype(time_total_) s_dummy{ 0 };
+};
 
 void vi_tmWarming(int all, std::size_t ms)
 {
@@ -64,22 +61,22 @@ void vi_tmWarming(int all, std::size_t ms)
 
 std::atomic<vi_tmTicks_t>* vi_tmItem(const char* name, std::size_t amount)
 {
-	if (!name)
-		return &item_t::s_dummy;
-
-	std::scoped_lock lg_{ item_t::s_instance_guard };
-
-	auto& item = item_t::s_instance[name];
-	item.calls_cnt_++;
-	item.amount_ += amount;
-	return &item.time_total_;
+	auto result = &item_t::s_dummy;
+	if (name)
+	{
+		std::scoped_lock lg_{ item_t::s_instance_guard };
+		auto& item = item_t::s_instance[name];
+		item.calls_cnt_++;
+		item.amount_ += amount;
+		result = &item.time_total_;
+	}
+	return result;
 }
 
 int vi_tmResults(vi_tmLogRAW_t fn, void* data)
 {
-	std::scoped_lock lg_{ item_t::s_instance_guard };
-
 	auto result = -1;
+	std::scoped_lock lg_{ item_t::s_instance_guard };
 	for (const auto& [name, item] : item_t::s_instance)
 	{
 		assert(item.calls_cnt_ && item.amount_ >= item.calls_cnt_);
@@ -89,14 +86,12 @@ int vi_tmResults(vi_tmLogRAW_t fn, void* data)
 			break;
 		}
 	}
-
 	return result;
 }
 
-//void vi_tmClear(void)
-//{
-//	std::scoped_lock lg_{ item_t::s_instance_guard };
-// 
-//	item_t::s_instance.clear();
-//	item_t::s_dummy = 0U;
-//}
+void vi_tmClear(void)
+{
+	std::scoped_lock lg_{ item_t::s_instance_guard };
+ 	item_t::s_instance.clear();
+	item_t::s_dummy = 0U;
+}

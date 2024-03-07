@@ -130,6 +130,7 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmWarming(int all, VI_STD(size_t) ms); // Superfluous for Intel
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
+	VI_TM_API void VI_TM_CALL vi_tmClear(void);
 
 	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
 	static inline void vi_tmAdd(vi_tmAtomicTicks_t* mem, vi_tmTicks_t start) VI_NOEXCEPT
