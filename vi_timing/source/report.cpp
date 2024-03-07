@@ -211,7 +211,6 @@ namespace
 	}();
 #endif // #ifndef NDEBUG
 
-VI_OPTIMIZE_OFF
 	duration_t seconds_per_tick()
 	{
 		auto wait_for_the_time_changed = []
@@ -241,7 +240,7 @@ VI_OPTIMIZE_OFF
 
 	duration_t duration()
 	{
-		static constexpr auto CNT = 10'000U;
+		static constexpr auto CNT = 1'000U;
 
 		auto foo = [] {
 			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmAdd()' further apart.
@@ -258,6 +257,8 @@ VI_OPTIMIZE_OFF
 			{/**/}
 			return last;
 		};
+
+		foo(); // Create a service item with empty name "".
 
 		auto b = start();
 		for (size_t cnt = CNT; cnt; --cnt)
@@ -281,12 +282,13 @@ VI_OPTIMIZE_OFF
 		return duration_t(dirty - pure) / (EXT * CNT);
 	}
 
+VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{
-		constexpr auto CNT = 10'000U;
+		constexpr auto CNT = 1'000U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		volatile auto e = vi_tmGetTicks(); // Preloading a function into cache
+		auto e = vi_tmGetTicks(); // Preloading a function into cache
 		auto s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
 		{
@@ -294,7 +296,7 @@ VI_OPTIMIZE_OFF
 		}
 		const auto pure = e - s;
 
-		constexpr auto EXT = 10U;
+		constexpr auto EXT = 30U;
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		e = vi_tmGetTicks(); // Preloading a function into cache
 		s = vi_tmGetTicks();
@@ -303,6 +305,10 @@ VI_OPTIMIZE_OFF
 			e = vi_tmGetTicks(); //-V761
 
 			// EXT calls
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 		}
@@ -321,16 +327,16 @@ VI_OPTIMIZE_ON
 	{
 		struct itm_t
 		{
-			std::string_view name_; // Name
-			vi_tmTicks_t total_{}; // Total ticks duration
-			std::size_t amount_{}; // Number of measured units
-			std::size_t calls_cnt_{}; // To account for overheads
+			std::string_view on_name_; // Name
+			vi_tmTicks_t on_total_{}; // Total ticks duration
+			std::size_t on_amount_{}; // Number of measured units
+			std::size_t on_calls_cnt_{}; // To account for overheads
 
 			duration_t total_time_{}; // seconds
 			duration_t average_{}; // seconds
 			std::string total_txt_;
 			std::string average_txt_;
-			itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : name_{ n }, total_{ t }, amount_{ a }, calls_cnt_{ c } {}
+			itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : on_name_{ n }, on_total_{ t }, on_amount_{ a }, on_calls_cnt_{ c } {}
 		};
 
 		std::vector<itm_t> meterages_;
@@ -352,10 +358,11 @@ VI_OPTIMIZE_ON
 
 		auto& itm = traits.meterages_.emplace_back(name, total, amount, calls_cnt);
 
-		if (const auto total_over_ticks = traits.measurement_cost_ * itm.calls_cnt_; itm.total_ > total_over_ticks)
+		constexpr auto dirty = 1.1; // A fair odds would be 1.
+		if (const auto total_over_ticks = traits.measurement_cost_ * itm.on_calls_cnt_ / dirty; itm.on_total_ > total_over_ticks)
 		{
-			itm.total_time_ = (itm.total_ - total_over_ticks) * traits.tick_duration_;
-			itm.average_ = itm.total_time_ / itm.amount_;
+			itm.total_time_ = traits.tick_duration_ * (itm.on_total_ - total_over_ticks);
+			itm.average_ = itm.total_time_ / itm.on_amount_;
 			itm.average_txt_ = to_string(itm.average_);
 		}
 		else
@@ -369,12 +376,12 @@ VI_OPTIMIZE_ON
 		itm.total_txt_ = to_string(itm.total_time_);
 		traits.max_len_total_ = std::max(traits.max_len_total_, itm.total_txt_.length());
 		traits.max_len_average_ = std::max(traits.max_len_average_, itm.average_txt_.length());
-		traits.max_len_name_ = std::max(traits.max_len_name_, itm.name_.length());
+		traits.max_len_name_ = std::max(traits.max_len_name_, itm.on_name_.length());
 
-		if (itm.amount_ > traits.max_amount_)
+		if (itm.on_amount_ > traits.max_amount_)
 		{
-			traits.max_amount_ = itm.amount_;
-			auto max_len_amount = static_cast<std::size_t>(std::floor(std::log10(itm.amount_)));
+			traits.max_amount_ = itm.on_amount_;
+			auto max_len_amount = static_cast<std::size_t>(std::floor(std::log10(itm.on_amount_)));
 			max_len_amount += max_len_amount / 3; // for thousand separators
 			max_len_amount += 1;
 			traits.max_len_amount_ = max_len_amount;
@@ -396,10 +403,10 @@ VI_OPTIMIZE_ON
 			switch (flags_ & static_cast<uint32_t>(vi_tmSortMask))
 			{
 			case static_cast<uint32_t>(vi_tmSortByName):
-				result = desc ? (l.name_ > r.name_) : (l.name_ < r.name_);
+				result = desc ? (l.on_name_ > r.on_name_) : (l.on_name_ < r.on_name_);
 				break;
 			case static_cast<uint32_t>(vi_tmSortByAmount):
-				result = desc ? (l.amount_ > r.amount_) : (l.amount_ < r.amount_);
+				result = desc ? (l.on_amount_ > r.on_amount_) : (l.on_amount_ < r.on_amount_);
 				break;
 			case static_cast<uint32_t>(vi_tmSortByTime):
 				result = desc ? (l.total_time_ > r.total_time_) : (l.total_time_ < r.total_time_);
@@ -458,12 +465,12 @@ VI_OPTIMIZE_ON
 			};
 			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t)); //-V2511
 
-			const char fill = '.'; // (n_ - 1) % 3 ? ' ' : '.';
+			const char fill = (traits_.meterages_.size() > 4 && (n_ - 1) % 2) ? ' ' : '.';
 			str << std::setw(number_len_) << n_ << ". ";
-			str << std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.name_ << ": ";
+			str << std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.on_name_ << ": ";
 			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [";
 			str << std::setw(traits_.max_len_total_) << i.total_txt_ << " / ";
-			str << std::setw(traits_.max_len_amount_) << i.amount_ << "]";
+			str << std::setw(traits_.max_len_amount_) << i.on_amount_ << "]";
 			str << "\n";
 
 			auto result = str.str();
@@ -502,6 +509,6 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t
 	auto s = str.str();
 	ret += fn(s.c_str(), data);
 	meterage_format_t mf{ traits, fn, data };
-	ret == mf.header();
+	ret += mf.header();
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }

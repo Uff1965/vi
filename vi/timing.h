@@ -130,6 +130,7 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmWarming(int all, VI_STD(size_t) ms); // Superfluous for Intel
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
+	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) n);
 	VI_TM_API void VI_TM_CALL vi_tmClear(void);
 
 	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
@@ -172,7 +173,9 @@ namespace vi_tm
 	public:
 		init_t(const char* title = "Timing report:", vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), void* data = stdout, std::uint32_t flags = 0)
 			:title_{ title + std::string{"\n"}}, cb_{fn}, data_{data}, flags_{flags}
-		{/**/}
+		{
+			vi_tmInit(32);
+		}
 
 		~init_t()
 		{

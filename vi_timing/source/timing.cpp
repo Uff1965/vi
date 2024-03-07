@@ -25,8 +25,8 @@ namespace ch = std::chrono;
 struct item_t
 {
 	std::atomic<vi_tmTicks_t> time_total_{ 0 };
-	std::size_t amount_{ 0 };
-	std::size_t calls_cnt_{ 0 };
+	std::size_t on_amount_{ 0 };
+	std::size_t on_calls_cnt_{ 0 };
 
 	static inline std::mutex s_instance_guard;
 	static inline CONTAINER s_instance;
@@ -66,8 +66,8 @@ std::atomic<vi_tmTicks_t>* vi_tmItem(const char* name, std::size_t amount)
 	{
 		std::scoped_lock lg_{ item_t::s_instance_guard };
 		auto& item = item_t::s_instance[name];
-		item.calls_cnt_++;
-		item.amount_ += amount;
+		item.on_calls_cnt_++;
+		item.on_amount_ += amount;
 		result = &item.time_total_;
 	}
 	return result;
@@ -79,14 +79,21 @@ int vi_tmResults(vi_tmLogRAW_t fn, void* data)
 	std::scoped_lock lg_{ item_t::s_instance_guard };
 	for (const auto& [name, item] : item_t::s_instance)
 	{
-		assert(item.calls_cnt_ && item.amount_ >= item.calls_cnt_);
-		if (!name.empty() && 0 == fn(name.c_str(), item.time_total_, item.amount_, item.calls_cnt_, data))
+		assert(item.on_calls_cnt_ && item.on_amount_ >= item.on_calls_cnt_);
+		if (!name.empty() && 0 == fn(name.c_str(), item.time_total_, item.on_amount_, item.on_calls_cnt_, data))
 		{
 			result = 0;
 			break;
 		}
 	}
 	return result;
+}
+
+void vi_tmInit(std::size_t n)
+{
+	std::scoped_lock lg_{ item_t::s_instance_guard };
+	assert(item_t::s_instance.empty());
+	item_t::s_instance.reserve(n);
 }
 
 void vi_tmClear(void)
