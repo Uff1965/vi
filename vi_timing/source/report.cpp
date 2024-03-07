@@ -35,38 +35,32 @@ namespace
 
 		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
 		friend constexpr [[nodiscard]] duration_t operator*(const duration_t& d, T f)
-		{
-			return duration_t{ d.count() * f };
+		{	return duration_t{ d.count() * f };
 		}
 
 		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
 		friend constexpr [[nodiscard]] duration_t operator*(T f, const duration_t& d)
-		{
-			return d * f;
+		{	return d * f;
 		}
 
 		template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>>
 		friend constexpr [[nodiscard]] duration_t operator/(const duration_t& d, T f)
-		{
-			return duration_t{ d.count() / f };
+		{	return duration_t{ d.count() / f };
 		}
 
 		friend constexpr [[nodiscard]] double operator/(const duration_t& l, const duration_t& r)
-		{
-			return l.count() / r.count();
+		{	return l.count() / r.count();
 		}
 
 		friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1);
 
 		friend [[nodiscard]] bool operator<(duration_t l, duration_t r)
-		{
-			return l.count() < r.count() && to_string(l) != to_string(r);
+		{	return l.count() < r.count() && to_string(l) != to_string(r);
 		}
 	};
 
 	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
-	{
-		return os << to_string(d);
+	{	return os << to_string(d);
 	}
 
 	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
@@ -112,136 +106,124 @@ namespace
 
 #ifndef NDEBUG
 	const auto unit_test_to_string = []
-		{
-			struct I { duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; };
-			static constexpr I samples[] = {
-				{1234567.89s, "1.2Ms", 9, 1},
-				{123456.789s, "123.457ks", 9, 3},
-				{0, "0.0ps"},
-				{0.1_ps, "0.0ps"},
-				{1_ps, "0.0ps"}, // The lower limit of accuracy is 10ps.
-				{10_ps, "10.0ps"},
-				{100_ps, "100.0ps"},
-				{1ns, "1.0ns"},
-				{10ns, "10.0ns"},
-				{100ns, "100.0ns"},
-				{1us, "1.0us"},
-				{10us, "10.0us"},
-				{100us, "100.0us"},
-				{1ms, "1.0ms"},
-				{10ms, "10.0ms"},
-				{100ms, "100.0ms"},
-				{1s, "1.0s "},
-				{10s, "10.0s "},
-				{100s, "100.0s "},
-				{1min, "60.0s "},
-				{1h, "3.6ks"},
+	{
+		struct I { duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; };
+		static constexpr I samples[] = {
+			{1234567.89s, "1.2Ms", 9, 1},
+			{123456.789s, "123.457ks", 9, 3},
+			{0, "0.0ps"},
+			{0.1_ps, "0.0ps"},
+			{1_ps, "0.0ps"}, // The lower limit of accuracy is 10ps.
+			{10_ps, "10.0ps"},
+			{100_ps, "100.0ps"},
+			{1ns, "1.0ns"},
+			{10ns, "10.0ns"},
+			{100ns, "100.0ns"},
+			{1us, "1.0us"},
+			{10us, "10.0us"},
+			{100us, "100.0us"},
+			{1ms, "1.0ms"},
+			{10ms, "10.0ms"},
+			{100ms, "100.0ms"},
+			{1s, "1.0s "},
+			{10s, "10.0s "},
+			{100s, "100.0s "},
+			{1min, "60.0s "},
+			{1h, "3.6ks"},
+			{4.999999999999_ps, "0ps", 1, 0},
+			{4.999999999999_ps, "0.0ps", 2},
+			{4.999999999999_ps, "0.0ps", 3},
+			{4.999999999999_ps, "0.0ps", 4},
+			{5.000000000000_ps, "10ps", 1, 0},
+			{5.000000000000_ps, "10.0ps", 2},
+			{5.000000000000_ps, "10.0ps", 3},
+			{5.000000000000_ps, "10.0ps", 4},
+			{4.499999999999ns, "4ns", 1, 0},
+			{4.499999999999ns, "4.5ns", 2},
+			{4.499999999999ns, "4.5ns", 3},
+			{4.499999999999ns, "4.5ns", 4},
+			{4.999999999999ns, "5ns", 1, 0},
+			{4.999999999999ns, "5.0ns", 2},
+			{4.999999999999ns, "5.0ns", 3},
+			{4.999999999999ns, "5.0ns", 4},
+			{5.000000000000ns, "5ns", 1, 0},
+			{5.000000000000ns, "5.0ns", 2},
+			{5.000000000000ns, "5.0ns", 3},
+			{5.000000000000ns, "5.0ns", 4},
+			{123.4ns, "100ns", 1, 0},
+			{123.4ns, "120.0ns", 2},
+			{123.4ns, "123.0ns", 3},
+			{123.4ns, "123.4ns", 4},
+			{4.999999999999_ps, "0.0ps", 2, 1},
+			{4.999999999999_ps, "0.00ps", 3, 2},
+			{4.999999999999_ps, "0.00ps", 4, 2},
+			{5.000000000000_ps, "10.00ps", 3, 2},
+			{5.000000000000_ps, "10.00ps", 4, 2},
+			{4.499999999999ns, "4.5ns", 2, 1},
+			{4.499999999999ns, "4.50ns", 3, 2},
+			{4.499999999999ns, "4.50ns", 4, 2},
+			{4.999999999999ns, "5.0ns", 2, 1},
+			{4.999999999999ns, "5.00ns", 3, 2},
+			{4.999999999999ns, "5.00ns", 4, 2},
+			{5.000000000000ns, "5.0ns", 2, 1},
+			{5.000000000000ns, "5.00ns", 3, 2},
+			{5.000000000000ns, "5.00ns", 4, 2},
+			{123.4ns, "120.0ns", 2, 1},
+			{123.4ns, "123.00ns", 3, 2},
+			{123.4ns, "123.40ns", 4, 2},
+			//**********************************
+			{0.0_ps, "0.0ps"},
+			{0.123456789us, "123.5ns", 4},
+			{1.23456789s, "1s ", 1, 0},
+			{1.23456789s, "1.2s ", 3},
+			{1.23456789s, "1.2s "},
+			{1.23456789us, "1.2us"},
+			{1004.4ns, "1.0us", 2},
+			{12.3456789s, "10s ", 1, 0},
+			{12.3456789s, "12.3s ", 3},
+			{12.3456789us, "12.3us", 3},
+			{12.3456s, "12.0s "},
+			{12.34999999ms, "10ms", 1, 0},
+			{12.34999999ms, "12.3ms", 3},
+			{12.34999999ms, "12.3ms", 4},
+			{12.4999999ms, "12.0ms"},
+			{12.4999999ms, "12.5ms", 3},
+			{12.5000000ms, "13.0ms"},
+			{123.456789ms, "123.0ms", 3},
+			{123.456789us, "120.0us"},
+			{123.4999999ms, "123.5ms", 4},
+			{1234.56789us, "1.2ms"},
+			{245.0_ps, "250.0ps"},
+			{49.999_ps, "50.0ps"},
+			{50.0_ps, "50.0ps"},
+			{9.49999_ps, "10.0ps"},
+			{9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
+			{9.999ns, "10.0ns"},
+			{99.49999_ps, "100.0ps"},
+			{99.4999ns, "99.0ns"},
+			{99.4ms, "99.0ms"},
+			{99.5_ps, "100.0ps"},
+			{99.5ms, "100.0ms"},
+			{99.5ns, "100.0ns"},
+			{99.5us, "100.0us"},
+			{99.999_ps, "100.0ps"},
+			{999.0_ps, "1.0ns"},
+			{999.45ns, "1us", 1, 0},
+			{999.45ns, "1.0us", 2},
+			{999.45ns, "999.0ns", 3},
+			{999.45ns, "999.5ns", 4},
+			{999.45ns, "999.45ns", 5, 2},
+			{999.55ns, "1.0us", 3},
+			{99ms, "99.0ms"},
+		};
 
-				{4.999999999999_ps, "0ps", 1, 0},
-				{4.999999999999_ps, "0.0ps", 2},
-				{4.999999999999_ps, "0.0ps", 3},
-				{4.999999999999_ps, "0.0ps", 4},
-				{5.000000000000_ps, "10ps", 1, 0},
-				{5.000000000000_ps, "10.0ps", 2},
-				{5.000000000000_ps, "10.0ps", 3},
-				{5.000000000000_ps, "10.0ps", 4},
+		for (auto& i : samples)
+		{	const auto str = to_string(i.sec_, i.precision_, i.dec_);
+			assert(i.res_ == str);
+		}
 
-				{4.499999999999ns, "4ns", 1, 0},
-				{4.499999999999ns, "4.5ns", 2},
-				{4.499999999999ns, "4.5ns", 3},
-				{4.499999999999ns, "4.5ns", 4},
-				{4.999999999999ns, "5ns", 1, 0},
-				{4.999999999999ns, "5.0ns", 2},
-				{4.999999999999ns, "5.0ns", 3},
-				{4.999999999999ns, "5.0ns", 4},
-				{5.000000000000ns, "5ns", 1, 0},
-				{5.000000000000ns, "5.0ns", 2},
-				{5.000000000000ns, "5.0ns", 3},
-				{5.000000000000ns, "5.0ns", 4},
-
-				{123.4ns, "100ns", 1, 0},
-				{123.4ns, "120.0ns", 2},
-				{123.4ns, "123.0ns", 3},
-				{123.4ns, "123.4ns", 4},
-
-				{4.999999999999_ps, "0ps", 1, 0},
-				{4.999999999999_ps, "0.0ps", 2, 1},
-				{4.999999999999_ps, "0.00ps", 3, 2},
-				{4.999999999999_ps, "0.00ps", 4, 2},
-				{5.000000000000_ps, "10.00ps", 3, 2},
-				{5.000000000000_ps, "10.00ps", 4, 2},
-
-				{4.499999999999ns, "4.5ns", 2, 1},
-				{4.499999999999ns, "4.50ns", 3, 2},
-				{4.499999999999ns, "4.50ns", 4, 2},
-				{4.999999999999ns, "5ns", 1, 0},
-				{4.999999999999ns, "5.0ns", 2, 1},
-				{4.999999999999ns, "5.00ns", 3, 2},
-				{4.999999999999ns, "5.00ns", 4, 2},
-				{5.000000000000ns, "5ns", 1, 0},
-				{5.000000000000ns, "5.0ns", 2, 1},
-				{5.000000000000ns, "5.00ns", 3, 2},
-				{5.000000000000ns, "5.00ns", 4, 2},
-
-				{123.4ns, "100ns", 1, 0},
-				{123.4ns, "120.0ns", 2, 1},
-				{123.4ns, "123.00ns", 3, 2},
-				{123.4ns, "123.40ns", 4, 2},
-
-				//**********************************
-				{0.0_ps, "0.0ps"},
-				{0.123456789us, "123.5ns", 4},
-				{1.23456789s, "1s ", 1, 0},
-				{1.23456789s, "1.2s ", 3},
-				{1.23456789s, "1.2s "},
-				{1.23456789us, "1.2us"},
-				{1004.4ns, "1.0us", 2},
-				{12.3456789s, "10s ", 1, 0},
-				{12.3456789s, "12.3s ", 3},
-				{12.3456789us, "12.3us", 3},
-				{12.3456s, "12.0s "},
-				{12.34999999ms, "10ms", 1, 0},
-				{12.34999999ms, "12.3ms", 3},
-				{12.34999999ms, "12.3ms", 4},
-				{12.4999999ms, "12.0ms"},
-				{12.4999999ms, "12.5ms", 3},
-				{12.5000000ms, "13.0ms"},
-				{123.456789ms, "123.0ms", 3},
-				{123.456789us, "120.0us"},
-				{123.4999999ms, "123.5ms", 4},
-				{1234.56789us, "1.2ms"},
-				{1s, "1.0s "},
-				{245.0_ps, "250.0ps"},
-				{49.999_ps, "50.0ps"},
-				{50.0_ps, "50.0ps"},
-				{9.49999_ps, "10.0ps"},
-				{9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
-				{9.999ns, "10.0ns"},
-				{99.49999_ps, "100.0ps"},
-				{99.4999ns, "99.0ns"},
-				{99.4ms, "99.0ms"},
-				{99.5_ps, "100.0ps"},
-				{99.5ms, "100.0ms"},
-				{99.5ns, "100.0ns"},
-				{99.5us, "100.0us"},
-				{99.999_ps, "100.0ps"},
-				{999.0_ps, "1.0ns"},
-				{999.45ns, "1us", 1, 0},
-				{999.45ns, "1.0us", 2},
-				{999.45ns, "999.0ns", 3},
-				{999.45ns, "999.5ns", 4},
-				{999.45ns, "999.45ns", 5, 2},
-				{999.55ns, "1.0us", 3},
-				{99ms, "99.0ms"},
-			};
-
-			for (auto& i : samples)
-			{	const auto str = to_string(i.sec_, i.precision_, i.dec_);
-				assert(i.res_ == str);
-			}
-
-			return 0;
-		}();
+		return 0;
+	}();
 #endif // #ifndef NDEBUG
 
 VI_OPTIMIZE_OFF
@@ -381,8 +363,6 @@ VI_OPTIMIZE_ON
 
 		auto& itm = traits.meterages_.emplace_back(name, total, amount, calls_cnt);
 
-		traits.max_len_name_ = std::max(traits.max_len_name_, itm.name_.length());
-
 		if (const auto total_over_ticks = traits.measurement_cost_ * itm.calls_cnt_; itm.total_ > total_over_ticks)
 		{
 			itm.total_time_ = (itm.total_ - total_over_ticks) * traits.tick_duration_;
@@ -392,13 +372,15 @@ VI_OPTIMIZE_ON
 		else
 		{
 			// Leave zeros.
+			itm.total_time_ = duration_t{};
+			itm.average_ = duration_t{};
 			itm.average_txt_ = "<too few>";
 		}
 
 		itm.total_txt_ = to_string(itm.total_time_);
 		traits.max_len_total_ = std::max(traits.max_len_total_, itm.total_txt_.length());
-
 		traits.max_len_average_ = std::max(traits.max_len_average_, itm.average_txt_.length());
+		traits.max_len_name_ = std::max(traits.max_len_name_, itm.name_.length());
 
 		if (itm.amount_ > traits.max_amount_)
 		{
