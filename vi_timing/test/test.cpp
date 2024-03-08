@@ -104,7 +104,7 @@ namespace {
 
 			for (auto n = CNT; n; --n)
 			{
-				VI_TM(("thread_" + std::to_string(n % 16)).c_str());
+				VI_TM(("thread_" + std::to_string(n % 10)).c_str());
 				v.fetch_add(1, std::memory_order_relaxed);
 				std::this_thread::sleep_for(15ms);
 			}

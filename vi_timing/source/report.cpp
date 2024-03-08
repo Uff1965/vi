@@ -4,6 +4,7 @@
 #include <vi/timing.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -12,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -23,10 +25,6 @@ namespace
 {
 	constexpr auto operator""_ps(long double v) noexcept { return ch::duration<double, std::pico>(v); };
 	constexpr auto operator""_ps(unsigned long long v) noexcept { return ch::duration<double, std::pico>(v); };
-	constexpr auto operator""_ks(long double v) noexcept { return ch::duration<double, std::kilo>(v); };
-	constexpr auto operator""_ks(unsigned long long v) noexcept { return ch::duration<double, std::kilo>(v); };
-	constexpr auto operator""_Ms(long double v) noexcept { return ch::duration<double, std::mega>(v); };
-	constexpr auto operator""_Ms(unsigned long long v) noexcept { return ch::duration<double, std::mega>(v); };
 
 	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
@@ -71,19 +69,17 @@ namespace
 	{
 		sec = duration_t{ round(sec.count(), precision, dec) };
 
-		std::pair<std::string_view, double> k;
-		if (10_ps > sec)			{ k = {"ps", 1.0}; }
-		else if (999.95_ps > sec)	{ k = {"ps", 1e12}; }
-		else if (999.95ns > sec)	{ k = {"ns", 1e9}; }
-		else if (999.95us > sec)	{ k = {"us", 1e6}; }
-		else if (999.95ms > sec)	{ k = {"ms", 1e3}; }
-		else if (999.95s > sec)		{ k = {"s ", 1e0}; }
-		else if (999.95_ks > sec)	{ k = {"ks", 1e-3}; }
-		else if (999.95_Ms > sec)	{ k = {"Ms", 1e-6}; }
-		else						{ k = {"Gs", 1e-9}; }
+		struct { std::string_view suffix_; double factor_; } k;
+		if (10_ps > sec)			{ k = {"ps"sv, 1.0}; }
+		else if (999.95_ps > sec)	{ k = {"ps"sv, 1e12}; }
+		else if (999.95ns > sec)	{ k = {"ns"sv, 1e9}; }
+		else if (999.95us > sec)	{ k = {"us"sv, 1e6}; }
+		else if (999.95ms > sec)	{ k = {"ms"sv, 1e3}; }
+		else if (999.95s > sec)		{ k = {"s "sv, 1e0}; }
+		else						{ k = {"ks"sv, 1e-3}; }
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(dec) << sec.count() * k.second << k.first;
+		ss << std::fixed << std::setprecision(dec) << sec.count() * k.factor_ << k.suffix_;
 		return ss.str();
 	}
 
@@ -94,7 +90,7 @@ namespace
 		static constexpr I samples[] = {
 			{10.1ms, "10.0ms"},
 			{10.01ms, "10.0ms"},
-			{1234567.89s, "1.2Ms", 9, 1},
+			{1234567.89s, "1200.0ks", 9, 1},
 			{123456.789s, "123.457ks", 9, 3},
 			{0, "0.0ps"},
 			{0.1_ps, "0.0ps"},
@@ -438,6 +434,24 @@ VI_OPTIMIZE_ON
 		return 1; // Continue enumerate.
 	}
 
+	template<vi_tmReportFlags E> auto make_tuple(const traits_t::itm_t& v);
+	template<vi_tmReportFlags E> bool less(const traits_t::itm_t& l, const traits_t::itm_t& r)
+	{	return make_tuple<E>(r) < make_tuple<E>(l);
+	}
+
+	template<> auto make_tuple<vi_tmSortByName>(const traits_t::itm_t& v)
+	{	return std::tuple{ v.on_name_ };
+	}
+	template<> auto make_tuple<vi_tmSortBySpeed>(const traits_t::itm_t& v)
+	{	return std::tuple{ v.average_, v.on_total_, v.on_amount_, v.on_name_ };
+	}
+	template<> auto make_tuple<vi_tmSortByTime>(const traits_t::itm_t& v)
+	{	return std::tuple{ v.on_total_, v.average_, v.on_amount_, v.on_name_ };
+	}
+	template<> auto make_tuple<vi_tmSortByAmount>(const traits_t::itm_t& v)
+	{	return std::tuple{ v.on_amount_, v.average_, v.on_total_, v.on_name_ };
+	}
+
 	struct meterage_comparator_t
 	{
 		uint32_t flags_{};
@@ -445,26 +459,25 @@ VI_OPTIMIZE_ON
 		explicit meterage_comparator_t(uint32_t flags) noexcept : flags_{ flags } {}
 
 		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const {
-			const bool desc = !(static_cast<uint32_t>(vi_tmSortAscending) & flags_);
-
-			auto result = false;
+			auto pr = &less<vi_tmSortBySpeed>;
 			switch (flags_ & static_cast<uint32_t>(vi_tmSortMask))
 			{
 			case static_cast<uint32_t>(vi_tmSortByName):
-				result = desc ? (l.on_name_ > r.on_name_) : (l.on_name_ < r.on_name_);
+				pr = less<vi_tmSortByName>;
 				break;
 			case static_cast<uint32_t>(vi_tmSortByAmount):
-				result = desc ? (l.on_amount_ > r.on_amount_) : (l.on_amount_ < r.on_amount_);
+				pr = less<vi_tmSortByAmount>;
 				break;
 			case static_cast<uint32_t>(vi_tmSortByTime):
-				result = desc ? (l.total_time_ > r.total_time_) : (l.total_time_ < r.total_time_);
+				pr = less<vi_tmSortByTime>;
 				break;
-			case static_cast<uint32_t>(vi_tmSortBySpeed):
+//			case static_cast<uint32_t>(vi_tmSortBySpeed):
 			default:
-				result = desc ? (l.average_ > r.average_) : (l.average_ < r.average_);
 				break;
 			}
-			return result;
+
+			const bool desc = !(static_cast<uint32_t>(vi_tmSortAscending) & flags_);
+			return desc ? pr(l, r) : pr(r, l);
 		}
 	};
 
