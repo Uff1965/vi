@@ -38,6 +38,6 @@
 
 #define VI_STR_AUX( a, b ) a##b
 #define VI_STR( a, b ) VI_STR_AUX( a, b )
-#define VI_MAKE_VAR_NAME( prefix ) VI_STR( prefix, __LINE__ )
+#define VI_MAKE_UNIC_ID( prefix ) VI_STR( prefix, __LINE__ )
 
 #endif // #ifndef VI_TIMING_VI_COMMON_H

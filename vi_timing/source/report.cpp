@@ -211,6 +211,33 @@ namespace
 	}();
 #endif // #ifndef NDEBUG
 
+	void warming(int all, ch::milliseconds ms)
+	{
+		if (ms.count())
+		{
+			std::atomic_bool done = false; // It must be defined before 'threads'!!!
+			auto load = [&done] {while (!done) {/**/ }}; //-V776
+
+			const auto hwcnt = std::thread::hardware_concurrency();
+			std::vector<std::thread> threads((0 != all && 1 < hwcnt) ? hwcnt - 1 : 0);
+			for (auto& t : threads)
+			{
+				t = std::thread{ load };
+			}
+
+			for (const auto stop = ch::steady_clock::now() + ms; ch::steady_clock::now() < stop;)
+			{/*The thread is fully loaded.*/
+			}
+
+			done = true;
+
+			for (auto& t : threads)
+			{
+				t.join();
+			}
+		}
+	}
+
 	duration_t seconds_per_tick()
 	{
 		auto wait_for_the_time_changed = []
@@ -285,7 +312,7 @@ namespace
 VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{
-		constexpr auto CNT = 1'000U;
+		constexpr auto CNT = 100U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		auto e = vi_tmGetTicks(); // Preloading a function into cache
@@ -293,20 +320,20 @@ VI_OPTIMIZE_OFF
 		for (auto cnt = CNT; cnt; --cnt)
 		{
 			e = vi_tmGetTicks();
+			e = vi_tmGetTicks();
 		}
 		const auto pure = e - s;
 
-		constexpr auto EXT = 30U;
+		constexpr auto EXT = 20U;
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		e = vi_tmGetTicks(); // Preloading a function into cache
 		s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
 		{
 			e = vi_tmGetTicks(); //-V761
+			e = vi_tmGetTicks();
 
 			// EXT calls
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
@@ -318,10 +345,12 @@ VI_OPTIMIZE_OFF
 	}
 VI_OPTIMIZE_ON
 
-	constexpr std::string_view title_name_ = "Name";
-	constexpr std::string_view title_average_ = "Average";
-	constexpr std::string_view title_total_ = "Total";
-	constexpr std::string_view title_amount_ = "Amount";
+	const std::string title_name_{ "Name"s };
+	const std::string title_average_{ "Average"s };
+	const std::string title_total_{ "Total"s };
+	const std::string title_amount_{ "Amount"s };
+	const std::string Ascending { " (^)"s };
+	const std::string Descending{ " (v)"s };
 
 	struct traits_t
 	{
@@ -332,15 +361,16 @@ VI_OPTIMIZE_ON
 			std::size_t on_amount_{}; // Number of measured units
 			std::size_t on_calls_cnt_{}; // To account for overheads
 
-			duration_t total_time_{}; // seconds
-			duration_t average_{}; // seconds
-			std::string total_txt_;
-			std::string average_txt_;
+			duration_t total_time_{.0}; // seconds
+			duration_t average_{.0}; // seconds
+			std::string total_txt_{ "<too few>" };
+			std::string average_txt_{ "<too few>" };
 			itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : on_name_{ n }, on_total_{ t }, on_amount_{ a }, on_calls_cnt_{ c } {}
 		};
 
 		std::vector<itm_t> meterages_;
 
+		std::uint32_t flags_;
 		const duration_t tick_duration_ = seconds_per_tick();
 		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
@@ -348,6 +378,29 @@ VI_OPTIMIZE_ON
 		std::size_t max_len_total_{ title_total_.length() };
 		std::size_t max_len_average_{ title_average_.length() };
 		std::size_t max_len_amount_{ title_amount_.length() };
+		
+		traits_t(std::uint32_t flags) : flags_{ flags }
+		{
+			const auto ac = Descending.length();
+			assert(ac == Ascending.length());
+
+			switch (flags_ & static_cast<uint32_t>(vi_tmSortMask))
+			{
+			case vi_tmSortByAmount:
+				max_len_amount_ += ac;
+				break;
+			case vi_tmSortByName:
+				max_len_name_ += ac;
+				break;
+			case vi_tmSortByTime:
+				max_len_total_ += ac;
+				break;
+			case vi_tmSortBySpeed:
+			default:
+				max_len_average_ += ac;
+				break;
+			}
+		}
 	};
 
 	int collector_meterages(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* _traits)
@@ -356,24 +409,19 @@ VI_OPTIMIZE_ON
 		auto& traits = *static_cast<traits_t*>(_traits);
 		assert(calls_cnt && amount >= calls_cnt);
 
+		const auto sort = traits.flags_ & static_cast<uint32_t>(vi_tmSortMask);
+
 		auto& itm = traits.meterages_.emplace_back(name, total, amount, calls_cnt);
 
-		constexpr auto dirty = 1.1; // A fair odds would be 1.
-		if (const auto total_over_ticks = traits.measurement_cost_ * itm.on_calls_cnt_ / dirty; itm.on_total_ > total_over_ticks)
+		constexpr auto dirty = 0.95; // A fair odds would be 1.0
+		if (const auto total_over_ticks = traits.measurement_cost_ * itm.on_calls_cnt_ * dirty; itm.on_total_ > total_over_ticks)
 		{
 			itm.total_time_ = traits.tick_duration_ * (itm.on_total_ - total_over_ticks);
 			itm.average_ = itm.total_time_ / itm.on_amount_;
+			itm.total_txt_ = to_string(itm.total_time_);
 			itm.average_txt_ = to_string(itm.average_);
 		}
-		else
-		{
-			// Leave zeros.
-			itm.total_time_ = duration_t{};
-			itm.average_ = duration_t{};
-			itm.average_txt_ = "<too few>";
-		}
 
-		itm.total_txt_ = to_string(itm.total_time_);
 		traits.max_len_total_ = std::max(traits.max_len_total_, itm.total_txt_.length());
 		traits.max_len_average_ = std::max(traits.max_len_average_, itm.average_txt_.length());
 		traits.max_len_name_ = std::max(traits.max_len_name_, itm.on_name_.length());
@@ -437,14 +485,30 @@ VI_OPTIMIZE_ON
 			}
 		}
 
-		int header() const
+		int header(std::uint32_t flags) const
 		{
+			const auto order = (flags & static_cast<uint32_t>(vi_tmSortAscending)) ? Ascending : Descending;
+			auto sort = vi_tmSortBySpeed;
+			switch (auto s = flags & static_cast<uint32_t>(vi_tmSortMask))
+			{
+			case vi_tmSortBySpeed:
+				break;
+			case vi_tmSortByAmount:
+			case vi_tmSortByName:
+			case vi_tmSortByTime:
+				sort = static_cast<vi_tmReportFlags>(s);
+				break;
+			default:
+				assert(false);
+				break;
+			}
+
 			std::ostringstream str;
 			str << std::setw(number_len_) << "#" << "  ";
-			str << std::setw(traits_.max_len_name_) << std::left << title_name_ << ": ";
-			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << title_average_ << " [";
-			str << std::setw(traits_.max_len_total_) << title_total_ << " / ";
-			str << std::setw(traits_.max_len_amount_) << title_amount_ << "]";
+			str << std::setw(traits_.max_len_name_) << std::left << (title_name_ + (sort == vi_tmSortByName ? order : "")) << ": ";
+			str << std::setw(traits_.max_len_average_) << std::right << (title_average_ + (sort == vi_tmSortBySpeed ? order : "")) << std::setfill(' ') << " [";
+			str << std::setw(traits_.max_len_total_) << (title_total_ + (sort == vi_tmSortByTime ? order : "")) << " / ";
+			str << std::setw(traits_.max_len_amount_) << (title_amount_ + (sort == vi_tmSortByAmount ? order : "")) << "]";
 			str << "\n";
 
 			auto result = str.str();
@@ -483,7 +547,9 @@ VI_OPTIMIZE_ON
 
 VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
-	traits_t traits;
+	warming(false, 512ms);
+
+	traits_t traits{ flags };
 	vi_tmResults(collector_meterages, &traits);
 
 	std::sort(traits.meterages_.begin(), traits.meterages_.end(), meterage_comparator_t{ flags });
@@ -509,6 +575,6 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t
 	auto s = str.str();
 	ret += fn(s.c_str(), data);
 	meterage_format_t mf{ traits, fn, data };
-	ret += mf.header();
+	ret += mf.header(flags);
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }

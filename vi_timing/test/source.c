@@ -7,6 +7,7 @@
 
 #include <threads.h>
 
+//VI_OPTIMIZE_OFF
 void foo(void)
 {
 	{
@@ -60,3 +61,4 @@ void foo(void)
 		vi_tmAdd(tm, s);
 	}
 }
+//VI_OPTIMIZE_ON

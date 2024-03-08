@@ -4,83 +4,41 @@
 #include <vi/timing.h>
 
 #include <cassert>
-#include <chrono>
 #include <mutex>
 #include <string>
-#include <thread>
-#include <vector>
-
-#define UNORDERED
-#ifdef UNORDERED
-#	include <unordered_map>
-#	define CONTAINER std::unordered_map<std::string, item_t>
-#else
-#	include <map>
-#	define CONTAINER std::map<std::string, item_t, std::less<>>
-#endif
-
-using namespace std::literals;
-namespace ch = std::chrono;
+#include <unordered_map>
 
 struct item_t
 {
-	std::atomic<vi_tmTicks_t> time_total_{ 0 };
-	std::size_t on_amount_{ 0 };
-	std::size_t on_calls_cnt_{ 0 };
-
-	static inline std::mutex s_instance_guard;
-	static inline CONTAINER s_instance;
-	static inline decltype(time_total_) s_dummy{ 0 };
+	std::atomic<vi_tmTicks_t> ticks_{ 0 };
+	std::size_t amount_{ 0 };
+	std::size_t calls_cnt_{ 0 };
 };
 
-void vi_tmWarming(int all, std::size_t ms)
-{
-	if (0 != ms)
-	{
-		std::atomic_bool done = false; // It must be defined before 'threads'!!!
-		auto load = [&done] {while (!done) {/**/}}; //-V776
-
-		const auto hwcnt = std::thread::hardware_concurrency();
-		std::vector<std::thread> threads((0 != all && 1 < hwcnt) ? hwcnt - 1 : 0);
-		for (auto& t : threads)
-		{
-			t = std::thread{ load };
-		}
-
-		for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
-		{/*The thread is fully loaded.*/}
-
-		done = true;
-
-		for (auto& t : threads)
-		{
-			t.join();
-		}
-	}
-}
+decltype(item_t::ticks_) s_dummy_ticks{ 0 };
+std::mutex s_instance_guard;
+std::unordered_map<std::string, item_t> s_instance;
 
 std::atomic<vi_tmTicks_t>* vi_tmItem(const char* name, std::size_t amount)
 {
-	auto result = &item_t::s_dummy;
-	if (name)
-	{
-		std::scoped_lock lg_{ item_t::s_instance_guard };
-		auto& item = item_t::s_instance[name];
-		item.on_calls_cnt_++;
-		item.on_amount_ += amount;
-		result = &item.time_total_;
-	}
-	return result;
+	if (nullptr == name)
+		return &s_dummy_ticks;
+
+	std::scoped_lock lg_{ s_instance_guard };
+	auto& item = s_instance[name];
+	item.calls_cnt_++;
+	item.amount_ += amount;
+	return &item.ticks_;
 }
 
 int vi_tmResults(vi_tmLogRAW_t fn, void* data)
 {
 	auto result = -1;
-	std::scoped_lock lg_{ item_t::s_instance_guard };
-	for (const auto& [name, item] : item_t::s_instance)
+	std::scoped_lock lg_{ s_instance_guard };
+	for (const auto& [name, item] : s_instance)
 	{
-		assert(item.on_calls_cnt_ && item.on_amount_ >= item.on_calls_cnt_);
-		if (!name.empty() && 0 == fn(name.c_str(), item.time_total_, item.on_amount_, item.on_calls_cnt_, data))
+		assert(item.calls_cnt_ && item.amount_ >= item.calls_cnt_);
+		if (!name.empty() && 0 == fn(name.c_str(), item.ticks_, item.amount_, item.calls_cnt_, data))
 		{
 			result = 0;
 			break;
@@ -91,14 +49,14 @@ int vi_tmResults(vi_tmLogRAW_t fn, void* data)
 
 void vi_tmInit(std::size_t n)
 {
-	std::scoped_lock lg_{ item_t::s_instance_guard };
-	assert(item_t::s_instance.empty());
-	item_t::s_instance.reserve(n);
+	std::scoped_lock lg_{ s_instance_guard };
+	assert(s_instance.empty());
+	s_instance.reserve(n);
 }
 
 void vi_tmClear(void)
 {
-	std::scoped_lock lg_{ item_t::s_instance_guard };
- 	item_t::s_instance.clear();
-	item_t::s_dummy = 0U;
+	std::scoped_lock lg_{ s_instance_guard };
+ 	s_instance.clear();
+	s_dummy_ticks = 0U;
 }

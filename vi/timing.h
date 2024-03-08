@@ -127,7 +127,6 @@ extern "C" {
 		vi_tmShowDuration = 0x80,
 	};
 
-	VI_TM_API void VI_TM_CALL vi_tmWarming(int all, VI_STD(size_t) ms); // Superfluous for Intel
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
 	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) n);
@@ -143,11 +142,6 @@ extern "C" {
 
 namespace vi_tm
 {
-	inline void warming(bool all = false, std::size_t ms = 256) 
-	{
-		vi_tmWarming(all, ms);
-	}
-
 	inline int report(vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), void* data = stdout, std::uint32_t flags = 0)
 	{
 		return vi_tmReport(fn, data, flags);
@@ -190,12 +184,12 @@ namespace vi_tm
 } // namespace vi_tm {
 
 #if defined(VI_TM_DISABLE)
-#	define VI_TM_INIT(...) int VI_MAKE_VAR_NAME(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#	define VI_TM(...) int VI_MAKE_VAR_NAME(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#	define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#	define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #	define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
 #else
-#	define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_VAR_NAME(_vi_tm_init_)(__VA_ARGS__)
-#	define VI_TM(...) vi_tm::timer_t VI_MAKE_VAR_NAME(_vi_tm_variable_) (__VA_ARGS__)
+#	define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_)(__VA_ARGS__)
+#	define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) (__VA_ARGS__)
 #	define VI_TM_REPORT(...) vi_tm::report(__VA_ARGS__)
 #endif
 

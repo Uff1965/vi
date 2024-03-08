@@ -11,23 +11,53 @@
 
 #include <vi/timing.h>
 
+#include <iomanip>
 #include <iostream>
+#include <chrono>
 #include <cmath>
 #include <thread>
 #include <vector>
 #include <atomic>
 
 using namespace std::literals;
+namespace ch = std::chrono;
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); // To automatically call the _CrtDumpMemoryLeaks function when the program ends
 const auto _dummy1 = _set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
 #endif
 
-VI_TM_INIT("Timing report:", reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), stdout, 0xE0);
+VI_TM_INIT("Timing report:", reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), stdout, 0xE2);
 VI_TM("*** Global ***");
 
 namespace {
+	void warming(bool all, ch::milliseconds ms)
+	{
+		if (0 != ms.count())
+		{
+			std::atomic_bool done = false; // It must be defined before 'threads'!!!
+			auto load = [&done] {while (!done) {/**/}}; //-V776
+
+			const auto hwcnt = std::thread::hardware_concurrency();
+			std::vector<std::thread> threads((all && hwcnt > 1) ? hwcnt - 1 : 0);
+			for (auto& t : threads)
+			{
+				t = std::thread{ load };
+			}
+
+			for (const auto stop = ch::steady_clock::now() + ms; ch::steady_clock::now() < stop;)
+			{/*The thread is fully loaded.*/
+			}
+
+			done = true;
+
+			for (auto& t : threads)
+			{
+				t.join();
+			}
+		}
+	}
+
 	bool test()
 	{
 		std::cout << "\ntest()" << std::endl;
@@ -49,11 +79,11 @@ namespace {
 			{
 				{ VI_TM("SELF_INT_2"); dummy = 0; }
 
-				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
-				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
-				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
-				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
-				{ VI_TM("SELF_INT_2");  dummy = 0; } { VI_TM("SELF_INT_2");  dummy = 0; }
+				{ VI_TM("SELF_INT_2"); dummy = 0; } { VI_TM("SELF_INT_2"); dummy = 0; }
+				{ VI_TM("SELF_INT_2"); dummy = 0; } { VI_TM("SELF_INT_2"); dummy = 0; }
+				{ VI_TM("SELF_INT_2"); dummy = 0; } { VI_TM("SELF_INT_2"); dummy = 0; }
+				{ VI_TM("SELF_INT_2"); dummy = 0; } { VI_TM("SELF_INT_2"); dummy = 0; }
+				{ VI_TM("SELF_INT_2"); dummy = 0; } { VI_TM("SELF_INT_2"); dummy = 0; }
 			}
 		}
 		std::cout << "Done" << std::endl;
@@ -135,7 +165,10 @@ int main()
 {
 	VI_TM_FUNC;
 
-	vi_tm::warming();
+	const std::time_t t_c = std::chrono::system_clock::to_time_t(ch::system_clock::now());
+	std::cout << "Start: " << std::put_time(std::localtime(&t_c), "%F %T.\n") << std::endl;
+
+	warming(true, 512ms);
 
 	foo();
 
@@ -146,8 +179,4 @@ int main()
 	std::cout << "\nHello, World!\n";
 
 	endl(std::cout);
-
-#ifdef VI_TM_DISABLE
-	vi_tm::report();
-#endif
 }
