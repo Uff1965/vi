@@ -111,7 +111,7 @@ namespace
 		template<typename T>
 		constexpr explicit duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
 
-		friend [[nodiscard]] std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1)
+		[[nodiscard]] friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1)
 		{
 			sec = duration_t{ round(sec.count(), precision, dec) };
 
@@ -131,7 +131,7 @@ namespace
 			return ss.str();
 		}
 
-		friend [[nodiscard]] bool operator<(duration_t l, duration_t r)
+		[[nodiscard]] friend bool operator<(duration_t l, duration_t r)
 		{
 			return l.count() < r.count() && to_string(l) != to_string(r);
 		}
