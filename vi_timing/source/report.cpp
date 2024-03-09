@@ -30,45 +30,6 @@ namespace
 	constexpr auto operator""_Ms(long double v) noexcept { return ch::duration<double, std::mega>(v); };
 	constexpr auto operator""_Ms(unsigned long long v) noexcept { return ch::duration<double, std::mega>(v); };
 
-	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
-	{
-		using ch::duration<double>::duration;
-		template<typename T>
-		constexpr explicit duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
-
-		friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1);
-
-		friend [[nodiscard]] bool operator<(duration_t l, duration_t r)
-		{	return l.count() < r.count() && to_string(l) != to_string(r);
-		}
-	};
-
-	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
-	{	return os << to_string(d);
-	}
-
-	//[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
-	//{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
-	//	double result;
-	//	if (num >= 5e-12 && prec != 0 && prec > dec)
-	//	{
-	//		const auto exp = static_cast<signed char>(std::ceil(std::log10(num)));
-	//		if (const auto n = 1 + dec + (11 + exp) % 3; prec > n)
-	//		{
-	//			prec = static_cast<unsigned char>(n);
-	//		}
-
-	//		const auto factor = std::max(10e-12, std::pow(10.0, exp - prec)); // The lower limit of accuracy is 0.01ns.
-	//		result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) / factor) * factor;
-	//	}
-	//	else
-	//	{
-	//		assert(num < 5e-12);
-	//		result = num;
-	//	}
-	//	return result;
-	//}
-
 	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
 		assert(num >= 0 && prec > dec && prec <= 3 + dec);
@@ -142,25 +103,37 @@ namespace
 		}();
 #endif // #ifndef NDEBUG
 
-	[[nodiscard]] std::string to_string( duration_t sec, unsigned char precision, unsigned char dec)
+	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
-		sec = duration_t{ round(sec.count(), precision, dec) };
+		using ch::duration<double>::duration;
+		template<typename T>
+		constexpr explicit duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
 
-		struct { std::string_view suffix_; double factor_; } k;
-		if (10_ps > sec)		{ k = {"ps"sv, 1.0}; }
-		else if (1ns > sec)		{ k = {"ps"sv, 1e12}; }
-		else if (1us > sec)		{ k = {"ns"sv, 1e9}; }
-		else if (1ms > sec)		{ k = {"us"sv, 1e6}; }
-		else if (1s > sec)		{ k = {"ms"sv, 1e3}; }
-		else if (1_ks > sec)	{ k = {"s "sv, 1e0}; }
-		else if (1_Ms > sec)	{ k = {"ks"sv, 1e-3 }; }
-		else if (1000_Ms > sec)	{ k = {"Ms"sv, 1e-6 }; }
-		else					{ k = {"Gs"sv, 1e-9}; }
+		friend [[nodiscard]] std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1)
+		{
+			sec = duration_t{ round(sec.count(), precision, dec) };
 
-		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(dec) << sec.count() * k.factor_ << k.suffix_;
-		return ss.str();
-	}
+			struct { std::string_view suffix_; double factor_; } k;
+			if (10_ps > sec) { k = { "ps"sv, 1.0 }; }
+			else if (1ns > sec) { k = { "ps"sv, 1e12 }; }
+			else if (1us > sec) { k = { "ns"sv, 1e9 }; }
+			else if (1ms > sec) { k = { "us"sv, 1e6 }; }
+			else if (1s > sec) { k = { "ms"sv, 1e3 }; }
+			else if (1_ks > sec) { k = { "s "sv, 1e0 }; }
+			else if (1_Ms > sec) { k = { "ks"sv, 1e-3 }; }
+			else if (1000_Ms > sec) { k = { "Ms"sv, 1e-6 }; }
+			else { k = { "Gs"sv, 1e-9 }; }
+
+			std::ostringstream ss;
+			ss << std::fixed << std::setprecision(dec) << sec.count() * k.factor_ << k.suffix_;
+			return ss.str();
+		}
+
+		friend [[nodiscard]] bool operator<(duration_t l, duration_t r)
+		{
+			return l.count() < r.count() && to_string(l) != to_string(r);
+		}
+	};
 
 #ifndef NDEBUG
 	const auto unit_test_to_string = []
@@ -289,6 +262,11 @@ namespace
 		return 0;
 	}();
 #endif // #ifndef NDEBUG
+
+	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
+	{
+		return os << to_string(d);
+	}
 
 	void warming(int all, ch::milliseconds ms)
 	{
