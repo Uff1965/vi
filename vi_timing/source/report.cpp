@@ -409,8 +409,8 @@ VI_OPTIMIZE_ON
 
 		auto& itm = traits.meterages_.emplace_back(name, total, amount, calls_cnt);
 
-		constexpr auto dirty = 0.95; // A fair odds would be 1.0
-		if (const auto total_over_ticks = traits.measurement_cost_ * itm.on_calls_cnt_ * dirty; itm.on_total_ > total_over_ticks)
+		constexpr auto dirty = 1.0; // A fair odds would be 1.0
+		if (const auto total_over_ticks = traits.measurement_cost_ * dirty * itm.on_calls_cnt_; itm.on_total_ > total_over_ticks)
 		{
 			itm.total_time_ = traits.tick_duration_ * (itm.on_total_ - total_over_ticks);
 			itm.average_ = itm.total_time_ / itm.on_amount_;
@@ -498,11 +498,11 @@ VI_OPTIMIZE_ON
 			}
 		}
 
-		int header(std::uint32_t flags) const
+		int header() const
 		{
-			const auto order = (flags & static_cast<uint32_t>(vi_tmSortAscending)) ? Ascending : Descending;
+			const auto order = (traits_.flags_ & static_cast<uint32_t>(vi_tmSortAscending)) ? Ascending : Descending;
 			auto sort = vi_tmSortBySpeed;
-			switch (auto s = flags & static_cast<uint32_t>(vi_tmSortMask))
+			switch (auto s = traits_.flags_ & static_cast<uint32_t>(vi_tmSortMask))
 			{
 			case vi_tmSortBySpeed:
 				break;
@@ -567,27 +567,20 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t
 
 	std::sort(traits.meterages_.begin(), traits.meterages_.end(), meterage_comparator_t{ flags });
 
-	int ret = 0;
 	std::ostringstream str;
 	if (flags & static_cast<uint32_t>(vi_tmShowOverhead))
-	{
-		str << "Measurement cost: " << traits.tick_duration_ * traits.measurement_cost_ << " per measurement. ";
+	{	str << "Measurement cost: " << traits.tick_duration_ * traits.measurement_cost_ << " per measurement. ";
 	}
-
 	if (flags & static_cast<uint32_t>(vi_tmShowDuration))
-	{
-		str << "Duration: " << duration() << ". ";
+	{	str << "Duration: " << duration() << ". ";
 	}
-
 	if (flags & static_cast<uint32_t>(vi_tmShowUnit))
-	{
-		str << "One tick corresponds: " << traits.tick_duration_ << ". ";
+	{	str << "One tick corresponds: " << traits.tick_duration_ << ". ";
 	}
-
 	str << '\n';
-	auto s = str.str();
-	ret += fn(s.c_str(), data);
+
+	int ret = fn(str.str().c_str(), data);
 	meterage_format_t mf{ traits, fn, data };
-	ret += mf.header(flags);
+	ret += mf.header();
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }
