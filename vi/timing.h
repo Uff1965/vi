@@ -33,6 +33,7 @@
 
 // Define VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
 #if defined(_WIN32) // Windows x86 or x64
+#	define VI_SYS_CALL __cdecl
 #	ifdef _WIN64
 #		define VI_TM_CALL
 #	else
@@ -46,6 +47,7 @@
 #elif defined(__ANDROID__)
 #	define CM_TM_DISABLE "Android not supported"
 #elif defined (__linux__)
+#	define VI_SYS_CALL
 #	define VI_TM_CALL
 #	ifdef vi_timing_EXPORTS
 #		define VI_TM_API __attribute__((visibility("default")))
@@ -58,8 +60,8 @@
 // Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
 typedef VI_STD(uint64_t) vi_tmTicks_t;
-typedef int (__cdecl *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
-typedef int (__cdecl *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
+typedef int (VI_SYS_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
+typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 #ifdef __cplusplus
 	using vi_tmAtomicTicks_t = std::atomic<vi_tmTicks_t>;
 #else
