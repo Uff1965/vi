@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cfloat>
 #include <chrono>
 #include <climits>
 #include <cmath>
