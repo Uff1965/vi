@@ -17,15 +17,6 @@ void foo(void)
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 10s", 1);
-		const vi_tmTicks_t s = vi_tmGetTicks();
-
-		thrd_sleep(&(struct timespec) { .tv_sec = 10 }, NULL);
-
-		vi_tmAdd(tm, s);
-	}
-
-	{
 		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 10ms", 1);
 		const vi_tmTicks_t s = vi_tmGetTicks();
 
@@ -35,28 +26,37 @@ void foo(void)
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 170ms", 1);
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 14ms", 1);
 		const vi_tmTicks_t s = vi_tmGetTicks();
 
-		thrd_sleep(&(struct timespec) { .tv_nsec = 170'000'000 }, NULL);
+		thrd_sleep(&(struct timespec) { .tv_nsec = 14'000'000 }, NULL);
 
 		vi_tmAdd(tm, s);
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 15ms", 1);
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 20ms", 1);
 		const vi_tmTicks_t s = vi_tmGetTicks();
 
-		thrd_sleep(&(struct timespec) { .tv_nsec = 15'000'000 }, NULL);
+		thrd_sleep(&(struct timespec) { .tv_nsec = 20'000'000 }, NULL);
 
 		vi_tmAdd(tm, s);
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 31ms", 1);
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 30ms", 1);
 		const vi_tmTicks_t s = vi_tmGetTicks();
 
-		thrd_sleep(&(struct timespec) { .tv_nsec = 31'000'000 }, NULL);
+		thrd_sleep(&(struct timespec) { .tv_nsec = 30'000'000 }, NULL);
+
+		vi_tmAdd(tm, s);
+	}
+
+	{
+		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 10s", 1);
+		const vi_tmTicks_t s = vi_tmGetTicks();
+
+		thrd_sleep(&(struct timespec) { .tv_sec = 10 }, NULL);
 
 		vi_tmAdd(tm, s);
 	}

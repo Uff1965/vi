@@ -62,13 +62,18 @@ namespace {
 	{
 		std::cout << "\ntest()" << std::endl;
 
-		constexpr auto CNT = 1'000'000;
 		volatile int dummy = 0;
 		{
-			VI_TM("SELF_EXT", CNT);
+			VI_TM("SELF_INT");
+			dummy = 0;
+		}
+
+		constexpr auto CNT = 1'000'000;
+		{
+			VI_TM("SELF_EXT1", CNT);
 			for (int n = 0; n < CNT; ++n)
 			{
-				VI_TM("SELF_INT");
+				VI_TM("SELF_INT1");
 				dummy = 0;
 			}
 		}
@@ -125,6 +130,45 @@ namespace {
 		std::cout << "Done" << std::endl;
 		return true;
 	}
+
+VI_OPTIMIZE_OFF
+	bool test1()
+	{
+		std::atomic<int> v = 0;
+
+		for(int n = 0; n < 100'000; ++n)
+		{
+			std::this_thread::yield();
+
+			{
+				VI_TM("");
+				++v;
+			}
+
+			{
+				VI_TM("volatile4", 4);
+				++v; ++v; ++v; ++v;
+			}
+
+			{
+				VI_TM("volatile1");
+				++v;
+			}
+
+			{
+				VI_TM("volatile50", 50);
+				++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v;
+				++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v;
+				++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v;
+				++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v;
+				++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v; ++v;
+			}
+		}
+
+		return true;
+	}
+VI_OPTIMIZE_ON
+
 VI_OPTIMIZE_OFF
 	bool test_duration()
 	{
@@ -163,18 +207,17 @@ VI_OPTIMIZE_ON
 
 int main()
 {
-	VI_TM_FUNC;
-
 	const std::time_t t_c = std::chrono::system_clock::to_time_t(ch::system_clock::now());
 	std::cout << "Start: " << std::put_time(std::localtime(&t_c), "%F %T.\n") << std::endl;
 
-	warming(true, 512ms);
+	warming(true, 500ms);
 
-	foo();
+//	foo();
 
-	test_multithreaded();
-	test_duration();
-	test();
+	test1();
+	//test_duration();
+	//test();
+	//test_multithreaded();
 
 	std::cout << "\nHello, World!\n";
 

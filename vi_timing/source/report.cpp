@@ -25,6 +25,10 @@ namespace
 {
 	constexpr auto operator""_ps(long double v) noexcept { return ch::duration<double, std::pico>(v); };
 	constexpr auto operator""_ps(unsigned long long v) noexcept { return ch::duration<double, std::pico>(v); };
+	constexpr auto operator""_ks(long double v) noexcept { return ch::duration<double, std::kilo>(v); };
+	constexpr auto operator""_ks(unsigned long long v) noexcept { return ch::duration<double, std::kilo>(v); };
+	constexpr auto operator""_Ms(long double v) noexcept { return ch::duration<double, std::mega>(v); };
+	constexpr auto operator""_Ms(unsigned long long v) noexcept { return ch::duration<double, std::mega>(v); };
 
 	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
@@ -43,40 +47,115 @@ namespace
 	{	return os << to_string(d);
 	}
 
+	//[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
+	//{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
+	//	double result;
+	//	if (num >= 5e-12 && prec != 0 && prec > dec)
+	//	{
+	//		const auto exp = static_cast<signed char>(std::ceil(std::log10(num)));
+	//		if (const auto n = 1 + dec + (11 + exp) % 3; prec > n)
+	//		{
+	//			prec = static_cast<unsigned char>(n);
+	//		}
+
+	//		const auto factor = std::max(10e-12, std::pow(10.0, exp - prec)); // The lower limit of accuracy is 0.01ns.
+	//		result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) / factor) * factor;
+	//	}
+	//	else
+	//	{
+	//		assert(num < 5e-12);
+	//		result = num;
+	//	}
+	//	return result;
+	//}
+
 	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
-		double result;
-		if (num >= 5e-12 && prec != 0 && prec > dec)
-		{
-			const auto exp = static_cast<signed char>(std::ceil(std::log10(num)));
-			if (const auto n = 1 + dec + (11 + exp) % 3; prec > n)
-			{
-				prec = static_cast<unsigned char>(n);
-			}
+		assert(num >= 0 && prec > dec && prec <= 3 + dec);
 
-			const auto factor = std::max(10e-12, std::pow(10.0, exp - prec)); // The lower limit of accuracy is 0.01ns.
-			result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) / factor) * factor;
-		}
-		else
+		double result = num;
+		if (num >= 0 && prec > dec && prec <= 3 + dec)
 		{
-			assert(num < 5e-12);
-			result = num;
+			auto power = static_cast<char>(std::floor(std::log10(num)));
+			auto t = 1U + (3 + power % 3) % 3;
+			if (prec > t)
+				t += std::min(dec, static_cast<unsigned char>(prec - t));
+			else
+				t = prec;
+			power -= t - 1;
+
+			auto factor = std::pow(10, -power);
+			result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) * factor) / factor;
 		}
+
 		return result;
 	}
+
+#ifndef NDEBUG
+	const auto unit_test_round= []
+		{
+			static constexpr struct { int line_;  double org_; double rnd_; unsigned char precision_ = 2; unsigned char dec_ = 1; }
+			samples[] = {
+				{__LINE__, 0.0, 0.0, 1, 0},
+				{__LINE__, 0.0, 0.0, 2, 1},
+				{__LINE__, 0.0, 0.0, 4, 1},
+				{__LINE__, 0.0, 0.0, 5, 2},
+
+				{__LINE__, 1.23456789, 1.0, 1, 0},
+				{__LINE__, 1.23456789, 1.2, 2, 1},
+				{__LINE__, 1.23456789, 1.2, 4, 1},
+				{__LINE__, 1.23456789, 1.23, 5, 2},
+
+				{__LINE__, 123.456789, 100.0, 1, 0},
+				{__LINE__, 123.456789, 120.0, 2, 1},
+				{__LINE__, 123.456789, 123.5, 4, 1},
+				{__LINE__, 123.456789, 123.46, 5, 2},
+
+				{__LINE__, 12.3456789e3, 10.0e3, 1, 0},
+				{__LINE__, 12.3456789e3, 12.0e3, 2, 1},
+				{__LINE__, 12.3456789e3, 12.3e3, 4, 1},
+				{__LINE__, 12.3456789e3, 12.35e3, 5, 2},
+
+				{__LINE__, 0.123456789, 0.10, 1, 0},
+				{__LINE__, 0.123456789, 0.12, 2, 1},
+				{__LINE__, 0.123456789, 0.1235, 4, 1},
+				{__LINE__, 0.123456789, 0.12346, 5, 2},
+
+				{__LINE__, 0.00123456789, 0.001, 1, 0},
+				{__LINE__, 0.00123456789, 0.0012, 2, 1},
+				{__LINE__, 0.00123456789, 0.0012, 4, 1},
+				{__LINE__, 0.00123456789, 0.00123, 5, 2},
+
+				{__LINE__, 0.0123456789e-3, 0.010e-3, 1, 0},
+				{__LINE__, 0.0123456789e-3, 0.012e-3, 2, 1},
+				{__LINE__, 0.0123456789e-3, 0.0123e-3, 4, 1},
+				{__LINE__, 0.0123456789e-3, 0.01235e-3, 5, 2},
+			};
+
+			for (auto& i : samples)
+			{
+				const auto rnd = round(i.org_, i.precision_, i.dec_);
+				assert(std::max(rnd, i.rnd_)* DBL_EPSILON >= std::abs(rnd - i.rnd_));
+			}
+
+			return 0;
+		}();
+#endif // #ifndef NDEBUG
 
 	[[nodiscard]] std::string to_string( duration_t sec, unsigned char precision, unsigned char dec)
 	{
 		sec = duration_t{ round(sec.count(), precision, dec) };
 
 		struct { std::string_view suffix_; double factor_; } k;
-		if (10_ps > sec)			{ k = {"ps"sv, 1.0}; }
-		else if (999.95_ps > sec)	{ k = {"ps"sv, 1e12}; }
-		else if (999.95ns > sec)	{ k = {"ns"sv, 1e9}; }
-		else if (999.95us > sec)	{ k = {"us"sv, 1e6}; }
-		else if (999.95ms > sec)	{ k = {"ms"sv, 1e3}; }
-		else if (999.95s > sec)		{ k = {"s "sv, 1e0}; }
-		else						{ k = {"ks"sv, 1e-3}; }
+		if (10_ps > sec)		{ k = {"ps"sv, 1.0}; }
+		else if (1ns > sec)		{ k = {"ps"sv, 1e12}; }
+		else if (1us > sec)		{ k = {"ns"sv, 1e9}; }
+		else if (1ms > sec)		{ k = {"us"sv, 1e6}; }
+		else if (1s > sec)		{ k = {"ms"sv, 1e3}; }
+		else if (1_ks > sec)	{ k = {"s "sv, 1e0}; }
+		else if (1_Ms > sec)	{ k = {"ks"sv, 1e-3 }; }
+		else if (1000_Ms > sec)	{ k = {"Ms"sv, 1e-6 }; }
+		else					{ k = {"Gs"sv, 1e-9}; }
 
 		std::ostringstream ss;
 		ss << std::fixed << std::setprecision(dec) << sec.count() * k.factor_ << k.suffix_;
@@ -86,116 +165,120 @@ namespace
 #ifndef NDEBUG
 	const auto unit_test_to_string = []
 	{
-		struct I { duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; };
+		struct I { int line_; duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; };
 		static constexpr I samples[] = {
-			{10.1ms, "10.0ms"},
-			{10.01ms, "10.0ms"},
-			{1234567.89s, "1200.0ks", 9, 1},
-			{123456.789s, "123.457ks", 9, 3},
-			{0, "0.0ps"},
-			{0.1_ps, "0.0ps"},
-			{1_ps, "0.0ps"}, // The lower limit of accuracy is 10ps.
-			{10_ps, "10.0ps"},
-			{100_ps, "100.0ps"},
-			{1ns, "1.0ns"},
-			{10ns, "10.0ns"},
-			{100ns, "100.0ns"},
-			{1us, "1.0us"},
-			{10us, "10.0us"},
-			{100us, "100.0us"},
-			{1ms, "1.0ms"},
-			{10ms, "10.0ms"},
-			{100ms, "100.0ms"},
-			{1s, "1.0s "},
-			{10s, "10.0s "},
-			{100s, "100.0s "},
-			{1min, "60.0s "},
-			{1h, "3.6ks"},
-			{4.999999999999_ps, "0ps", 1, 0},
-			{4.999999999999_ps, "0.0ps", 2},
-			{4.999999999999_ps, "0.0ps", 3},
-			{4.999999999999_ps, "0.0ps", 4},
-			{5.000000000000_ps, "10ps", 1, 0},
-			{5.000000000000_ps, "10.0ps", 2},
-			{5.000000000000_ps, "10.0ps", 3},
-			{5.000000000000_ps, "10.0ps", 4},
-			{4.499999999999ns, "4ns", 1, 0},
-			{4.499999999999ns, "4.5ns", 2},
-			{4.499999999999ns, "4.5ns", 3},
-			{4.499999999999ns, "4.5ns", 4},
-			{4.999999999999ns, "5ns", 1, 0},
-			{4.999999999999ns, "5.0ns", 2},
-			{4.999999999999ns, "5.0ns", 3},
-			{4.999999999999ns, "5.0ns", 4},
-			{5.000000000000ns, "5ns", 1, 0},
-			{5.000000000000ns, "5.0ns", 2},
-			{5.000000000000ns, "5.0ns", 3},
-			{5.000000000000ns, "5.0ns", 4},
-			{123.4ns, "100ns", 1, 0},
-			{123.4ns, "120.0ns", 2},
-			{123.4ns, "123.0ns", 3},
-			{123.4ns, "123.4ns", 4},
-			{4.999999999999_ps, "0.0ps", 2, 1},
-			{4.999999999999_ps, "0.00ps", 3, 2},
-			{4.999999999999_ps, "0.00ps", 4, 2},
-			{5.000000000000_ps, "10.00ps", 3, 2},
-			{5.000000000000_ps, "10.00ps", 4, 2},
-			{4.499999999999ns, "4.5ns", 2, 1},
-			{4.499999999999ns, "4.50ns", 3, 2},
-			{4.499999999999ns, "4.50ns", 4, 2},
-			{4.999999999999ns, "5.0ns", 2, 1},
-			{4.999999999999ns, "5.00ns", 3, 2},
-			{4.999999999999ns, "5.00ns", 4, 2},
-			{5.000000000000ns, "5.0ns", 2, 1},
-			{5.000000000000ns, "5.00ns", 3, 2},
-			{5.000000000000ns, "5.00ns", 4, 2},
-			{123.4ns, "120.0ns", 2, 1},
-			{123.4ns, "123.00ns", 3, 2},
-			{123.4ns, "123.40ns", 4, 2},
+			{__LINE__, 0s, "0.0ps"},
+			{__LINE__, 0.01234567891s, "12.346ms", 6, 3},
+			{__LINE__, 0.01234567891s, "12.35ms", 5, 2},
+			{__LINE__, 0.1_ps, "0.0ps"},
+			{__LINE__, 1_ps, "0.0ps"}, // The lower limit of accuracy is 10ps.
+			{__LINE__, 10.01ms, "10.0ms"},
+			{__LINE__, 10.1ms, "10.0ms"},
+			{__LINE__, 10_ps, "10.0ps"},
+			{__LINE__, 100_ps, "100.0ps"},
+			{__LINE__, 100ms, "100.0ms"},
+			{__LINE__, 100ns, "100.0ns"},
+			{__LINE__, 100s, "100.0s "},
+			{__LINE__, 100us, "100.0us"},
+			{__LINE__, 10ms, "10.0ms"},
+			{__LINE__, 10ns, "10.0ns"},
+			{__LINE__, 10s, "10.0s "},
+			{__LINE__, 10us, "10.0us"},
+			{__LINE__, 12.34567891s, "12.346s ", 6, 3},
+			{__LINE__, 12.34567891s, "12.35s ", 5, 2},
+			{__LINE__, 123.456789_ks, "123.457ks", 6, 3},
+			{__LINE__, 123.4ns, "100ns", 1, 0},
+			{__LINE__, 123.4ns, "120.0ns", 2, 1},
+			{__LINE__, 123.4ns, "120.0ns", 2},
+			{__LINE__, 123.4ns, "123.00ns", 3, 2},
+			{__LINE__, 123.4ns, "123.0ns", 3},
+			{__LINE__, 123.4ns, "123.40ns", 4, 2},
+			{__LINE__, 123.4ns, "123.4ns", 4},
+			{__LINE__, 1234.56789_ks, "1.2Ms", 3, 1},
+			{__LINE__, 1h, "3.6ks"},
+			{__LINE__, 1min, "60.0s "},
+			{__LINE__, 1ms, "1.0ms"},
+			{__LINE__, 1ns, "1.0ns"},
+			{__LINE__, 1s, "1.0s "},
+			{__LINE__, 1us, "1.0us"},
+			{__LINE__, 4.499999999999ns, "4.50ns", 3, 2},
+			{__LINE__, 4.499999999999ns, "4.50ns", 4, 2},
+			{__LINE__, 4.499999999999ns, "4.5ns", 2, 1},
+			{__LINE__, 4.499999999999ns, "4.5ns", 2},
+			{__LINE__, 4.499999999999ns, "4.5ns", 3},
+			{__LINE__, 4.499999999999ns, "4.5ns", 4},
+			{__LINE__, 4.499999999999ns, "4ns", 1, 0},
+			{__LINE__, 4.999999999999_ps, "0.00ps", 3, 2},
+			{__LINE__, 4.999999999999_ps, "0.00ps", 4, 2},
+			{__LINE__, 4.999999999999_ps, "0.0ps", 2, 1},
+			{__LINE__, 4.999999999999_ps, "0.0ps", 2},
+			{__LINE__, 4.999999999999_ps, "0.0ps", 3},
+			{__LINE__, 4.999999999999_ps, "0.0ps", 4},
+			{__LINE__, 4.999999999999_ps, "0ps", 1, 0},
+			{__LINE__, 4.999999999999ns, "5.00ns", 3, 2},
+			{__LINE__, 4.999999999999ns, "5.00ns", 4, 2},
+			{__LINE__, 4.999999999999ns, "5.0ns", 2, 1},
+			{__LINE__, 4.999999999999ns, "5.0ns", 2},
+			{__LINE__, 4.999999999999ns, "5.0ns", 3},
+			{__LINE__, 4.999999999999ns, "5.0ns", 4},
+			{__LINE__, 4.999999999999ns, "5ns", 1, 0},
+			{__LINE__, 5.000000000000_ps, "0.00ps", 3, 2},
+			{__LINE__, 5.000000000000_ps, "0.00ps", 4, 2},
+			{__LINE__, 5.000000000000_ps, "0.0ps", 2},
+			{__LINE__, 5.000000000000_ps, "0.0ps", 3},
+			{__LINE__, 5.000000000000_ps, "0.0ps", 4},
+			{__LINE__, 5.000000000000_ps, "0ps", 1, 0},
+			{__LINE__, 5.000000000000ns, "5.00ns", 3, 2},
+			{__LINE__, 5.000000000000ns, "5.00ns", 4, 2},
+			{__LINE__, 5.000000000000ns, "5.0ns", 2, 1},
+			{__LINE__, 5.000000000000ns, "5.0ns", 2},
+			{__LINE__, 5.000000000000ns, "5.0ns", 3},
+			{__LINE__, 5.000000000000ns, "5.0ns", 4},
+			{__LINE__, 5.000000000000ns, "5ns", 1, 0},
 			//**********************************
-			{0.0_ps, "0.0ps"},
-			{0.123456789us, "123.5ns", 4},
-			{1.23456789s, "1s ", 1, 0},
-			{1.23456789s, "1.2s ", 3},
-			{1.23456789s, "1.2s "},
-			{1.23456789us, "1.2us"},
-			{1004.4ns, "1.0us", 2},
-			{12.3456789s, "10s ", 1, 0},
-			{12.3456789s, "12.3s ", 3},
-			{12.3456789us, "12.3us", 3},
-			{12.3456s, "12.0s "},
-			{12.34999999ms, "10ms", 1, 0},
-			{12.34999999ms, "12.3ms", 3},
-			{12.34999999ms, "12.3ms", 4},
-			{12.4999999ms, "12.0ms"},
-			{12.4999999ms, "12.5ms", 3},
-			{12.5000000ms, "13.0ms"},
-			{123.456789ms, "123.0ms", 3},
-			{123.456789us, "120.0us"},
-			{123.4999999ms, "123.5ms", 4},
-			{1234.56789us, "1.2ms"},
-			{245.0_ps, "250.0ps"},
-			{49.999_ps, "50.0ps"},
-			{50.0_ps, "50.0ps"},
-			{9.49999_ps, "10.0ps"},
-			{9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
-			{9.999ns, "10.0ns"},
-			{99.49999_ps, "100.0ps"},
-			{99.4999ns, "99.0ns"},
-			{99.4ms, "99.0ms"},
-			{99.5_ps, "100.0ps"},
-			{99.5ms, "100.0ms"},
-			{99.5ns, "100.0ns"},
-			{99.5us, "100.0us"},
-			{99.999_ps, "100.0ps"},
-			{999.0_ps, "1.0ns"},
-			{999.45ns, "1us", 1, 0},
-			{999.45ns, "1.0us", 2},
-			{999.45ns, "999.0ns", 3},
-			{999.45ns, "999.5ns", 4},
-			{999.45ns, "999.45ns", 5, 2},
-			{999.55ns, "1.0us", 3},
-			{99ms, "99.0ms"},
+			{__LINE__, 0.0_ps, "0.0ps"},
+			{__LINE__, 0.123456789us, "123.5ns", 4},
+			{__LINE__, 1.23456789s, "1s ", 1, 0},
+			{__LINE__, 1.23456789s, "1.2s ", 3},
+			{__LINE__, 1.23456789s, "1.2s "},
+			{__LINE__, 1.23456789us, "1.2us"},
+			{__LINE__, 1004.4ns, "1.0us", 2},
+			{__LINE__, 12.3456789s, "10s ", 1, 0},
+			{__LINE__, 12.3456789s, "12.3s ", 3},
+			{__LINE__, 12.3456789us, "12.3us", 3},
+			{__LINE__, 12.3456s, "12.0s "},
+			{__LINE__, 12.34999999ms, "10ms", 1, 0},
+			{__LINE__, 12.34999999ms, "12.3ms", 3},
+			{__LINE__, 12.34999999ms, "12.3ms", 4},
+			{__LINE__, 12.4999999ms, "12.0ms"},
+			{__LINE__, 12.4999999ms, "12.5ms", 3},
+			{__LINE__, 12.5000000ms, "13.0ms"},
+			{__LINE__, 123.456789ms, "123.0ms", 3},
+			{__LINE__, 123.456789us, "120.0us"},
+			{__LINE__, 123.4999999ms, "123.5ms", 4},
+			{__LINE__, 1234.56789us, "1.2ms"},
+			{__LINE__, 245.0_ps, "250.0ps"},
+			{__LINE__, 49.999_ps, "50.0ps"},
+			{__LINE__, 50.0_ps, "50.0ps"},
+			{__LINE__, 9.49999_ps, "0.0ps"},
+			{__LINE__, 9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
+			{__LINE__, 9.999ns, "10.0ns"},
+			{__LINE__, 99.49999_ps, "99.0ps"},
+			{__LINE__, 99.4999ns, "99.0ns"},
+			{__LINE__, 99.4ms, "99.0ms"},
+			{__LINE__, 99.5_ps, "100.0ps"},
+			{__LINE__, 99.5ms, "100.0ms"},
+			{__LINE__, 99.5ns, "100.0ns"},
+			{__LINE__, 99.5us, "100.0us"},
+			{__LINE__, 99.999_ps, "100.0ps"},
+			{__LINE__, 999.0_ps, "1.0ns"},
+			{__LINE__, 999.45ns, "1us", 1, 0},
+			{__LINE__, 999.45ns, "1.0us", 2},
+			{__LINE__, 999.45ns, "999.0ns", 3},
+			{__LINE__, 999.45ns, "999.5ns", 4},
+			{__LINE__, 999.45ns, "999.45ns", 5, 2},
+			{__LINE__, 999.55ns, "1.0us", 3},
+			{__LINE__, 99ms, "99.0ms"},
 		};
 
 		for (auto& i : samples)
