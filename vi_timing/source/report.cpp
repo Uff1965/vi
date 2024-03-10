@@ -40,7 +40,7 @@ namespace
 		double result = num;
 		if (num >= 0 && prec > dec && prec <= 3 + dec)
 		{
-			auto power = static_cast<char>(std::floor(std::log10(num)));
+			auto power = static_cast<signed char>(std::floor(std::log10(num)));
 			auto t = 1U + (3 + power % 3) % 3;
 			if (prec > t)
 				t += std::min(dec, static_cast<unsigned char>(prec - t));
