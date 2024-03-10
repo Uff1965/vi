@@ -107,9 +107,9 @@ namespace
 
 	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
-		using ch::duration<double>::duration;
+//		using ch::duration<double>::duration;
 		template<typename T>
-		constexpr explicit duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
+		constexpr duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
 
 		[[nodiscard]] friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1)
 		{
