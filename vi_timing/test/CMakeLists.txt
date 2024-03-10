@@ -75,6 +75,7 @@ elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
   PRIVATE
     -fvisibility=hidden
+    -Wno-psabi
     $<$<COMPILE_LANGUAGE:CXX>:-fPIC>
     $<$<CONFIG:Release>:-O3 -ggdb3 -s>
   )
@@ -98,7 +99,6 @@ elseif (UNIX)
   target_link_options(${PROJECT_NAME}
   PRIVATE
     -Wl,--exclude-libs,ALL
-    -Wno-psabi
   )
 
   target_link_libraries(${PROJECT_NAME}
