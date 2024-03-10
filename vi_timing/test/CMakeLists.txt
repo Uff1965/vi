@@ -4,8 +4,6 @@ project(vi_timing_test)
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
-vi_show(VI_ROOT_DIR)
-
 #[[*** Requires CMake version no older than 3.21 ***
 cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_TIMING_ROOT_DIR)
 cmake_path(SET VI_SOURCE_DIR ${PROJECT_SOURCE_DIR})
@@ -33,8 +31,6 @@ source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-
-vi_show(VI_OUT_DIR)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
