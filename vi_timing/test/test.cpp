@@ -212,12 +212,12 @@ int main()
 
 	warming(true, 500ms);
 
-//	foo();
+	foo();
 
 	test1();
-	//test_duration();
-	//test();
-	//test_multithreaded();
+	test_duration();
+	test();
+	test_multithreaded();
 
 	std::cout << "\nHello, World!\n";
 
