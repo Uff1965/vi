@@ -84,7 +84,7 @@ if (WIN32)
 elseif (UNIX)
   target_link_options(${PROJECT_NAME}
   PRIVATE
-    exclude-libs=ALL
+    exclude-libs,ALL
   )
 
   target_link_libraries(${PROJECT_NAME}
