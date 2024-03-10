@@ -101,6 +101,7 @@ elseif (UNIX)
   target_link_options(${PROJECT_NAME}
   PRIVATE
     -Wl,--exclude-libs,ALL
+    -Wno-psabi
   )
 
   target_link_libraries(${PROJECT_NAME}
