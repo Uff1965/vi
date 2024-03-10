@@ -103,7 +103,7 @@ extern "C" {
 		}
 #	elif defined(__linux__)
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
-		{	timespec ts;
+		{	struct timespec ts;
 			::clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 			return 1000000000ULL * ts.tv_sec + ts.tv_nsec;
 		}
