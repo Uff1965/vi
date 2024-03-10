@@ -4,8 +4,6 @@ project(vi_timing VERSION 3.1.1)
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
-vi_show(VI_ROOT_DIR)
-
 if(NOT DEFINED VI_ROOT_DIR)
 #Requires CMake version no older than 3.21	cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_ROOT_DIR)
 	get_filename_component(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/..")
@@ -37,8 +35,6 @@ source_group("Source files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
-
-vi_show(VI_OUT_DIR)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
