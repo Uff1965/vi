@@ -6,10 +6,15 @@ set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
 vi_show(VI_ROOT_DIR)
 
+#[[*** Requires CMake version no older than 3.21 ***
 cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_TIMING_ROOT_DIR)
 cmake_path(SET VI_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 cmake_path(SET VI_INTERFACE_DIR ${VI_ROOT_DIR})
 cmake_path(APPEND VI_ROOT_DIR "lib" OUTPUT_VARIABLE VI_OUT_DIR)
+]]
+get_filename_component(VI_INTERFACE_DIR "${VI_ROOT_DIR}" ABSOLUTE)
+get_filename_component(VI_SOURCE_DIR "${PROJECT_SOURCE_DIR}" ABSOLUTE)
+get_filename_component(VI_OUT_DIR "${VI_ROOT_DIR}/lib" ABSOLUTE)
 
 ### Files #####################################################################
 set(FILE_GROUP

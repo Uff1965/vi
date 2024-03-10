@@ -10,7 +10,9 @@ function(vi_show m)
 	endif()
 endfunction()
 
-cmake_path(SET VI_ROOT_DIR ${PROJECT_SOURCE_DIR})
+#Requires CMake version no older than 3.21.	need cmake_path(SET VI_ROOT_DIR ${PROJECT_SOURCE_DIR})
+get_filename_component(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}" ABSOLUTE)
+
 vi_show(VI_ROOT_DIR)
 
 add_subdirectory(vi_timing)
