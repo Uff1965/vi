@@ -138,7 +138,7 @@ namespace
 
 		[[nodiscard]] friend bool operator<(duration_t l, duration_t r)
 		{
-			return l.count() < r.count() && to_string(l) != to_string(r);
+			return l.count() < r.count() && to_string(l, 2, 1) != to_string(r, 2, 1);
 		}
 	};
 
@@ -511,13 +511,13 @@ VI_OPTIMIZE_ON
 	{	return std::tuple{ v.on_name_ };
 	}
 	template<> auto make_tuple<vi_tmSortBySpeed>(const traits_t::itm_t& v)
-	{	return std::tuple{ v.average_, v.on_total_, v.on_amount_, v.on_name_ };
+	{	return std::tuple{ v.average_, v.total_time_, v.on_amount_, v.on_name_ };
 	}
 	template<> auto make_tuple<vi_tmSortByTime>(const traits_t::itm_t& v)
-	{	return std::tuple{ v.on_total_, v.average_, v.on_amount_, v.on_name_ };
+	{	return std::tuple{ v.total_time_, v.average_, v.on_amount_, v.on_name_ };
 	}
 	template<> auto make_tuple<vi_tmSortByAmount>(const traits_t::itm_t& v)
-	{	return std::tuple{ v.on_amount_, v.average_, v.on_total_, v.on_name_ };
+	{	return std::tuple{ v.on_amount_, v.average_, v.total_time_, v.on_name_ };
 	}
 
 	struct meterage_comparator_t
