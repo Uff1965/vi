@@ -105,7 +105,7 @@ extern "C" {
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
 		{	timespec ts;
 			::clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-			return 1'000'000'000ULL * ts.tv_sec + ts.tv_nsec;
+			return 1000000000ULL * ts.tv_sec + ts.tv_nsec;
 		}
 #	else
 #		error "You need to define function(s) for your OS and CPU"
