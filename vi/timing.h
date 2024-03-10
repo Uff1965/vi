@@ -98,13 +98,13 @@ extern "C" {
 #	elif defined(_WIN32) // Windows
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
 		{	LARGE_INTEGER cnt;
-			::QueryPerformanceCounter(&cnt);
+			QueryPerformanceCounter(&cnt);
 			return cnt.QuadPart;
 		}
 #	elif defined(__linux__)
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
 		{	struct timespec ts;
-			::clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+			clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 			return 1000000000ULL * ts.tv_sec + ts.tv_nsec;
 		}
 #	else
