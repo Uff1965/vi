@@ -11,6 +11,7 @@
 #include <climits>
 #include <cmath>
 #include <iomanip>
+#include <iostream>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -98,7 +99,11 @@ namespace
 			for (auto& i : samples)
 			{
 				const auto rnd = round(i.org_, i.precision_, i.dec_);
-				assert(std::max(rnd, i.rnd_)* DBL_EPSILON >= std::abs(rnd - i.rnd_));
+				if (std::max(rnd, i.rnd_) * DBL_EPSILON < std::abs(rnd - i.rnd_))
+				{
+					std::cerr << i.line_ << " " << rnd << " " << i.rnd_ << std::endl;
+					assert(false);
+				}
 			}
 
 			return 0;
