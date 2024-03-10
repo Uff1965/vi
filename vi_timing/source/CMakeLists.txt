@@ -68,7 +68,7 @@ if (WIN32)
 elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
   PRIVATE
-    -fvisibility=hidden -Wl,--exclude-libs=ALL
+    -fvisibility=hidden
     $<$<COMPILE_LANGUAGE:CXX>:-fPIC>
     $<$<CONFIG:Release>:-O3 -s>
   )

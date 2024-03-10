@@ -58,7 +58,6 @@ if (WIN32)
     $<$<CONFIG:Debug>:   /MTd /Od /RTC1>
   )
 elseif (UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs=ALL")
 
   target_compile_options(${PROJECT_NAME}
   PRIVATE
@@ -83,11 +82,15 @@ if (WIN32)
     $<$<CONFIG:Debug>:   /INCREMENTAL>
   )
 elseif (UNIX)
+  target_link_options(${PROJECT_NAME}
+  PRIVATE
+    exclude-libs=ALL
+  )
+
   target_link_libraries(${PROJECT_NAME}
   PRIVATE
     rt
     pthread
-#    stdc++fs
   PUBLIC
     atomic
   )
