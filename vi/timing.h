@@ -170,7 +170,7 @@ namespace vi_tm
 		init_t(const char* title = "Timing report:", vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), void* data = stdout, std::uint32_t flags = 0)
 			:title_{ title + std::string{"\n"}}, cb_{fn}, data_{data}, flags_{flags}
 		{
-			vi_tmInit(32);
+			vi_tmInit(64);
 		}
 
 		~init_t()
