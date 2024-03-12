@@ -10,55 +10,48 @@
 //VI_OPTIMIZE_OFF
 void foo(void)
 {
-	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("foo", 1);
-		const vi_tmTicks_t s = vi_tmGetTicks();
-		vi_tmAdd(tm, s);
-	}
+	struct vi_tmItem_t const foo_tm = vi_tmStart("foo", 1);
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 10ms", 1);
-		const vi_tmTicks_t s = vi_tmGetTicks();
+		struct vi_tmItem_t const tm = vi_tmStart("thrd_sleep 10ms", 1);
 
 		thrd_sleep(&(struct timespec) { .tv_nsec = 10000000 }, NULL);
 
-		vi_tmAdd(tm, s);
+		vi_tmEnd(&tm);
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 14ms", 1);
-		const vi_tmTicks_t s = vi_tmGetTicks();
+		struct vi_tmItem_t const tm = vi_tmStart("thrd_sleep 14ms", 1);
 
 		thrd_sleep(&(struct timespec) { .tv_nsec = 14000000 }, NULL);
 
-		vi_tmAdd(tm, s);
+		vi_tmEnd(&tm);
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 20ms", 1);
-		const vi_tmTicks_t s = vi_tmGetTicks();
+		struct vi_tmItem_t const tm = vi_tmStart("thrd_sleep 20ms", 1);
 
 		thrd_sleep(&(struct timespec) { .tv_nsec = 20000000 }, NULL);
 
-		vi_tmAdd(tm, s);
+		vi_tmEnd(&tm);
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 30ms", 1);
-		const vi_tmTicks_t s = vi_tmGetTicks();
+		struct vi_tmItem_t const tm = vi_tmStart("thrd_sleep 30ms", 1);
 
 		thrd_sleep(&(struct timespec) { .tv_nsec = 30000000 }, NULL);
 
-		vi_tmAdd(tm, s);
+		vi_tmEnd(&tm);
 	}
 
 	{
-		vi_tmAtomicTicks_t* const tm = vi_tmItem("thrd_sleep 10s", 1);
-		const vi_tmTicks_t s = vi_tmGetTicks();
+		struct vi_tmItem_t const tm = vi_tmStart("thrd_sleep 10s", 1);
 
 		thrd_sleep(&(struct timespec) { .tv_sec = 10 }, NULL);
 
-		vi_tmAdd(tm, s);
+		vi_tmEnd(&tm);
 	}
+
+	vi_tmEnd(&foo_tm);
 }
 //VI_OPTIMIZE_ON
