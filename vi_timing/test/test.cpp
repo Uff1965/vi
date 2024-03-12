@@ -53,7 +53,7 @@ namespace {
 		static constexpr auto CNT = 100'000;
 		static std::atomic<std::size_t> v{};
 
-		std::cout << "\nStart: \'test_multithreaded()\'" << std::endl;
+		std::cout << "\ntest_multithreaded()... " << std::endl;
 
 		auto load = []
 		{	VI_TM("load");
@@ -74,7 +74,7 @@ namespace {
 		}
 
 		std::cout << "v: " << v << std::endl;
-		std::cout << "Done" << std::endl;
+		std::cout << "done" << std::endl;
 		return true;
 	}
 }
@@ -83,9 +83,20 @@ int main()
 {
 	const std::time_t tm = std::chrono::system_clock::to_time_t(ch::system_clock::now());
 #pragma warning(suppress: 4996)
-	std::cout << "Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") << std::endl;
+	std::cout << "Start: " << std::put_time(std::localtime(&tm), "%F %T.\n");
 
+	std::cout << "Build type: ";
+#ifdef NDEBUG
+	std::cout << "Release";
+#else
+	std::cout << "Debug";
+#endif
+	endl(std::cout);
+
+	std::cout << "\nWarming... ";
 	warming(true, 500ms);
+	std::cout << "done";
+	endl(std::cout);
 
 	foo();
 	test_multithreaded();

@@ -52,11 +52,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 ### Compiler ##################################################################
-target_compile_definitions(${PROJECT_NAME}
-PRIVATE
-  $<$<CONFIG:Debug>:_DEBUG> # Microsoft debug RTL
-  $<$<CONFIG:Release>:NDEBUG>
-)
+#target_compile_definitions(${PROJECT_NAME}
+#PRIVATE
+#  $<$<CONFIG:Debug>:_DEBUG> # Microsoft debug RTL
+#  $<$<CONFIG:Release>:NDEBUG>
+#)
 
 if (WIN32)
   target_compile_options(${PROJECT_NAME}
