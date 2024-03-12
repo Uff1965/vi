@@ -12,6 +12,8 @@ void foo(void)
 {
 	struct vi_tmItem_t const foo_tm = vi_tmStart("foo", 1);
 
+	printf("\n%s... ", __func__);
+
 	{
 		struct vi_tmItem_t const tm = vi_tmStart("thrd_sleep 10ms", 1);
 
@@ -53,5 +55,6 @@ void foo(void)
 	}
 
 	vi_tmEnd(&foo_tm);
+	printf("done\n");
 }
 //VI_OPTIMIZE_ON
