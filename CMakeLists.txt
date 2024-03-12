@@ -11,6 +11,9 @@ function(vi_macro_show M)
 endfunction()
 
 vi_macro_show(CMAKE_BUILD_TYPE)
+vi_macro_show(CONFIG)
+vi_macro_show(CONFIG:Debug)
+vi_macro_show(CONFIG:Release)
 vi_macro_show(PROJECT_NAME)
 vi_macro_show(CMAKE_PROJECT_NAME)
 
