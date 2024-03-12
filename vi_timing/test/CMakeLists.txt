@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(vi_timing_test)
 
-set(CMAKE_CONFIGURATION_TYPES Debug Release)
+#set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
 #[[*** Requires CMake version no older than 3.21 ***
 cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_TIMING_ROOT_DIR)
