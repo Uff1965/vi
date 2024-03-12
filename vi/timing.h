@@ -1,5 +1,30 @@
-﻿#ifndef VI_TIMING_VI_TIMING_H
-#	define VI_TIMING_VI_TIMING_H 0.1
+﻿/********************************************************************\
+'vi_timing' is a small library for measuring the time execution of
+code in C and C++.
+
+Copyright (C) 2024 A.Prograamar
+
+This library was created to experiment for educational purposes.
+Do not expect much from it. If you spot a bug or can suggest any
+improvement to the code, please email me at eMail:programmer.amateur@proton.me.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. 
+If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
+\********************************************************************/
+
+#ifndef VI_TIMING_VI_TIMING_H
+#	define VI_TIMING_VI_TIMING_H 3.0
 #	pragma once
 
 #if defined(_WIN32)
@@ -26,7 +51,7 @@
 #include <vi/common.h>
 
 #if !defined(__cplusplus) && defined( __STDC_NO_ATOMICS__)
-// "<...> we left out support for some C11 optional features such as atomics, <...>"
+// "<...> we left out support for some C11 optional features such as atomics <...>" [Microsoft]
 //	[https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
 #	error "Atomic objects and the atomic operation library are not supported."
 #endif
@@ -45,7 +70,7 @@
 #		define VI_TM_API __declspec(dllimport)
 #	endif
 #elif defined(__ANDROID__)
-#	define CM_TM_DISABLE "Android not supported"
+#	define CM_TM_DISABLE "Android not supported yet."
 #elif defined (__linux__)
 #	define VI_SYS_CALL
 #	define VI_TM_CALL
@@ -55,7 +80,7 @@
 #		define VI_TM_API
 #	endif
 #else
-#	define CM_TM_DISABLE "Unknown platform"
+#	define CM_TM_DISABLE "Unknown platform!"
 #endif
 // Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -72,9 +97,9 @@ typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must b
 extern "C" {
 #endif
 
-// Define vi_tmGetTicks vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Definition of vi_tmGetTicks() function for different platforms. vvvvvvvvvvvv
 #if defined(vi_tmGetTicks)
-	/*Custom define*/
+// Custom define
 #else
 #	if defined(_M_X64) || defined(_M_AMD64) // MS compiler on Intel
 #		pragma intrinsic(__rdtscp)
@@ -112,10 +137,17 @@ extern "C" {
 #	endif
 	
 #	define vi_tmGetTicks vi_tmGetTicks_impl
-
 #endif
-// Define vi_tmGetTicks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
+	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) n);
+	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
+	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
+	VI_TM_API void VI_TM_CALL vi_tmClear(void);
+	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	enum vi_tmReportFlags {
 		vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
@@ -129,35 +161,38 @@ extern "C" {
 		vi_tmShowDuration = 0x80,
 	};
 
-	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
-	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) n);
-	VI_TM_API void VI_TM_CALL vi_tmClear(void);
-
-	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
-	static inline void vi_tmAdd(vi_tmAtomicTicks_t* mem, vi_tmTicks_t start) VI_NOEXCEPT
-	{	const vi_tmTicks_t end = vi_tmGetTicks();
-		VI_STD(atomic_fetch_add_explicit)(mem, end - start, VI_MEMORY_ORDER(memory_order_relaxed));
+	struct vi_tmItem_t
+	{	vi_tmAtomicTicks_t* item_;
+		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
+	};
+	static inline struct vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
+	{	struct vi_tmItem_t result;
+		result.item_ = vi_tmItem(name, amount);
+		result.start_ = vi_tmGetTicks();
+		return result;
 	}
-#ifdef __cplusplus
+	static inline void vi_tmEnd(const struct vi_tmItem_t *itm) VI_NOEXCEPT
+	{	const vi_tmTicks_t end = vi_tmGetTicks();
+		VI_STD(atomic_fetch_add_explicit)(itm->item_, end - itm->start_, VI_MEMORY_ORDER(memory_order_relaxed));
+	}
+	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+#	ifdef __cplusplus
 } // extern "C" {
 
 namespace vi_tm
 {
-	inline int report(vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), void* data = stdout, std::uint32_t flags = 0)
+	class timer_t: public vi_tmItem_t
 	{
-		return vi_tmReport(fn, data, flags);
-	}
-
-	class timer_t
-	{
-		vi_tmAtomicTicks_t* item_;
-		const vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
-		timer_t(const char* name, std::size_t amount = 1) noexcept : item_{ vi_tmItem(name, amount) }, start_{ vi_tmGetTicks() } {}
-		~timer_t() noexcept { vi_tmAdd(item_, start_); }
+		timer_t(const char* name, std::size_t amount = 1) noexcept : vi_tmItem_t{ vi_tmItem(name, amount), vi_tmGetTicks() } {}
+		~timer_t() noexcept
+		{	const auto end = vi_tmGetTicks();
+			std::atomic_fetch_add_explicit(item_, end - start_, std::memory_order::memory_order_relaxed);
+		}
 	};
 
 	class init_t
@@ -167,36 +202,38 @@ namespace vi_tm
 		void* data_;
 		std::uint32_t flags_;
 	public:
-		init_t(const char* title = "Timing report:", vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), void* data = stdout, std::uint32_t flags = 0)
-			:title_{ title + std::string{"\n"}}, cb_{fn}, data_{data}, flags_{flags}
-		{
-			vi_tmInit(64);
+		init_t
+		(	const char* title = "Timing report:",
+			vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs),
+			void* data = stdout,
+			std::uint32_t flags = vi_tmSortByTime,
+			std::size_t reserve = 64
+		)
+		:	title_{ title + std::string{"\n"}}, cb_{fn}, data_{data}, flags_{flags}
+		{	vi_tmInit(reserve);
 		}
 
 		~init_t()
-		{
-			if (!title_.empty())
-			{
-				cb_(title_.c_str(), data_);
+		{	if (!title_.empty())
+			{	cb_(title_.c_str(), data_);
 			}
 
-			report(cb_, data_, flags_);
+			vi_tmReport(cb_, data_, flags_);
 		}
 	};
 } // namespace vi_tm {
 
-#if defined(VI_TM_DISABLE)
-#	define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#	define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#	define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
-#else
-#	define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_)(__VA_ARGS__)
-#	define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) (__VA_ARGS__)
-#	define VI_TM_REPORT(...) vi_tm::report(__VA_ARGS__)
-#endif
+#	if defined(VI_TM_DISABLE)
+#		define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#		define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#		define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
+#	else
+#		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_)(__VA_ARGS__)
+#		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) (__VA_ARGS__)
+#		define VI_TM_REPORT(...) vi_tm::report(__VA_ARGS__)
+#	endif
 
-#define VI_TM_FUNC VI_TM( VI_FUNCNAME )
-
-#endif // #ifdef __cplusplus
+#	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
+#endif // #if !defined(__cplusplus) ^^^
 
 #endif // #ifndef VI_TIMING_VI_TIMING_H

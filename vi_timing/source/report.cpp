@@ -1,6 +1,31 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
+/********************************************************************\
+'vi_timing' is a small library for measuring the time execution of
+code in C and C++.
+
+Copyright (C) 2024 A.Prograamar
+
+This library was created to experiment for educational purposes.
+Do not expect much from it. If you spot a bug or can suggest any
+improvement to the code, please email me at eMail:programmer.amateur@proton.me.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. 
+If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
+\********************************************************************/
+
 #include <vi/timing.h>
 
 #include <algorithm>
@@ -43,9 +68,11 @@ namespace
 			auto power = static_cast<signed char>(std::floor(std::log10(num)));
 			auto t = 1U + (3 + power % 3) % 3;
 			if (prec > t)
-				t += std::min(dec, static_cast<unsigned char>(prec - t));
+			{	t += std::min(dec, static_cast<unsigned char>(prec - t));
+			}
 			else
-				t = prec;
+			{	t = prec;
+			}
 			power -= t - 1;
 
 			auto factor = std::pow(10, -power);
@@ -334,10 +361,9 @@ namespace
 		static constexpr auto CNT = 1'000U;
 
 		auto foo = [] {
-			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmAdd()' further apart.
-			const auto s = vi_tmGetTicks();
-			auto itm = vi_tmItem("", 1);
-			vi_tmAdd(itm, s);
+			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmEnd()' further apart.
+			auto itm = vi_tmStart("", 1);
+			vi_tmEnd(&itm);
 		};
 
 		auto start = [] {
@@ -383,8 +409,8 @@ VI_OPTIMIZE_OFF
 		auto s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
 		{
-			e = vi_tmGetTicks();
-			e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); //-V519
+			e = vi_tmGetTicks(); //-V519
 		}
 		const auto pure = e - s;
 
@@ -539,8 +565,10 @@ VI_OPTIMIZE_ON
 			case static_cast<uint32_t>(vi_tmSortByTime):
 				pr = less<vi_tmSortByTime>;
 				break;
-//			case static_cast<uint32_t>(vi_tmSortBySpeed):
+			case static_cast<uint32_t>(vi_tmSortBySpeed):
+				break;
 			default:
+				assert(false);
 				break;
 			}
 
@@ -628,7 +656,7 @@ VI_OPTIMIZE_ON
 
 VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
-	warming(false, 512ms);
+	warming(false, 512ms); //-V601
 
 	traits_t traits{ flags };
 	vi_tmResults(collector_meterages, &traits);
