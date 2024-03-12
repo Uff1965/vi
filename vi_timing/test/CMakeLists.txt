@@ -51,12 +51,12 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
 )
 
-### Compiler ##################################################################
-#target_compile_definitions(${PROJECT_NAME}
-#PRIVATE
-#  $<$<CONFIG:Debug>:_DEBUG> # Microsoft debug RTL
-#  $<$<CONFIG:Release>:NDEBUG>
-#)
+## Compiler ##################################################################
+target_compile_definitions(${PROJECT_NAME}
+PRIVATE
+  $<$<CONFIG:Debug>:_DEBUG> # Microsoft debug RTL
+  $<$<CONFIG:Release>:NDEBUG>
+)
 
 if (WIN32)
   target_compile_options(${PROJECT_NAME}
