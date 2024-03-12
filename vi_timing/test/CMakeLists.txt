@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(vi_timing_test)
 
-#set(CMAKE_CONFIGURATION_TYPES Debug Release)
-
 #[[*** Requires CMake version no older than 3.21 ***
 cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_TIMING_ROOT_DIR)
 cmake_path(SET VI_SOURCE_DIR ${PROJECT_SOURCE_DIR})
@@ -54,11 +52,17 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 ## Compiler ##################################################################
 target_compile_definitions(${PROJECT_NAME}
 PRIVATE
-  $<$<CONFIG:Debug>:_DEBUG> # Microsoft debug RTL
-  $<$<CONFIG:Release>:NDEBUG>
+  $<$<CONFIG:Debug>: _DEBUG> # Microsoft debug RTL
+  $<$<CONFIG:Release>: NDEBUG>
 )
 
 if (WIN32)
+   target_compile_definitions(${PROJECT_NAME}
+   PRIVATE
+     WIN32_LEAN_AND_MEAN # Exclude rarely-used stuff from Windows headers.
+     NOMINMAX # WinAPI
+   )
+
   target_compile_options(${PROJECT_NAME}
   PRIVATE
     /MP /W3 /nologo /EHsc /Zi
@@ -67,13 +71,12 @@ if (WIN32)
     $<$<CONFIG:Debug>:   /MTd /Od /RTC1>
   )
 elseif (UNIX)
-
   target_compile_options(${PROJECT_NAME}
   PRIVATE
     -fvisibility=hidden
     -Wno-psabi
-    $<$<COMPILE_LANGUAGE:CXX>:-fPIC>
-    $<$<CONFIG:Release>:-O3 -ggdb3 -s>
+    $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
+    $<$<CONFIG:Release>: -O3 -ggdb3 -s>
   )
 endif()
 

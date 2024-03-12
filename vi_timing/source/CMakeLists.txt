@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(vi_timing VERSION 3.1.1)
 
-#set(CMAKE_CONFIGURATION_TYPES Debug Release)
-
 if(NOT DEFINED VI_ROOT_DIR)
 #Requires CMake version no older than 3.21	cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_ROOT_DIR)
 	get_filename_component(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/..")
@@ -63,13 +61,17 @@ PUBLIC
 
 target_compile_definitions(${PROJECT_NAME}
 PRIVATE
-  WIN32_LEAN_AND_MEAN # Exclude rarely-used stuff from Windows headers.
-  NOMINMAX # WinAPI
   $<$<CONFIG:Debug>: _DEBUG> # Microsoft debug RTL
   $<$<CONFIG:Release>: NDEBUG>
 )
 
 if (WIN32)
+    target_compile_definitions(${PROJECT_NAME}
+    PRIVATE
+      WIN32_LEAN_AND_MEAN # Exclude rarely-used stuff from Windows headers.
+      NOMINMAX # WinAPI
+    )
+
   target_compile_options(${PROJECT_NAME}
   PRIVATE
     /MP /W3 /nologo /EHsc /Zi 
@@ -81,8 +83,8 @@ elseif (UNIX)
   PRIVATE
     -fvisibility=hidden
     -Wno-psabi
-    $<$<COMPILE_LANGUAGE:CXX>:-fPIC>
-    $<$<CONFIG:Release>:-O3 -s>
+    $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
+    $<$<CONFIG:Release>: -O3 -s>
   )
 endif()
 
