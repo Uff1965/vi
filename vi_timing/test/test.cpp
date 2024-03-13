@@ -79,8 +79,53 @@ namespace {
 	}
 }
 
+bool test_quant()
+{
+	std::cout << "\ntest_quant()... " << std::endl;
+
+	const auto [step, dur] = []
+	{	constexpr auto CNT = 100'000;
+		std::this_thread::yield();
+		const auto s = ch::steady_clock::now();
+		auto last = vi_tmGetTicks();
+		const auto first = last;
+		for (int n = 0; n < CNT; ++n)
+			last = vi_tmGetTicks();
+		const auto f = ch::steady_clock::now();
+		return std::tuple{ (last - first) / CNT, (ch::nanoseconds(f - s).count() * 1'000) / (last - first) };
+	}();
+
+	std::atomic_bool done = false; // It must be defined before 'threads'!!!
+	std::vector<std::thread> threads(std::thread::hardware_concurrency());
+	for (auto& t : threads) { t = std::thread{ [&done] {while (!done) {/**/}}}; }
+
+	const auto mes = [step]
+	{	std::this_thread::yield();
+		const auto first = vi_tmGetTicks();
+		auto last = first;
+		for (auto current = vi_tmGetTicks(); current - last < 1'000 * step; current = vi_tmGetTicks())
+		{	last = current;
+		}
+		return last - first;
+	}();
+
+	done = true;
+	for (auto& t : threads) { t.join(); }
+
+	std::cout << "Quantum of time: " << mes << " ticks * " << dur << " ps = " << mes * dur / 1'000'000 << " us.\n";
+	std::cout << "Step: " << step << " ticks * " << dur << " ps = " << step * dur << " ps.\n";
+	std::cout << "done" << std::endl;
+	return true;
+}
+
 int main()
 {
+	struct space_out : std::numpunct<char> {
+		char do_thousands_sep() const override { return '\''; }  // separate with spaces
+		std::string do_grouping() const override { return "\3"; } // groups of 1 digit
+	};
+	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
+
 	const std::time_t tm = std::chrono::system_clock::to_time_t(ch::system_clock::now());
 #pragma warning(suppress: 4996)
 	std::cout << "Start: " << std::put_time(std::localtime(&tm), "%F %T.\n");
@@ -100,6 +145,7 @@ int main()
 
 	foo();
 	test_multithreaded();
+	test_quant();
 
 	std::cout << "\nHello, World!\n";
 	endl(std::cout);
