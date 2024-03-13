@@ -84,6 +84,14 @@ bool test_quant()
 {
 	std::cout << "\ntest_quant()... " << std::endl;
 
+	{
+		const auto s = vi_tmGetTicks();
+		const auto f = vi_tmGetTicks();
+		std::cout << "s: " << s << "\n";
+		std::cout << "f: " << f << "\n";
+		std::cout << "f - s: " << f - s << "\n";
+	}
+
 	const auto [step, dur] = []
 	{	constexpr auto CNT = 100'000;
 		std::this_thread::yield();
