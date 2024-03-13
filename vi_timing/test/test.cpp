@@ -79,6 +79,7 @@ namespace {
 	}
 }
 
+VI_OPTIMIZE_OFF
 bool test_quant()
 {
 	std::cout << "\ntest_quant()... " << std::endl;
@@ -117,6 +118,7 @@ bool test_quant()
 	std::cout << "done" << std::endl;
 	return true;
 }
+VI_OPTIMIZE_ON
 
 int main()
 {
