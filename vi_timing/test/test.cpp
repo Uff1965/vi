@@ -86,12 +86,12 @@ bool test_quant()
 	const auto [step, dur] = []
 	{	constexpr auto CNT = 100'000;
 		std::this_thread::yield();
-		const auto s = ch::steady_clock::now();
+		const auto s = ch::high_resolution_clock::now();
 		auto last = vi_tmGetTicks();
 		const auto first = last;
 		for (int n = 0; n < CNT; ++n)
 			last = vi_tmGetTicks();
-		const auto f = ch::steady_clock::now();
+		const auto f = ch::high_resolution_clock::now();
 		return std::tuple{ (last - first) / CNT, (ch::nanoseconds(f - s).count() * 1'000) / (last - first) };
 	}();
 
