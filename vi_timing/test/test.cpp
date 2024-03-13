@@ -90,6 +90,8 @@ bool test_quant()
 		std::cout << "s: " << s << "\n";
 		std::cout << "f: " << f << "\n";
 		std::cout << "f - s: " << f - s << "\n";
+		std::cout << "sizeof(vi_tmTicks_t): " << sizeof(vi_tmTicks_t) << " byte" << "\n";
+		endl(std::cout);
 	}
 
 	const auto [step, dur] = []
