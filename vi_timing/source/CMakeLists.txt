@@ -82,7 +82,7 @@ elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
   PRIVATE
     -fvisibility=hidden
-    -Wno-psabi
+    -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
     $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
     $<$<CONFIG:Release>: -O3 -s>
   )
