@@ -3,7 +3,7 @@
 
 #include "header.h"
 
-#include <vi/timing.h>
+#include "../timing.h"
 
 #include <threads.h>
 
