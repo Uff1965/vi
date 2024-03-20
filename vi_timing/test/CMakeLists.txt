@@ -6,16 +6,16 @@ project(vi_timing_test)
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "test.cpp"
-  "header.h"
-  "source.c"
+  "${PROJECT_SOURCE_DIR}/test.cpp"
+  "${PROJECT_SOURCE_DIR}/header.h"
+  "${PROJECT_SOURCE_DIR}/source.c"
 )
 source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "${VI_INTERFACE_DIR}/timing.h"
-  "${VI_INTERFACE_DIR}/vi_timing_proxy.h"
+  "../timing.h"
+  "../vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
