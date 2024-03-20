@@ -48,7 +48,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <stdio.h>
 #endif
 
-#include <vi/common.h>
+#include "common.h"
 
 #if !defined(__cplusplus) && defined( __STDC_NO_ATOMICS__)
 // "<...> we left out support for some C11 optional features such as atomics <...>" [Microsoft]

@@ -2,28 +2,20 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(vi_timing_test)
 
-#[[*** Requires CMake version no older than 3.21 ***
-cmake_path(GET PROJECT_SOURCE_DIR PARENT_PATH VI_TIMING_ROOT_DIR)
-cmake_path(SET VI_SOURCE_DIR ${PROJECT_SOURCE_DIR})
-cmake_path(SET VI_INTERFACE_DIR ${VI_ROOT_DIR})
-cmake_path(APPEND VI_ROOT_DIR "lib" OUTPUT_VARIABLE VI_OUT_DIR)
-]]
-get_filename_component(VI_INTERFACE_DIR "${VI_ROOT_DIR}" ABSOLUTE)
-get_filename_component(VI_SOURCE_DIR "${PROJECT_SOURCE_DIR}" ABSOLUTE)
-get_filename_component(VI_OUT_DIR "${VI_ROOT_DIR}/lib" ABSOLUTE)
-
 ### Files #####################################################################
+set(SOURCE_FILES)
+
 set(FILE_GROUP
-  "${VI_SOURCE_DIR}/test.cpp"
-  "${VI_SOURCE_DIR}/header.h"
-  "${VI_SOURCE_DIR}/source.c"
+  "test.cpp"
+  "header.h"
+  "source.c"
 )
 source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "${VI_INTERFACE_DIR}/vi/timing.h"
-  "${VI_INTERFACE_DIR}/vi/vi_timing_proxy.h"
+  "${VI_INTERFACE_DIR}/timing.h"
+  "${VI_INTERFACE_DIR}/vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
@@ -37,16 +29,21 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_EXTENSIONS OFF
   OUTPUT_NAME_RELEASE "${PROJECT_NAME}"
   OUTPUT_NAME_DEBUG   "${PROJECT_NAME}_d"
+
+  LIBRARY_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
+  LIBRARY_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
+  ARCHIVE_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
+  ARCHIVE_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
+  RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
+  RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
+
   LIBRARY_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
   ARCHIVE_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
+)
 
-  LIBRARY_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
-  ARCHIVE_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
-  RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
-  LIBRARY_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
-  ARCHIVE_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
-  RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
+add_dependencies(${PROJECT_NAME}
+	vi_timing
 )
 
 ## Compiler ##################################################################
