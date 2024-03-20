@@ -6,16 +6,15 @@ if(NOT DEFINED VI_OUT_DIR)
 	get_filename_component(VI_OUT_DIR "${PROJECT_SOURCE_DIR}/lib/." DIRECTORY)
 endif()
 
-set(VI_INTERFACE_DIR ${PROJECT_SOURCE_DIR})
 get_filename_component(VI_SOURCE_DIR "${PROJECT_SOURCE_DIR}/source/." DIRECTORY)
 
 ### Files #####################################################################
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "${VI_INTERFACE_DIR}/common.h"
-  "${VI_INTERFACE_DIR}/timing.h"
-  "${VI_INTERFACE_DIR}/vi_timing_proxy.h"
+  "${PROJECT_SOURCE_DIR}/common.h"
+  "${PROJECT_SOURCE_DIR}/timing.h"
+  "${PROJECT_SOURCE_DIR}/vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
@@ -52,7 +51,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 ### Compiler ##################################################################
 target_include_directories(${PROJECT_NAME}
 PUBLIC
-  ${VI_INTERFACE_DIR}
+  ${PROJECT_SOURCE_DIR}
 )
 
 target_compile_definitions(${PROJECT_NAME}
