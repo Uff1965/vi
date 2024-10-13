@@ -23,7 +23,7 @@ const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF
 const auto _dummy1 = _set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
 #endif
 
-VI_TM_INIT("Timing report:", reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), stdout, 0xE2);
+VI_TM_INIT("Timing report:\n", reinterpret_cast<vi_tmLogSTR_t>(&std::fputs), stdout, 0x72);
 VI_TM("GLOBAL");
 
 namespace {

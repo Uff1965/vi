@@ -663,19 +663,24 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t
 
 	std::sort(traits.meterages_.begin(), traits.meterages_.end(), meterage_comparator_t{ flags });
 
-	std::ostringstream str;
-	if (flags & static_cast<uint32_t>(vi_tmShowOverhead))
-	{	str << "Measurement cost: " << traits.tick_duration_ * traits.measurement_cost_ << " per measurement. ";
-	}
-	if (flags & static_cast<uint32_t>(vi_tmShowDuration))
-	{	str << "Duration: " << duration() << ". ";
-	}
-	if (flags & static_cast<uint32_t>(vi_tmShowUnit))
-	{	str << "One tick corresponds: " << traits.tick_duration_ << ". ";
-	}
-	str << '\n';
+	int ret = 0;
+	if (flags & static_cast<std::uint32_t>(vi_tmShowMask))
+	{	std::ostringstream str;
 
-	int ret = fn(str.str().c_str(), data);
+		if (flags & static_cast<uint32_t>(vi_tmShowOverhead))
+		{	str << "Measurement cost: " << traits.tick_duration_ * traits.measurement_cost_ << " per measurement. ";
+		}
+		if (flags & static_cast<uint32_t>(vi_tmShowDuration))
+		{	str << "Duration: " << duration() << ". ";
+		}
+		if (flags & static_cast<uint32_t>(vi_tmShowUnit))
+		{	str << "One tick corresponds: " << traits.tick_duration_ << ". ";
+		}
+
+		str << '\n';
+		ret = fn(str.str().c_str(), data);
+	}
+
 	meterage_format_t mf{ traits, fn, data };
 	ret += mf.header();
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
