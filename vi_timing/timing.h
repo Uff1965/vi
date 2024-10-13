@@ -153,12 +153,13 @@ extern "C" {
 		vi_tmSortByName = 0x01,
 		vi_tmSortBySpeed = 0x02,
 		vi_tmSortByAmount = 0x03,
-		vi_tmSortMask = 0x0F,
 		vi_tmSortDescending = 0x00,
-		vi_tmSortAscending = 0x10,
-		vi_tmShowOverhead = 0x20,
-		vi_tmShowUnit = 0x40,
-		vi_tmShowDuration = 0x80,
+		vi_tmSortAscending = 0x08,
+		vi_tmSortMask = 0x0F,
+		vi_tmShowOverhead = 0x10,
+		vi_tmShowUnit = 0x20,
+		vi_tmShowDuration = 0x40,
+		vi_tmShowMask = 0xF0,
 	};
 
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
@@ -203,13 +204,13 @@ namespace vi_tm
 		std::uint32_t flags_;
 	public:
 		init_t
-		(	const char* title = "Timing report:",
+		(	const char* title = "Timing report:\n",
 			vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs),
 			void* data = stdout,
 			std::uint32_t flags = vi_tmSortByTime,
 			std::size_t reserve = 64
 		)
-		:	title_{ title + std::string{"\n"}}, cb_{fn}, data_{data}, flags_{flags}
+		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }
 		{	vi_tmInit(reserve);
 		}
 
@@ -228,9 +229,9 @@ namespace vi_tm
 #		define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #		define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
 #	else
-#		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_)(__VA_ARGS__)
-#		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) (__VA_ARGS__)
-#		define VI_TM_REPORT(...) vi_tm::report(__VA_ARGS__)
+#		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
+#		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
+#		define VI_TM_REPORT(...) vi_tmReport(__VA_ARGS__)
 #	endif
 
 #	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
