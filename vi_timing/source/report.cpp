@@ -654,7 +654,7 @@ VI_OPTIMIZE_ON
 	};
 } // namespace {
 
-VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
+VI_TM_API int VI_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
 	warming(false, 512ms); //-V601
 

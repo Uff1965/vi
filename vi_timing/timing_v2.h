@@ -23,8 +23,8 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
-#ifndef VI_TIMING_VI_TIMING_H
-#	define VI_TIMING_VI_TIMING_H 3.0
+#ifndef VI_TIMING_VI_TIMING_V2_H
+#	define VI_TIMING_VI_TIMING_V2_H 3.0
 #	pragma once
 
 #if defined(_WIN32)
@@ -135,10 +135,13 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API void VI_CALL vi_tmInit(VI_STD(size_t) n);
-	VI_TM_API vi_tmAtomicTicks_t* VI_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
-	VI_TM_API int VI_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_CALL vi_tmClear(void);
+	typedef struct vi_tmTimer_t vi_tmTimer_t;
+	VI_TM_API vi_tmTimer_t* VI_CALL vi_tmCreate_v2(VI_STD(size_t) n);
+	VI_TM_API vi_tmTimer_t* VI_CALL vi_tmGlobal_v2(void);
+	VI_TM_API vi_tmAtomicTicks_t* VI_CALL vi_tmItem_v2(vi_tmTimer_t* tm, const char* name, VI_STD(size_t) amount);
+	VI_TM_API int VI_CALL vi_tmResults_v2(vi_tmTimer_t* tm, vi_tmLogRAW_t fn, void* data);
+	VI_TM_API void VI_CALL vi_tmClear_v2(vi_tmTimer_t* tm);
+	VI_TM_API void VI_CALL vi_tmClose_v2(vi_tmTimer_t* tm);
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -157,18 +160,18 @@ extern "C" {
 		vi_tmShowMask		= 0b1111'0000,
 	};
 
-	VI_TM_API int VI_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
+	VI_TM_API int VI_CALL vi_tmReport_v2(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
 	typedef struct vi_tmItem_t
 	{	vi_tmAtomicTicks_t* item_;
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
 	} vi_tmItem_t;
-	static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
+	static inline vi_tmItem_t vi_tmStart_v2(vi_tmTimer_t* tm, const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
 	{	vi_tmItem_t result;
-		result.item_ = vi_tmItem(name, amount);
+		result.item_ = vi_tmItem_v2(tm, name, amount);
 		result.start_ = vi_tmGetTicks();
 		return result;
 	}
-	static inline void vi_tmEnd(const vi_tmItem_t *itm) VI_NOEXCEPT
+	static inline void vi_tmEnd_v2(vi_tmTimer_t* tm, const vi_tmItem_t *itm) VI_NOEXCEPT
 	{	const vi_tmTicks_t end = vi_tmGetTicks();
 		VI_STD(atomic_fetch_add_explicit)(itm->item_, end - itm->start_, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
@@ -184,7 +187,7 @@ namespace vi_tm
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
-		timer_t(const char* name, std::size_t amount = 1) noexcept : vi_tmItem_t{ vi_tmItem(name, amount), vi_tmGetTicks() } {}
+		timer_t(vi_tmTimer_t *tm, const char* name, std::size_t amount = 1) noexcept : vi_tmItem_t{ vi_tmItem_v2(tm, name, amount), vi_tmGetTicks() } {}
 		~timer_t() noexcept
 		{	const auto end = vi_tmGetTicks();
 			std::atomic_fetch_add_explicit(item_, end - start_, std::memory_order::memory_order_relaxed);
@@ -206,7 +209,7 @@ namespace vi_tm
 			std::size_t reserve = 64
 		)
 		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }
-		{	vi_tmInit(reserve);
+		{	
 		}
 
 		~init_t()
@@ -214,22 +217,22 @@ namespace vi_tm
 			{	cb_(title_.c_str(), data_);
 			}
 
-			vi_tmReport(cb_, data_, flags_);
+			vi_tmReport_v2(cb_, data_, flags_);
 		}
 	};
 } // namespace vi_tm {
 
-#	if defined(VI_TM_DISABLE)
-#		define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#		define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#		define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
+#	if defined(VI_TM_V2_DISABLE)
+#		define VI_TM_V2_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#		define VI_TM_V2(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#		define VI_TM_V2_REPORT(...) ((void)(__VA_ARGS__, 0))
 #	else
-#		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
-#		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
-#		define VI_TM_REPORT(...) vi_tmReport(__VA_ARGS__)
+#		define VI_TM_V2_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
+#		define VI_TM_V2(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
+#		define VI_TM_V2_REPORT(...) vi_tmReport(__VA_ARGS__)
 #	endif
 
-#	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
+#	define VI_TM_V2_FUNC VI_TM_V2( VI_FUNCNAME )
 #endif // #if !defined(__cplusplus) ^^^
 
-#endif // #ifndef VI_TIMING_VI_TIMING_H
+#endif // #ifndef VI_TIMING_VI_TIMING_V2_H

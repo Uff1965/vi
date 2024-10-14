@@ -31,14 +31,14 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_STD(s) std::s
 #	define VI_MEMORY_ORDER(s) std::memory_order::s
 #	define VI_NOEXCEPT noexcept
-#	define VI_R_CAST(T, s) reinterpret_cast<T>(s)
-#	define VI_S_CAST(T, s) static_cast<T>(s)
+#	define VI_CAST_R(T, s) reinterpret_cast<T>(s)
+#	define VI_CAST_S(T, s) static_cast<T>(s)
 #else
 #	define VI_STD(foo_s) foo_s
 #	define VI_MEMORY_ORDER(foo_s) foo_s
 #	define VI_NOEXCEPT
-#	define VI_R_CAST(T, foo_s) (T)foo_s
-#	define VI_S_CAST(T, foo_s) (T)foo_s
+#	define VI_CAST_R(T, foo_s) (T)foo_s
+#	define VI_CAST_S(T, foo_s) (T)foo_s
 #endif
 
 #ifdef _MSC_VER
@@ -64,5 +64,18 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #define VI_STR_AUX( a, b ) a##b
 #define VI_STR( a, b ) VI_STR_AUX( a, b )
 #define VI_MAKE_UNIC_ID( prefix ) VI_STR( prefix, __LINE__ )
+
+// Define VI_CALL vvvvvvvvvvvvvv
+#if defined(_WIN32) // Windows x86 or x64
+#	ifdef _WIN64
+#		define VI_CALL
+#	else
+#		define VI_CALL __fastcall
+#	endif
+#elif defined (__linux__)
+#	define VI_CALL
+#else
+#	error "Unknown platform!"
+#endif
 
 #endif // #ifndef VI_TIMING_VI_COMMON_H
