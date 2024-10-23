@@ -26,6 +26,8 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
+//-V:assert:2570
+
 #include <timing.h>
 
 #include <algorithm>
@@ -60,10 +62,10 @@ namespace
 
 	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
-		assert(num >= 0 && prec > dec && prec <= 3 + dec);
+		assert(num >= .0 && prec > dec && prec <= 3U + dec);
 
 		double result = num;
-		if (num >= 0 && prec > dec && prec <= 3 + dec)
+		if (num >= .0 && prec > dec && prec <= 3U + dec)
 		{
 			auto power = static_cast<signed char>(std::floor(std::log10(num)));
 			auto t = 1U + (3 + power % 3) % 3;
@@ -85,7 +87,7 @@ namespace
 #ifndef NDEBUG
 	const auto unit_test_round= []
 		{
-			static constexpr struct { int line_;  double org_; double rnd_; unsigned char precision_ = 2; unsigned char dec_ = 1; }
+			static constexpr struct { int line_;  double org_; double rnd_; unsigned char precision_ = 2; unsigned char dec_ = 1; } //-V802 //-V730
 			samples[] = {
 				{__LINE__, 0.0, 0.0, 1, 0},
 				{__LINE__, 0.0, 0.0, 2, 1},
@@ -172,7 +174,7 @@ namespace
 #ifndef NDEBUG
 	const auto unit_test_to_string = []
 	{
-		struct I { int line_; duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; };
+		struct I { int line_; duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; }; //-V802 //-V730
 		static constexpr I samples[] = {
 			{__LINE__, 0s, "0.0ps"},
 			{__LINE__, 0.01234567891s, "12.346ms", 6, 3},
@@ -493,10 +495,10 @@ VI_OPTIMIZE_ON
 		}
 	};
 
-	int collector_meterages(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* _traits)
+	int collector_meterages(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* data)
 	{
-		assert(_traits);
-		auto& traits = *static_cast<traits_t*>(_traits);
+		assert(data);
+		auto& traits = *static_cast<traits_t*>(data);
 		assert(calls_cnt && amount >= calls_cnt);
 
 		const auto sort = traits.flags_ & static_cast<uint32_t>(vi_tmSortMask);
@@ -521,7 +523,7 @@ VI_OPTIMIZE_ON
 			traits.max_amount_ = itm.on_amount_;
 			auto max_len_amount = static_cast<std::size_t>(std::floor(std::log10(itm.on_amount_)));
 			max_len_amount += max_len_amount / 3; // for thousand separators
-			max_len_amount += 1;
+			max_len_amount += 1U;
 			traits.max_len_amount_ = max_len_amount;
 		}
 
@@ -572,7 +574,7 @@ VI_OPTIMIZE_ON
 				break;
 			}
 
-			const bool desc = !(static_cast<uint32_t>(vi_tmSortAscending) & flags_);
+			const bool desc = (0 == (static_cast<uint32_t>(vi_tmSortAscending) & flags_));
 			return desc ? pr(l, r) : pr(r, l);
 		}
 	};
@@ -638,7 +640,7 @@ VI_OPTIMIZE_ON
 			};
 			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t)); //-V2511
 
-			const char fill = (traits_.meterages_.size() > 4 && (n_ - 1) % 2) ? ' ' : '.';
+			const char fill = (traits_.meterages_.size() > 4 && 0 != (n_ - 1) % 2) ? ' ' : '.';
 			str << std::setw(number_len_) << n_ << ". ";
 			str << std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.on_name_ << ": ";
 			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [";
@@ -656,7 +658,7 @@ VI_OPTIMIZE_ON
 
 VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
-	warming(false, 512ms); //-V601
+	warming(false, 512ms);
 
 	traits_t traits{ flags };
 	vi_tmResults(collector_meterages, &traits);
