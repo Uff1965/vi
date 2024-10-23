@@ -12,7 +12,7 @@ void foo(void)
 {
 	struct vi_tmItem_t const foo_tm = vi_tmStart("foo", 1);
 
-	printf("\n%s... ", __func__);
+	printf("\n%s... ", __func__); //-V2600
 
 	{
 		thrd_yield();
@@ -71,6 +71,6 @@ void foo(void)
 	}
 
 	vi_tmEnd(&foo_tm);
-	printf("done\n");
+	printf("done\n"); //-V2600
 }
 //VI_OPTIMIZE_ON

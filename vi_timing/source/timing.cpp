@@ -26,6 +26,8 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
+//-V:assert:2570
+
 #include <timing.h>
 
 #include <cassert>
@@ -35,7 +37,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 struct item_t
 {
-	std::atomic<vi_tmTicks_t> ticks_{ 0 };
+	vi_tmAtomicTicks_t ticks_{ 0 };
 	std::size_t amount_{ 0 };
 	std::size_t calls_cnt_{ 0 };
 };
@@ -44,9 +46,9 @@ decltype(item_t::ticks_) s_dummy_ticks{ 0 };
 std::mutex s_instance_guard;
 std::unordered_map<std::string, item_t> s_instance;
 
-std::atomic<vi_tmTicks_t>* vi_tmItem(const char* name, std::size_t amount)
+vi_tmAtomicTicks_t* vi_tmItem(const char* name, std::size_t amount)
 {
-	std::atomic<vi_tmTicks_t>* result;
+	vi_tmAtomicTicks_t* result;
 	if (nullptr != name)
 	{
 		std::scoped_lock lg_{ s_instance_guard };

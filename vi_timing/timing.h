@@ -34,7 +34,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #endif
 
 #ifdef _MSC_VER
-#	include <intrin.h> // For __rdtscp
+#	include <intrin.h>
+#	pragma intrinsic(__rdtscp, _mm_lfence)
+#elif defined(__GNUC__)
+#	include <x86intrin.h>
 #endif
 
 #ifdef __cplusplus
@@ -70,7 +73,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define VI_TM_API __declspec(dllimport)
 #	endif
 #elif defined(__ANDROID__)
-#	define CM_TM_DISABLE "Android not supported yet."
+#	define VI_TM_DISABLE "Android not supported yet."
 #elif defined (__linux__)
 #	define VI_SYS_CALL
 #	define VI_TM_CALL
@@ -80,7 +83,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define VI_TM_API
 #	endif
 #else
-#	define CM_TM_DISABLE "Unknown platform!"
+#	define VI_TM_DISABLE "Unknown platform!"
 #endif
 // Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -101,23 +104,21 @@ extern "C" {
 #if defined(vi_tmGetTicks)
 // Custom define
 #else
-#	if defined(_M_X64) || defined(_M_AMD64) // MS compiler on Intel
-#		pragma intrinsic(__rdtscp)
+#	if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
-		{	unsigned int _;
-			return __rdtscp(&_);
-		}
-#	elif defined(__x86_64__) || defined(__amd64__) // GNU on Intel
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
-		{	VI_STD(uint32_t) aux;
-			VI_STD(uint64_t) low, high;
-			__asm__ volatile("rdtscp\n" : "=a" (low), "=d" (high), "=c" (aux));
-			return (high << 32) | low;
+		{	uint32_t _; // будет удалён оптимизатором
+			const uint64_t result = __rdtscp(&_);
+			//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
+			//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
+			//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
+			//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
+			_mm_lfence();
+			return result;
 		}
 #	elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
 		{	VI_STD(uint64_t) result;
-			asm volatile("mrs %0, cntvct_el0" : "=r"(result));
+			__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
 			return result;
 		}
 #	elif defined(_WIN32) // Windows
@@ -163,17 +164,17 @@ extern "C" {
 	};
 
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
-	struct vi_tmItem_t
+	typedef struct vi_tmItem_t
 	{	vi_tmAtomicTicks_t* item_;
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
-	};
-	static inline struct vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
-	{	struct vi_tmItem_t result;
+	} vi_tmItem_t;
+	static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
+	{	vi_tmItem_t result;
 		result.item_ = vi_tmItem(name, amount);
 		result.start_ = vi_tmGetTicks();
 		return result;
 	}
-	static inline void vi_tmEnd(const struct vi_tmItem_t *itm) VI_NOEXCEPT
+	static inline void vi_tmEnd(const vi_tmItem_t *itm) VI_NOEXCEPT
 	{	const vi_tmTicks_t end = vi_tmGetTicks();
 		VI_STD(atomic_fetch_add_explicit)(itm->item_, end - itm->start_, VI_MEMORY_ORDER(memory_order_relaxed));
 	}

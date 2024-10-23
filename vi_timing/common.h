@@ -1,4 +1,4 @@
-/********************************************************************\
+/*****************************************************************************\
 'vi_timing' is a small library for measuring the time execution of
 code in C and C++.
 
@@ -21,7 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. 
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
-\********************************************************************/
+\*****************************************************************************/
 
 #ifndef VI_TIMING_VI_COMMON_H
 #	define VI_TIMING_VI_COMMON_H
@@ -34,11 +34,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_R_CAST(T, s) reinterpret_cast<T>(s)
 #	define VI_S_CAST(T, s) static_cast<T>(s)
 #else
-#	define VI_STD(foo_s) foo_s
-#	define VI_MEMORY_ORDER(foo_s) foo_s
+#	define VI_STD(s) s
+#	define VI_MEMORY_ORDER(s) s
 #	define VI_NOEXCEPT
-#	define VI_R_CAST(T, foo_s) (T)foo_s
-#	define VI_S_CAST(T, foo_s) (T)foo_s
+#	define VI_R_CAST(T, s) (T)s
+#	define VI_S_CAST(T, s) (T)s
 #endif
 
 #ifdef _MSC_VER
