@@ -65,19 +65,16 @@ namespace
 		assert(num >= .0 && prec > dec && prec <= 3U + dec);
 
 		double result = num;
-		if (num >= .0 && prec > dec && prec <= 3U + dec)
+		if (num > .0 && prec > dec && prec <= 3U + dec)
 		{
 			auto power = static_cast<signed char>(std::floor(std::log10(num)));
-			auto t = 1U + (3 + power % 3) % 3;
-			if (prec > t)
-			{	t += std::min(dec, static_cast<unsigned char>(prec - t));
-			}
-			else
-			{	t = prec;
-			}
-			power -= t - 1;
+			assert(.0 <= num * std::pow(10, -power) && num * std::pow(10, -power) < 10.0);
+			auto t =  static_cast<unsigned char>(dec + 1 + (3 + power % 3) % 3);
+			assert(dec < t && t <= dec + 3U);
+			t = std::min(prec, t);
+			assert(dec < t && t <= prec);
 
-			auto factor = std::pow(10, -power);
+			const auto factor = std::pow(10, t - power - 1);
 			result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) * factor) / factor;
 		}
 
@@ -109,7 +106,7 @@ namespace
 				{__LINE__, 12.3456789e3, 12.3e3, 4, 1},
 				{__LINE__, 12.3456789e3, 12.35e3, 5, 2},
 
-				{__LINE__, 0.123456789, 0.10, 1, 0},
+				{__LINE__, 0.123456789, 0.1, 1, 0},
 				{__LINE__, 0.123456789, 0.12, 2, 1},
 				{__LINE__, 0.123456789, 0.1235, 4, 1},
 				{__LINE__, 0.123456789, 0.12346, 5, 2},
@@ -119,7 +116,7 @@ namespace
 				{__LINE__, 0.00123456789, 0.0012, 4, 1},
 				{__LINE__, 0.00123456789, 0.00123, 5, 2},
 
-				{__LINE__, 0.0123456789e-3, 0.010e-3, 1, 0},
+				{__LINE__, 0.0123456789e-3, 0.01e-3, 1, 0},
 				{__LINE__, 0.0123456789e-3, 0.012e-3, 2, 1},
 				{__LINE__, 0.0123456789e-3, 0.0123e-3, 4, 1},
 				{__LINE__, 0.0123456789e-3, 0.01235e-3, 5, 2},
@@ -300,22 +297,19 @@ namespace
 #endif // #ifndef NDEBUG
 
 	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
-	{
-		return os << to_string(d);
+	{	return os << to_string(d);
 	}
 
 	void warming(int all, ch::milliseconds ms)
 	{
 		if (ms.count())
-		{
-			std::atomic_bool done = false; // It must be defined before 'threads'!!!
+		{	std::atomic_bool done = false;
 			auto load = [&done] {while (!done) {/**/ }}; //-V776
 
 			const auto hwcnt = std::thread::hardware_concurrency();
 			std::vector<std::thread> threads((0 != all && 1 < hwcnt) ? hwcnt - 1 : 0);
 			for (auto& t : threads)
-			{
-				t = std::thread{ load };
+			{	t = std::thread{ load };
 			}
 
 			for (const auto stop = ch::steady_clock::now() + ms; ch::steady_clock::now() < stop;)
@@ -325,8 +319,7 @@ namespace
 			done = true;
 
 			for (auto& t : threads)
-			{
-				t.join();
+			{	t.join();
 			}
 		}
 	}
@@ -335,8 +328,7 @@ namespace
 	{
 		auto wait_for_the_time_changed = []
 		{
-			{
-				std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+			{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 				[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks(); // Preloading a function into cache
 				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
 			}
@@ -363,9 +355,9 @@ namespace
 		static constexpr auto CNT = 1'000U;
 
 		auto foo = [] {
-			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmEnd()' further apart.
+			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmFinish()' further apart.
 			auto itm = vi_tmStart("", 1);
-			vi_tmEnd(&itm);
+			vi_tmFinish(&itm);
 		};
 
 		auto start = [] {

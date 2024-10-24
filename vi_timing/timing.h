@@ -142,13 +142,33 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) n);
-	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) amount);
+	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve);
+	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt);
+	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
+	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
+	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(void);
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	typedef struct vi_tmItem_t
+	{	vi_tmAtomicTicks_t* amount_;
+		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
+	} vi_tmItem_t;
+
+	static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
+	{	vi_tmItem_t result;
+		result.amount_ = vi_tmItem(name, amount);
+		result.start_ = vi_tmGetTicks();
+		return result;
+	}
+
+	static inline void vi_tmFinish(const vi_tmItem_t *itm) VI_NOEXCEPT
+	{	const vi_tmTicks_t finish = vi_tmGetTicks();
+		vi_tmAdd(itm->amount_, finish - itm->start_);
+	}
+
 	enum vi_tmReportFlags {
 		vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
@@ -157,6 +177,7 @@ extern "C" {
 		vi_tmSortDescending = 0x00,
 		vi_tmSortAscending = 0x08,
 		vi_tmSortMask = 0x0F,
+
 		vi_tmShowOverhead = 0x10,
 		vi_tmShowUnit = 0x20,
 		vi_tmShowDuration = 0x40,
@@ -164,20 +185,6 @@ extern "C" {
 	};
 
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
-	typedef struct vi_tmItem_t
-	{	vi_tmAtomicTicks_t* item_;
-		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
-	} vi_tmItem_t;
-	static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
-	{	vi_tmItem_t result;
-		result.item_ = vi_tmItem(name, amount);
-		result.start_ = vi_tmGetTicks();
-		return result;
-	}
-	static inline void vi_tmEnd(const vi_tmItem_t *itm) VI_NOEXCEPT
-	{	const vi_tmTicks_t end = vi_tmGetTicks();
-		VI_STD(atomic_fetch_add_explicit)(itm->item_, end - itm->start_, VI_MEMORY_ORDER(memory_order_relaxed));
-	}
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
@@ -190,10 +197,12 @@ namespace vi_tm
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
-		timer_t(const char* name, std::size_t amount = 1) noexcept : vi_tmItem_t{ vi_tmItem(name, amount), vi_tmGetTicks() } {}
+		timer_t(const char *name, std::size_t cnt = 1) noexcept
+			: vi_tmItem_t{ vi_tmStart(name, cnt) }
+		{
+		}
 		~timer_t() noexcept
-		{	const auto end = vi_tmGetTicks();
-			std::atomic_fetch_add_explicit(item_, end - start_, std::memory_order::memory_order_relaxed);
+		{	vi_tmFinish(this);
 		}
 	};
 
@@ -208,7 +217,7 @@ namespace vi_tm
 		(	const char* title = "Timing report:\n",
 			vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs),
 			void* data = stdout,
-			std::uint32_t flags = vi_tmSortByTime,
+			std::uint32_t flags = vi_tmSortByTime | vi_tmSortDescending,
 			std::size_t reserve = 64
 		)
 		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }

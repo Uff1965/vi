@@ -35,67 +35,65 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <string>
 #include <unordered_map>
 
-struct item_t
+namespace
 {
-	vi_tmAtomicTicks_t ticks_{ 0 };
-	std::size_t amount_{ 0 };
-	std::size_t calls_cnt_{ 0 };
-};
+	struct item_t
+	{	vi_tmAtomicTicks_t amount_{ 0 };
+		std::size_t counter_{ 0 };
+		std::size_t calls_cnt_{ 0 };
+	};
 
-decltype(item_t::ticks_) s_dummy_ticks{ 0 };
-std::mutex s_instance_guard;
-std::unordered_map<std::string, item_t> s_instance;
+	decltype(item_t::amount_) s_dummy_amount{};
 
-vi_tmAtomicTicks_t* vi_tmItem(const char* name, std::size_t amount)
-{
-	vi_tmAtomicTicks_t* result;
+	std::mutex s_instance_guard;
+	auto s_instance = []
+		{	std::unordered_map<std::string, item_t> result;
+			result.reserve(16);
+			return result;
+		}();
+}
+
+vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
+{	vi_tmAtomicTicks_t* result;
 	if (nullptr != name)
-	{
-		std::scoped_lock lg_{ s_instance_guard };
+	{	std::scoped_lock lg_{ s_instance_guard };
 		auto& item = s_instance[name];
-		item.calls_cnt_++;
-		item.amount_ += amount;
-		result = &item.ticks_;
+		item.calls_cnt_ += 1;
+		item.counter_ += amount;
+		result = &item.amount_;
 	}
 	else
-	{
-		result = &s_dummy_ticks;
+	{	result = &s_dummy_amount;
 	}
 	return result;
 }
 
-int vi_tmResults(vi_tmLogRAW_t fn, void* data)
-{
-	auto result = -1;
+int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data)
+{	int result = -1;
 	std::scoped_lock lg_{ s_instance_guard };
 	for (const auto& [name, item] : s_instance)
-	{
-		assert(item.calls_cnt_ && item.amount_ >= item.calls_cnt_);
-		if (!name.empty() && 0 == fn(name.c_str(), item.ticks_, item.amount_, item.calls_cnt_, data))
-		{
-			result = 0;
+	{	assert(item.calls_cnt_ && item.counter_ >= item.calls_cnt_);
+		if (!name.empty() && 0 == fn(name.c_str(), item.amount_, item.counter_, item.calls_cnt_, data))
+		{	result = 0;
 			break;
 		}
 	}
 	return result;
 }
 
-void vi_tmInit(std::size_t n)
-{
-	std::scoped_lock lg_{ s_instance_guard };
+void VI_TM_CALL vi_tmInit(std::size_t n)
+{	std::scoped_lock lg_{ s_instance_guard };
 	assert(s_instance.empty());
 	s_instance.reserve(n);
 }
 
-void vi_tmClear(void)
-{
-	std::scoped_lock lg_{ s_instance_guard };
+void VI_TM_CALL vi_tmClear(void)
+{	std::scoped_lock lg_{ s_instance_guard };
 	for (auto& [name, item] : s_instance)
-	{
-		item.amount_ = 0;
+	{	item.amount_ = 0;
+		item.counter_ = 0;
 		item.calls_cnt_ = 0;
-		item.ticks_ = 0;
 	}
 
-	s_dummy_ticks = 0U;
+	s_dummy_amount = 0U;
 }
