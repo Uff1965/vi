@@ -69,12 +69,12 @@ namespace
 		{
 			auto power = static_cast<signed char>(std::floor(std::log10(num)));
 			assert(.0 <= num * std::pow(10, -power) && num * std::pow(10, -power) < 10.0);
-			auto t =  static_cast<unsigned char>(dec + 1 + (3 + power % 3) % 3);
-			assert(dec < t && t <= dec + 3U);
-			t = std::min(prec, t);
-			assert(dec < t && t <= prec);
+			auto len =  static_cast<unsigned char>(dec + 1 + (3 + power % 3) % 3);
+			assert(dec < len && len <= dec + 3U);
+			len = std::min(prec, len);
+			assert(dec < len && len <= prec);
 
-			const auto factor = std::pow(10, t - power - 1);
+			const auto factor = std::pow(10, len - power - 1);
 			result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) * factor) / factor;
 		}
 
