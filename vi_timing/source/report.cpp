@@ -59,26 +59,23 @@ namespace
 	constexpr auto operator""_ks(unsigned long long v) noexcept { return ch::duration<double, std::kilo>(v); };
 	constexpr auto operator""_Ms(long double v) noexcept { return ch::duration<double, std::mega>(v); };
 	constexpr auto operator""_Ms(unsigned long long v) noexcept { return ch::duration<double, std::mega>(v); };
+	constexpr auto operator""_Gs(long double v) noexcept { return ch::duration<double, std::giga>(v); };
+	constexpr auto operator""_Gs(unsigned long long v) noexcept { return ch::duration<double, std::giga>(v); };
 
 	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
 		assert(num >= .0 && prec > dec && prec <= 3U + dec);
+		if (num <= .0 || prec <= dec || prec > 3U + dec)
+			return num;
 
-		double result = num;
-		if (num > .0 && prec > dec && prec <= 3U + dec)
-		{
-			auto power = static_cast<signed char>(std::floor(std::log10(num)));
-			assert(.0 <= num * std::pow(10, -power) && num * std::pow(10, -power) < 10.0);
-			auto len =  static_cast<unsigned char>(dec + 1 + (3 + power % 3) % 3);
-			assert(dec < len && len <= dec + 3U);
-			len = std::min(prec, len);
-			assert(dec < len && len <= prec);
+		const auto exp = static_cast<signed>(std::floor(std::log10(num)));
+		assert(.0 <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 10.0);
 
-			const auto factor = std::pow(10, len - power - 1);
-			result = std::round((num * (1 + std::numeric_limits<decltype(num)>::epsilon())) * factor) / factor;
-		}
+		auto len =  std::min(prec, static_cast<unsigned char>(dec + 1 + (3 + exp % 3) % 3));
+		assert(dec < len && len <= prec);
 
-		return result;
+		const auto factor = std::pow(10, len - exp - 1);
+		return std::round(factor * (num * (1 + std::numeric_limits<decltype(num)>::epsilon()))) / factor;
 	}
 
 #ifndef NDEBUG
@@ -86,48 +83,53 @@ namespace
 		{
 			static constexpr struct { int line_;  double org_; double rnd_; unsigned char precision_ = 2; unsigned char dec_ = 1; } //-V802 //-V730
 			samples[] = {
-				{__LINE__, 0.0, 0.0, 1, 0},
-				{__LINE__, 0.0, 0.0, 2, 1},
-				{__LINE__, 0.0, 0.0, 4, 1},
-				{__LINE__, 0.0, 0.0, 5, 2},
-
-				{__LINE__, 1.23456789, 1.0, 1, 0},
-				{__LINE__, 1.23456789, 1.2, 2, 1},
-				{__LINE__, 1.23456789, 1.2, 4, 1},
-				{__LINE__, 1.23456789, 1.23, 5, 2},
-
-				{__LINE__, 123.456789, 100.0, 1, 0},
-				{__LINE__, 123.456789, 120.0, 2, 1},
-				{__LINE__, 123.456789, 123.5, 4, 1},
-				{__LINE__, 123.456789, 123.46, 5, 2},
-
-				{__LINE__, 12.3456789e3, 10.0e3, 1, 0},
-				{__LINE__, 12.3456789e3, 12.0e3, 2, 1},
-				{__LINE__, 12.3456789e3, 12.3e3, 4, 1},
-				{__LINE__, 12.3456789e3, 12.35e3, 5, 2},
-
-				{__LINE__, 0.123456789, 0.1, 1, 0},
-				{__LINE__, 0.123456789, 0.12, 2, 1},
-				{__LINE__, 0.123456789, 0.1235, 4, 1},
-				{__LINE__, 0.123456789, 0.12346, 5, 2},
-
-				{__LINE__, 0.00123456789, 0.001, 1, 0},
-				{__LINE__, 0.00123456789, 0.0012, 2, 1},
-				{__LINE__, 0.00123456789, 0.0012, 4, 1},
-				{__LINE__, 0.00123456789, 0.00123, 5, 2},
-
-				{__LINE__, 0.0123456789e-3, 0.01e-3, 1, 0},
-				{__LINE__, 0.0123456789e-3, 0.012e-3, 2, 1},
-				{__LINE__, 0.0123456789e-3, 0.0123e-3, 4, 1},
-				{__LINE__, 0.0123456789e-3, 0.01235e-3, 5, 2},
+				{__LINE__, 0.0, 0.0},
+				{__LINE__, 1.4544, 1.0, 1, 0},
+				{__LINE__, 1.4544, 1.0, 3, 0},
+				{__LINE__, 1.4544, 1.5, 2, 1},
+				{__LINE__, 1.4544, 1.5, 3, 1},
+				{__LINE__, 1.4544, 1.45, 3, 2},
+				{__LINE__, 14.544, 10.0, 1, 0},
+				{__LINE__, 14.544, 15.0, 2, 1},
+				{__LINE__, 14.544, 15.0, 3, 0},
+				{__LINE__, 14.544, 14.5, 3, 1},
+				{__LINE__, 14.544, 14.5, 3, 2},
+				{__LINE__, 145.44, 100.0, 1, 0},
+				{__LINE__, 145.44, 145.0, 3, 0},
+				{__LINE__, 145.44, 145.0, 3, 1},
+				{__LINE__, 145.44, 145.0, 3, 2},
+				{__LINE__, 0.1454, 0.10, 1, 0},
+				{__LINE__, 0.1454, 0.145, 3, 0},
+				{__LINE__, 0.1454, 0.145, 3, 1},
+				{__LINE__, 0.1454, 0.145, 3, 2},
+				{__LINE__, 14.544, 10.0, 1, 0},
+				{__LINE__, 14.544, 15.0, 3, 0},
+				{__LINE__, 14.544, 14.5, 3, 1},
+				{__LINE__, 14.544, 14.5, 3, 2},
+				{__LINE__, 1454.4, 1000.0, 1, 0},
+				{__LINE__, 1454.4, 1000.0, 3, 0},
+				{__LINE__, 1454.4, 1500.0, 3, 1},
+				{__LINE__, 1454.4, 1450.0, 3, 2},
+				{__LINE__, 0.01454, 0.0100, 1, 0},
+				{__LINE__, 0.01454, 0.0150, 3, 0},
+				{__LINE__, 0.01454, 0.0145, 3, 1},
+				{__LINE__, 0.01454, 0.0145, 3, 2},
+				{__LINE__, 9.5444, 10.0, 1, 0},
+				{__LINE__, 9.5444, 10.0, 2, 0},
+				{__LINE__, 9.5444, 10.0, 3, 0},
+				{__LINE__, 9.5444, 9.5, 3, 1},
+				{__LINE__, 9.5444, 9.54, 3, 2},
+				{__LINE__, 9.4544, 9.0, 1, 0},
+				{__LINE__, 9.4544, 9.0, 2, 0},
+				{__LINE__, 9.4544, 9.0, 3, 0},
+				{__LINE__, 9.4544, 9.5, 3, 1},
+				{__LINE__, 9.4544, 9.45, 3, 2},
 			};
 
 			for (auto& i : samples)
-			{
-				const auto rnd = round(i.org_, i.precision_, i.dec_);
-				if (std::max(rnd, i.rnd_) * DBL_EPSILON < std::abs(rnd - i.rnd_))
-				{
-					std::cerr << i.line_ << " " << rnd << " " << i.rnd_ << std::endl;
+			{	const auto rnd = round(i.org_, i.precision_, i.dec_);
+				if (std::max(std::abs(rnd), std::abs(i.rnd_)) * DBL_EPSILON < std::abs(rnd - i.rnd_))
+				{	std::cerr << i.line_ << " " << rnd << " " << i.rnd_ << std::endl;
 					assert(false);
 				}
 			}
@@ -143,28 +145,32 @@ namespace
 		constexpr duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
 
 		[[nodiscard]] friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1)
-		{
-			sec = duration_t{ round(sec.count(), precision, dec) };
-
-			struct { std::string_view suffix_; double factor_; } k;
-			if (10_ps > sec) { k = { "ps"sv, 1.0 }; }
-			else if (1ns > sec) { k = { "ps"sv, 1e12 }; }
-			else if (1us > sec) { k = { "ns"sv, 1e9 }; }
-			else if (1ms > sec) { k = { "us"sv, 1e6 }; }
-			else if (1s > sec) { k = { "ms"sv, 1e3 }; }
-			else if (1_ks > sec) { k = { "s "sv, 1e0 }; }
-			else if (1_Ms > sec) { k = { "ks"sv, 1e-3 }; }
-			else if (1000_Ms > sec) { k = { "Ms"sv, 1e-6 }; }
-			else { k = { "Gs"sv, 1e-9 }; }
-
+		{	sec = round(sec.count(), precision, dec);
 			std::ostringstream ss;
-			ss << std::fixed << std::setprecision(dec) << sec.count() * k.factor_ << k.suffix_;
+			ss << std::fixed << std::setprecision(dec);
+			
+			if ( 10_ps > sec)
+			{	ss << 0.0 << "ps"sv;
+			}
+			else
+			{	struct { std::string_view suffix_; double factor_; } k;
+				if (1ns > sec) { k = { "ps"sv, 1e12 }; }
+				else if (1us > sec) { k = { "ns"sv, 1e9 }; }
+				else if (1ms > sec) { k = { "us"sv, 1e6 }; }
+				else if (1s > sec) { k = { "ms"sv, 1e3 }; }
+				else if (1_ks > sec) { k = { "s "sv, 1e0 }; }
+				else if (1_Ms > sec) { k = { "ks"sv, 1e-3 }; }
+				else if (1_Gs > sec) { k = { "Ms"sv, 1e-6 }; }
+				else { k = { "Gs"sv, 1e-9 }; }
+
+				ss << sec.count() * k.factor_ << k.suffix_;
+			}
+
 			return ss.str();
 		}
 
 		[[nodiscard]] friend bool operator<(duration_t l, duration_t r)
-		{
-			return l.count() < r.count() && to_string(l, 2, 1) != to_string(r, 2, 1);
+		{	return l.count() < r.count() && to_string(l, 2, 1) != to_string(r, 2, 1);
 		}
 	};
 
@@ -173,6 +179,20 @@ namespace
 	{
 		struct I { int line_; duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; }; //-V802 //-V730
 		static constexpr I samples[] = {
+			{__LINE__, 0s, "0.0ps"},
+			{__LINE__, 0ms, "0.00ps", 3, 2},
+			{__LINE__, 9.4_ps, "0.0ps"},
+			{__LINE__, 9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
+			{__LINE__, 0.1_ps, "0.0ps"},
+			{__LINE__, 1.0_ps, "0.0ps"},
+			{__LINE__, 10.0_ps, "10.0ps"},
+			{__LINE__, 11.0_ps, "11.0ps"},
+			{__LINE__, 1454.4us, "1ms", 3, 0},
+			{__LINE__, 1.4544ms, "1.5ms", 3, 1},
+			{__LINE__, 1.4544ms, "1.45ms", 3, 2},
+
+
+
 			{__LINE__, 0s, "0.0ps"},
 			{__LINE__, 0.01234567891s, "12.346ms", 6, 3},
 			{__LINE__, 0.01234567891s, "12.35ms", 5, 2},
@@ -289,7 +309,10 @@ namespace
 
 		for (auto& i : samples)
 		{	const auto str = to_string(i.sec_, i.precision_, i.dec_);
-			assert(i.res_ == str);
+			if (i.res_ != str)
+			{	std::cerr << i.line_ << " " << str << " " << i.res_ << std::endl;
+				assert(false);
+			}
 		}
 
 		return 0;
