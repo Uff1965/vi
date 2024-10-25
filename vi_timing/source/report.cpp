@@ -62,7 +62,7 @@ namespace
 	constexpr auto operator""_Gs(long double v) noexcept { return ch::duration<double, std::giga>(v); };
 	constexpr auto operator""_Gs(unsigned long long v) noexcept { return ch::duration<double, std::giga>(v); };
 
-	[[nodiscard]] double round(double num, unsigned char prec, unsigned char dec = 1)
+	[[nodiscard]] double round_triple(double num, unsigned char prec, unsigned char dec = 1)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
 		assert(num >= .0 && prec > dec && prec <= 3U + dec);
 		if (num <= .0 || prec <= dec || prec > 3U + dec)
@@ -71,7 +71,7 @@ namespace
 		const auto exp = static_cast<signed>(std::floor(std::log10(num)));
 		assert(.0 <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 10.0);
 
-		auto len =  std::min(prec, static_cast<unsigned char>(dec + 1 + (3 + exp % 3) % 3));
+		auto len = std::min(prec, static_cast<unsigned char>(dec + 1 + (3 + exp % 3) % 3));
 		assert(dec < len && len <= prec);
 
 		const auto factor = std::pow(10, len - exp - 1);
@@ -127,7 +127,7 @@ namespace
 			};
 
 			for (auto& i : samples)
-			{	const auto rnd = round(i.org_, i.precision_, i.dec_);
+			{	const auto rnd = round_triple(i.org_, i.precision_, i.dec_);
 				if (std::max(std::abs(rnd), std::abs(i.rnd_)) * DBL_EPSILON < std::abs(rnd - i.rnd_))
 				{	std::cerr << i.line_ << " " << rnd << " " << i.rnd_ << std::endl;
 					assert(false);
@@ -145,7 +145,7 @@ namespace
 		constexpr duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
 
 		[[nodiscard]] friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1)
-		{	sec = round(sec.count(), precision, dec);
+		{	sec = round_triple(sec.count(), precision, dec);
 			std::ostringstream ss;
 			ss << std::fixed << std::setprecision(dec);
 			
@@ -190,8 +190,6 @@ namespace
 			{__LINE__, 1454.4us, "1ms", 3, 0},
 			{__LINE__, 1.4544ms, "1.5ms", 3, 1},
 			{__LINE__, 1.4544ms, "1.45ms", 3, 2},
-
-
 
 			{__LINE__, 0s, "0.0ps"},
 			{__LINE__, 0.01234567891s, "12.346ms", 6, 3},
