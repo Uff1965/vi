@@ -41,8 +41,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <iostream>
 #include <numeric>
 #include <sstream>
-#include <string>
 #include <string_view>
+#include <string>
 #include <thread>
 #include <tuple>
 #include <type_traits>
@@ -53,6 +53,11 @@ using namespace std::literals;
 
 namespace
 {
+	struct space_out: std::numpunct<char>
+	{	char do_thousands_sep() const override { return '\''; }  // separate with spaces
+		std::string do_grouping() const override { return "\3"; } // groups of 1 digit
+	};
+
 	constexpr auto operator""_ps(long double v) noexcept { return ch::duration<double, std::pico>(v); };
 	constexpr auto operator""_ps(unsigned long long v) noexcept { return ch::duration<double, std::pico>(v); };
 	constexpr auto operator""_ks(long double v) noexcept { return ch::duration<double, std::kilo>(v); };
@@ -62,33 +67,78 @@ namespace
 	constexpr auto operator""_Gs(long double v) noexcept { return ch::duration<double, std::giga>(v); };
 	constexpr auto operator""_Gs(unsigned long long v) noexcept { return ch::duration<double, std::giga>(v); };
 
-	[[nodiscard]] double round_triple(double num, unsigned char prec, unsigned char dec = 1)
+	[[nodiscard]] double round_triple(double num, int prec = 2, int dec = 1, int group = 3)
 	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
-		assert(num >= .0 && prec > dec && prec <= 3U + dec);
-		if (num <= .0 || prec <= dec || prec > 3U + dec)
+		constexpr auto EPS = std::numeric_limits<decltype(num)>::epsilon();
+		assert(num >= .0 && dec >= 0 && group > 0 && prec > dec && group > dec);
+		if (num <= .0 || dec < 0 || group <= 0 || prec <= dec)
 			return num;
+		if (dec >= group)
+			dec %= group;
 
-		const auto exp = static_cast<signed>(std::floor(std::log10(num)));
-		assert(.0 <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 10.0);
+		auto mod_norm = [group](int n)
+			{	auto r = n % group;
+				if (r <= 0)
+				{	r += group;
+				}
+				return r;
+			};
 
-		auto len = std::min(prec, static_cast<unsigned char>(dec + 1 + (3 + exp % 3) % 3));
-		assert(dec < len && len <= prec);
+		const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
+		assert(0.1 * (1.0 - EPS) <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 1.0 + EPS);
 
-		const auto factor = std::pow(10, len - exp - 1);
-		return std::round(factor * (num * (1 + std::numeric_limits<decltype(num)>::epsilon()))) / factor;
+		const auto num_ext = mod_norm(exp);
+		if (num_ext < prec)
+		{	if (const auto prec_ext = (prec - num_ext) % group; prec_ext > dec)
+			{	prec -= prec_ext - dec;
+			}
+		}
+
+		const auto factor = std::pow(10, prec - exp);
+		return std::round(factor * (num * (1 + EPS))) / factor;
 	}
 
 #ifndef NDEBUG
 	const auto unit_test_round= []
 		{
-			static constexpr struct { int line_;  double org_; double rnd_; unsigned char precision_ = 2; unsigned char dec_ = 1; } //-V802 //-V730
+			static constexpr struct
+			{	int line_;
+				double original_;
+				double expected_;
+				unsigned char precision_ = 2;
+				unsigned char dec_ = 1;
+			} //-V802 //-V730
 			samples[] = {
+				{__LINE__, 5.555'555'5, 5.556, 4, 0},
+				{__LINE__, 5.555'555'5, 5.556, 4, 1},
+				{__LINE__, 5.555'555'5, 5.556, 4, 2},
+
+				{__LINE__, 12.345'678'912,	12.345'679, 8, 2},
+
+				{__LINE__, 12.345'678'912,	12.346'000, 7, 0},
+				{__LINE__, 12.345'678'912,	12.345'680, 7, 2},
+
+				{__LINE__, 12.345'678'912,	12.345'700, 6, 2},
+				{__LINE__, 12.345'678'912,	12.346'000, 5, 2},
+				{__LINE__, 12.345'678'912,	12.350'000, 4, 2},
+
+				{__LINE__, 12.345'678'912,	12.345'679, 8, 0},
+				{__LINE__, 12.345'678'912,	12.346'000, 7, 0},
+				{__LINE__, 12.345'678'912,	12.345'678'900, 9, 1},
+
+				{__LINE__, 1.111'111'1, 1.111'11, 6, 2},
+				{__LINE__, 12'345.678'9, 12'345.679, 8, 2},
+				{__LINE__, 12'345.678'9, 12'345.679, 8, 1},
+				{__LINE__, 123.46, 123.50, 5, 1},
+				{__LINE__, 1.234'567'89, 1.234'567'900, 8, 2},
+				{__LINE__, 123.456, 123.5, 5, 1},
+
 				{__LINE__, 0.0, 0.0},
-				{__LINE__, 1.4544, 1.0, 1, 0},
-				{__LINE__, 1.4544, 1.0, 3, 0},
-				{__LINE__, 1.4544, 1.5, 2, 1},
-				{__LINE__, 1.4544, 1.5, 3, 1},
-				{__LINE__, 1.4544, 1.45, 3, 2},
+				{__LINE__, 1.454'4, 1.0, 1, 0},
+				{__LINE__, 1.454'4, 1.0, 3, 0},
+				{__LINE__, 1.454'4, 1.5, 2, 1},
+				{__LINE__, 1.454'4, 1.5, 3, 1},
+				{__LINE__, 1.454'4, 1.45, 3, 2},
 				{__LINE__, 14.544, 10.0, 1, 0},
 				{__LINE__, 14.544, 15.0, 2, 1},
 				{__LINE__, 14.544, 15.0, 3, 0},
@@ -98,39 +148,49 @@ namespace
 				{__LINE__, 145.44, 145.0, 3, 0},
 				{__LINE__, 145.44, 145.0, 3, 1},
 				{__LINE__, 145.44, 145.0, 3, 2},
-				{__LINE__, 0.1454, 0.10, 1, 0},
-				{__LINE__, 0.1454, 0.145, 3, 0},
-				{__LINE__, 0.1454, 0.145, 3, 1},
-				{__LINE__, 0.1454, 0.145, 3, 2},
+				{__LINE__, 0.145'4, 0.10, 1, 0},
+				{__LINE__, 0.145'4, 0.145, 3, 0},
+				{__LINE__, 0.145'4, 0.145, 3, 1},
+				{__LINE__, 0.145'4, 0.145, 3, 2},
 				{__LINE__, 14.544, 10.0, 1, 0},
 				{__LINE__, 14.544, 15.0, 3, 0},
 				{__LINE__, 14.544, 14.5, 3, 1},
 				{__LINE__, 14.544, 14.5, 3, 2},
-				{__LINE__, 1454.4, 1000.0, 1, 0},
-				{__LINE__, 1454.4, 1000.0, 3, 0},
-				{__LINE__, 1454.4, 1500.0, 3, 1},
-				{__LINE__, 1454.4, 1450.0, 3, 2},
-				{__LINE__, 0.01454, 0.0100, 1, 0},
-				{__LINE__, 0.01454, 0.0150, 3, 0},
-				{__LINE__, 0.01454, 0.0145, 3, 1},
-				{__LINE__, 0.01454, 0.0145, 3, 2},
-				{__LINE__, 9.5444, 10.0, 1, 0},
-				{__LINE__, 9.5444, 10.0, 2, 0},
-				{__LINE__, 9.5444, 10.0, 3, 0},
-				{__LINE__, 9.5444, 9.5, 3, 1},
-				{__LINE__, 9.5444, 9.54, 3, 2},
-				{__LINE__, 9.4544, 9.0, 1, 0},
-				{__LINE__, 9.4544, 9.0, 2, 0},
-				{__LINE__, 9.4544, 9.0, 3, 0},
-				{__LINE__, 9.4544, 9.5, 3, 1},
-				{__LINE__, 9.4544, 9.45, 3, 2},
+				{__LINE__, 1'454.4, 1000.0, 1, 0},
+				{__LINE__, 1'454.4, 1000.0, 3, 0},
+				{__LINE__, 1'454.4, 1500.0, 3, 1},
+				{__LINE__, 1'454.4, 1450.0, 3, 2},
+				{__LINE__, 0.014'54, 0.0100, 1, 0},
+				{__LINE__, 0.014'54, 0.0150, 3, 0},
+				{__LINE__, 0.014'54, 0.0145, 3, 1},
+				{__LINE__, 0.014'54, 0.0145, 3, 2},
+				{__LINE__, 9.544'4, 10.0, 1, 0},
+				{__LINE__, 9.544'4, 10.0, 2, 0},
+				{__LINE__, 9.544'4, 10.0, 3, 0},
+				{__LINE__, 9.544'4, 9.5, 3, 1},
+				{__LINE__, 9.544'4, 9.54, 3, 2},
+				{__LINE__, 9.454'4, 9.0, 1, 0},
+				{__LINE__, 9.454'4, 9.0, 2, 0},
+				{__LINE__, 9.454'4, 9.0, 3, 0},
+				{__LINE__, 9.454'4, 9.5, 3, 1},
+				{__LINE__, 9.454'4, 9.45, 3, 2},
 			};
 
 			for (auto& i : samples)
-			{	const auto rnd = round_triple(i.org_, i.precision_, i.dec_);
-				if (std::max(std::abs(rnd), std::abs(i.rnd_)) * DBL_EPSILON < std::abs(rnd - i.rnd_))
-				{	std::cerr << i.line_ << " " << rnd << " " << i.rnd_ << std::endl;
-					assert(false);
+			{	const auto rounded = round_triple(i.original_, i.precision_, i.dec_);
+				if (std::max(std::abs(rounded), std::abs(i.expected_)) * DBL_EPSILON < std::abs(rounded - i.expected_))
+				{
+					std::stringstream buff;
+					buff.imbue(std::locale(std::cout.getloc(), new space_out));
+					buff << std::fixed << std::setprecision(8) <<
+					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) <<
+					"\nOriginal:\t" << i.original_ <<
+					"\nExpected:\t" << i.expected_ <<
+					"\nRounded:\t" << rounded <<
+					'\n' << std::endl;
+					
+					std::cerr << buff.str();
+					assert(std::cout);
 				}
 			}
 
@@ -146,26 +206,27 @@ namespace
 
 		[[nodiscard]] friend std::string to_string(duration_t sec, unsigned char precision = 2, unsigned char dec = 1)
 		{	sec = round_triple(sec.count(), precision, dec);
+
+			dec += 3 * ((precision - 1 - dec) / 3);
 			std::ostringstream ss;
 			ss << std::fixed << std::setprecision(dec);
 			
+			struct { std::string_view suffix_; double factor_; } k;
+				
 			if ( 10_ps > sec)
-			{	ss << 0.0 << "ps"sv;
+			{	sec = 0.0;
+				k = { "ps"sv, 1e12 };
 			}
-			else
-			{	struct { std::string_view suffix_; double factor_; } k;
-				if (1ns > sec) { k = { "ps"sv, 1e12 }; }
-				else if (1us > sec) { k = { "ns"sv, 1e9 }; }
-				else if (1ms > sec) { k = { "us"sv, 1e6 }; }
-				else if (1s > sec) { k = { "ms"sv, 1e3 }; }
-				else if (1_ks > sec) { k = { "s "sv, 1e0 }; }
-				else if (1_Ms > sec) { k = { "ks"sv, 1e-3 }; }
-				else if (1_Gs > sec) { k = { "Ms"sv, 1e-6 }; }
-				else { k = { "Gs"sv, 1e-9 }; }
+			else if (1ns > sec) { k = { "ps"sv, 1e12 }; }
+			else if (1us > sec) { k = { "ns"sv, 1e9 }; }
+			else if (1ms > sec) { k = { "us"sv, 1e6 }; }
+			else if (1s > sec) { k = { "ms"sv, 1e3 }; }
+			else if (1_ks > sec) { k = { "s "sv, 1e0 }; }
+			else if (1_Ms > sec) { k = { "ks"sv, 1e-3 }; }
+			else if (1_Gs > sec) { k = { "Ms"sv, 1e-6 }; }
+			else { k = { "Gs"sv, 1e-9 }; }
 
-				ss << sec.count() * k.factor_ << k.suffix_;
-			}
-
+			ss << sec.count() * k.factor_ << k.suffix_;
 			return ss.str();
 		}
 
@@ -177,7 +238,7 @@ namespace
 #ifndef NDEBUG
 	const auto unit_test_to_string = []
 	{
-		struct I { int line_; duration_t sec_; std::string_view res_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; }; //-V802 //-V730
+		struct I { int line_; duration_t original_; std::string_view expected_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; }; //-V802 //-V730
 		static constexpr I samples[] = {
 			{__LINE__, 0s, "0.0ps"},
 			{__LINE__, 0ms, "0.00ps", 3, 2},
@@ -192,7 +253,7 @@ namespace
 			{__LINE__, 1.4544ms, "1.45ms", 3, 2},
 
 			{__LINE__, 0s, "0.0ps"},
-			{__LINE__, 0.01234567891s, "12.346ms", 6, 3},
+			{__LINE__, 0.01234567891s, "12.346ms", 6, 0},
 			{__LINE__, 0.01234567891s, "12.35ms", 5, 2},
 			{__LINE__, 0.1_ps, "0.0ps"},
 			{__LINE__, 1_ps, "0.0ps"}, // The lower limit of accuracy is 10ps.
@@ -208,9 +269,9 @@ namespace
 			{__LINE__, 10ns, "10.0ns"},
 			{__LINE__, 10s, "10.0s "},
 			{__LINE__, 10us, "10.0us"},
-			{__LINE__, 12.34567891s, "12.346s ", 6, 3},
+			{__LINE__, 12.34567891s, "12.346s ", 6, 0},
 			{__LINE__, 12.34567891s, "12.35s ", 5, 2},
-			{__LINE__, 123.456789_ks, "123.457ks", 6, 3},
+			{__LINE__, 123.456789_ks, "123.457ks", 6, 0},
 			{__LINE__, 123.4ns, "100ns", 1, 0},
 			{__LINE__, 123.4ns, "120.0ns", 2, 1},
 			{__LINE__, 123.4ns, "120.0ns", 2},
@@ -306,9 +367,18 @@ namespace
 		};
 
 		for (auto& i : samples)
-		{	const auto str = to_string(i.sec_, i.precision_, i.dec_);
-			if (i.res_ != str)
-			{	std::cerr << i.line_ << " " << str << " " << i.res_ << std::endl;
+		{	const auto result = to_string(i.original_, i.precision_, i.dec_);
+			if (i.expected_ != result)
+			{	std::stringstream buff;
+				buff.imbue(std::locale(std::cout.getloc(), new space_out));
+				buff << std::fixed << std::setprecision(8) <<
+				"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) <<
+				"\nOriginal:\t" << i.original_<<
+				"\nExpected:\t" << i.expected_ <<
+				"\nRounded:\t" << result <<
+				'\n' << std::endl;
+					
+				std::cerr << buff.str();
 				assert(false);
 			}
 		}
