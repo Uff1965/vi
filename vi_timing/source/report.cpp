@@ -35,10 +35,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <cassert>
 #include <cfloat>
 #include <chrono>
-#include <climits>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <sstream>
 #include <string_view>
@@ -129,6 +129,10 @@ namespace
 		}
 	};
 
+	template<typename T>
+	inline std::basic_ostream<T>& operator<<(std::basic_ostream<T>& os, const duration_t& d)
+	{	return os << to_string(d);
+	}
 
 #ifndef NDEBUG
 	const auto unit_test_round= []
@@ -212,7 +216,7 @@ namespace
 		for (auto& i : samples)
 		{	const auto rounded = round_triple(i.original_, i.precision_, i.dec_);
 			if (std::max(std::abs(rounded), std::abs(i.expected_)) * DBL_EPSILON < std::abs(rounded - i.expected_))
-			{	std::stringstream buff;
+			{	std::ostringstream buff;
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
 				buff << std::fixed << std::setprecision(8) <<
 					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) << '\n' <<
@@ -370,7 +374,7 @@ namespace
 		for (auto& i : samples)
 		{	const auto result = to_string(i.original_, i.precision_, i.dec_);
 			if (i.expected_ != result)
-			{	std::stringstream buff;
+			{	std::ostringstream buff;
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
 				buff << std::fixed << std::setprecision(8) <<
 				"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) <<
@@ -388,10 +392,6 @@ namespace
 
 	}(); // const auto unit_test_to_string
 #endif // #ifndef NDEBUG
-
-	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
-	{	return os << to_string(d);
-	}
 
 	void warming(int all, ch::milliseconds ms)
 	{
@@ -755,7 +755,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t
 	{	std::ostringstream str;
 
 		if (flags & static_cast<uint32_t>(vi_tmShowOverhead))
-		{	str << "Measurement cost: " << traits.tick_duration_ * traits.measurement_cost_ << " per measurement. ";
+		{	str << "Measurement cost: " << duration_t(traits.tick_duration_ * traits.measurement_cost_) << " per measurement. ";
 		}
 		if (flags & static_cast<uint32_t>(vi_tmShowDuration))
 		{	str << "Duration: " << duration() << ". ";
