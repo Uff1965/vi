@@ -54,8 +54,8 @@ using namespace std::literals;
 namespace
 {
 	struct space_out: std::numpunct<char>
-	{	char do_thousands_sep() const override { return '\''; }  // separate with spaces
-		std::string do_grouping() const override { return "\3"; } // groups of 1 digit
+	{	char do_thousands_sep() const override { return '\''; }  // separate with '
+		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
 
 	constexpr auto operator""_ps(long double v) noexcept { return ch::duration<double, std::pico>(v); };
@@ -72,23 +72,17 @@ namespace
 		constexpr auto EPS = std::numeric_limits<decltype(num)>::epsilon();
 		assert(num >= .0 && dec >= 0 && group > 0 && prec > dec && group > dec);
 		if (num <= .0 || dec < 0 || group <= 0 || prec <= dec)
-			return num;
+		{	return num;
+		}
 		if (dec >= group)
-			dec %= group;
-
-		auto mod_norm = [group](int n)
-			{	auto r = n % group;
-				if (r <= 0)
-				{	r += group;
-				}
-				return r;
-			};
+		{	dec %= group;
+		}
 
 		const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
 		assert(0.1 * (1.0 - EPS) <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 1.0 + EPS);
 
-		const auto num_ext = mod_norm(exp);
-		if (num_ext < prec)
+		auto mod_norm = [group](int n) { auto r = n % group; if (r <= 0) { r += group; } return r; };
+		if (auto num_ext = mod_norm(exp); num_ext < prec)
 		{	if (const auto prec_ext = (prec - num_ext) % group; prec_ext > dec)
 			{	prec -= prec_ext - dec;
 			}
@@ -97,106 +91,6 @@ namespace
 		const auto factor = std::pow(10, prec - exp);
 		return std::round(factor * (num * (1 + EPS))) / factor;
 	}
-
-#ifndef NDEBUG
-	const auto unit_test_round= []
-		{
-			static constexpr struct
-			{	int line_;
-				double original_;
-				double expected_;
-				unsigned char precision_ = 2;
-				unsigned char dec_ = 1;
-			} //-V802 //-V730
-			samples[] = {
-				{__LINE__, 5.555'555'5, 5.556, 4, 0},
-				{__LINE__, 5.555'555'5, 5.556, 4, 1},
-				{__LINE__, 5.555'555'5, 5.556, 4, 2},
-
-				{__LINE__, 12.345'678'912,	12.345'679, 8, 2},
-
-				{__LINE__, 12.345'678'912,	12.346'000, 7, 0},
-				{__LINE__, 12.345'678'912,	12.345'680, 7, 2},
-
-				{__LINE__, 12.345'678'912,	12.345'700, 6, 2},
-				{__LINE__, 12.345'678'912,	12.346'000, 5, 2},
-				{__LINE__, 12.345'678'912,	12.350'000, 4, 2},
-
-				{__LINE__, 12.345'678'912,	12.345'679, 8, 0},
-				{__LINE__, 12.345'678'912,	12.346'000, 7, 0},
-				{__LINE__, 12.345'678'912,	12.345'678'900, 9, 1},
-
-				{__LINE__, 1.111'111'1, 1.111'11, 6, 2},
-				{__LINE__, 12'345.678'9, 12'345.679, 8, 2},
-				{__LINE__, 12'345.678'9, 12'345.679, 8, 1},
-				{__LINE__, 123.46, 123.50, 5, 1},
-				{__LINE__, 1.234'567'89, 1.234'567'900, 8, 2},
-				{__LINE__, 123.456, 123.5, 5, 1},
-
-				{__LINE__, 0.0, 0.0},
-				{__LINE__, 1.454'4, 1.0, 1, 0},
-				{__LINE__, 1.454'4, 1.0, 3, 0},
-				{__LINE__, 1.454'4, 1.5, 2, 1},
-				{__LINE__, 1.454'4, 1.5, 3, 1},
-				{__LINE__, 1.454'4, 1.45, 3, 2},
-				{__LINE__, 14.544, 10.0, 1, 0},
-				{__LINE__, 14.544, 15.0, 2, 1},
-				{__LINE__, 14.544, 15.0, 3, 0},
-				{__LINE__, 14.544, 14.5, 3, 1},
-				{__LINE__, 14.544, 14.5, 3, 2},
-				{__LINE__, 145.44, 100.0, 1, 0},
-				{__LINE__, 145.44, 145.0, 3, 0},
-				{__LINE__, 145.44, 145.0, 3, 1},
-				{__LINE__, 145.44, 145.0, 3, 2},
-				{__LINE__, 0.145'4, 0.10, 1, 0},
-				{__LINE__, 0.145'4, 0.145, 3, 0},
-				{__LINE__, 0.145'4, 0.145, 3, 1},
-				{__LINE__, 0.145'4, 0.145, 3, 2},
-				{__LINE__, 14.544, 10.0, 1, 0},
-				{__LINE__, 14.544, 15.0, 3, 0},
-				{__LINE__, 14.544, 14.5, 3, 1},
-				{__LINE__, 14.544, 14.5, 3, 2},
-				{__LINE__, 1'454.4, 1000.0, 1, 0},
-				{__LINE__, 1'454.4, 1000.0, 3, 0},
-				{__LINE__, 1'454.4, 1500.0, 3, 1},
-				{__LINE__, 1'454.4, 1450.0, 3, 2},
-				{__LINE__, 0.014'54, 0.0100, 1, 0},
-				{__LINE__, 0.014'54, 0.0150, 3, 0},
-				{__LINE__, 0.014'54, 0.0145, 3, 1},
-				{__LINE__, 0.014'54, 0.0145, 3, 2},
-				{__LINE__, 9.544'4, 10.0, 1, 0},
-				{__LINE__, 9.544'4, 10.0, 2, 0},
-				{__LINE__, 9.544'4, 10.0, 3, 0},
-				{__LINE__, 9.544'4, 9.5, 3, 1},
-				{__LINE__, 9.544'4, 9.54, 3, 2},
-				{__LINE__, 9.454'4, 9.0, 1, 0},
-				{__LINE__, 9.454'4, 9.0, 2, 0},
-				{__LINE__, 9.454'4, 9.0, 3, 0},
-				{__LINE__, 9.454'4, 9.5, 3, 1},
-				{__LINE__, 9.454'4, 9.45, 3, 2},
-			};
-
-			for (auto& i : samples)
-			{	const auto rounded = round_triple(i.original_, i.precision_, i.dec_);
-				if (std::max(std::abs(rounded), std::abs(i.expected_)) * DBL_EPSILON < std::abs(rounded - i.expected_))
-				{
-					std::stringstream buff;
-					buff.imbue(std::locale(std::cout.getloc(), new space_out));
-					buff << std::fixed << std::setprecision(8) <<
-					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) <<
-					"\nOriginal:\t" << i.original_ <<
-					"\nExpected:\t" << i.expected_ <<
-					"\nRounded:\t" << rounded <<
-					'\n' << std::endl;
-					
-					std::cerr << buff.str();
-					assert(std::cout);
-				}
-			}
-
-			return 0;
-		}();
-#endif // #ifndef NDEBUG
 
 	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
@@ -217,10 +111,10 @@ namespace
 			{	sec = 0.0;
 				k = { "ps"sv, 1e12 };
 			}
-			else if (1ns > sec) { k = { "ps"sv, 1e12 }; }
-			else if (1us > sec) { k = { "ns"sv, 1e9 }; }
-			else if (1ms > sec) { k = { "us"sv, 1e6 }; }
-			else if (1s > sec) { k = { "ms"sv, 1e3 }; }
+			else if (1ns  > sec) { k = { "ps"sv, 1e12 }; }
+			else if (1us  > sec) { k = { "ns"sv, 1e9 }; }
+			else if (1ms  > sec) { k = { "us"sv, 1e6 }; }
+			else if (1s   > sec) { k = { "ms"sv, 1e3 }; }
 			else if (1_ks > sec) { k = { "s "sv, 1e0 }; }
 			else if (1_Ms > sec) { k = { "ks"sv, 1e-3 }; }
 			else if (1_Gs > sec) { k = { "Ms"sv, 1e-6 }; }
@@ -235,135 +129,242 @@ namespace
 		}
 	};
 
+
 #ifndef NDEBUG
+	const auto unit_test_round= []
+	{	static constexpr struct
+		{	int line_;
+			double original_;
+			double expected_;
+			unsigned char precision_ = 2;
+			unsigned char dec_ = 1;
+		} //-V802 //-V730
+		samples[] = {
+#	define ITM(v, ...) {__LINE__, (v), __VA_ARGS__}
+			ITM(5.555'555'5, 5.556, 4, 0),
+			ITM(5.555'555'5, 5.556, 4, 1),
+			ITM(5.555'555'5, 5.556, 4, 2),
+
+			ITM(12.345'678'912,	12.345'679, 8, 2),
+
+			ITM(12.345'678'912,	12.346'000, 7, 0),
+			ITM(12.345'678'912,	12.345'680, 7, 2),
+
+			ITM(12.345'678'912,	12.345'700, 6, 2),
+			ITM(12.345'678'912,	12.346'000, 5, 2),
+			ITM(12.345'678'912,	12.350'000, 4, 2),
+
+			ITM(12.345'678'912,	12.345'679, 8, 0),
+			ITM(12.345'678'912,	12.346'000, 7, 0),
+			ITM(12.345'678'912,	12.345'678'900, 9, 1),
+
+			ITM(1.111'111'1, 1.111'11, 6, 2),
+			ITM(12'345.678'9, 12'345.679, 8, 2),
+			ITM(12'345.678'9, 12'345.679, 8, 1),
+			ITM(123.46, 123.50, 5, 1),
+			ITM(1.234'567'89, 1.234'567'900, 8, 2),
+			ITM(123.456, 123.5, 5, 1),
+
+			ITM(0.0, 0.0),
+			ITM(1.454'4, 1.0, 1, 0),
+			ITM(1.454'4, 1.0, 3, 0),
+			ITM(1.454'4, 1.5, 2, 1),
+			ITM(1.454'4, 1.5, 3, 1),
+			ITM(1.454'4, 1.45, 3, 2),
+			ITM(14.544, 10.0, 1, 0),
+			ITM(14.544, 15.0, 2, 1),
+			ITM(14.544, 15.0, 3, 0),
+			ITM(14.544, 14.5, 3, 1),
+			ITM(14.544, 14.5, 3, 2),
+			ITM(145.44, 100.0, 1, 0),
+			ITM(145.44, 145.0, 3, 0),
+			ITM(145.44, 145.0, 3, 1),
+			ITM(145.44, 145.0, 3, 2),
+			ITM(0.145'4, 0.10, 1, 0),
+			ITM(0.145'4, 0.145, 3, 0),
+			ITM(0.145'4, 0.145, 3, 1),
+			ITM(0.145'4, 0.145, 3, 2),
+			ITM(14.544, 10.0, 1, 0),
+			ITM(14.544, 15.0, 3, 0),
+			ITM(14.544, 14.5, 3, 1),
+			ITM(14.544, 14.5, 3, 2),
+			ITM(1'454.4, 1000.0, 1, 0),
+			ITM(1'454.4, 1000.0, 3, 0),
+			ITM(1'454.4, 1500.0, 3, 1),
+			ITM(1'454.4, 1450.0, 3, 2),
+			ITM(0.014'54, 0.0100, 1, 0),
+			ITM(0.014'54, 0.0150, 3, 0),
+			ITM(0.014'54, 0.0145, 3, 1),
+			ITM(0.014'54, 0.0145, 3, 2),
+			ITM(9.544'4, 10.0, 1, 0),
+			ITM(9.544'4, 10.0, 2, 0),
+			ITM(9.544'4, 10.0, 3, 0),
+			ITM(9.544'4, 9.5, 3, 1),
+			ITM(9.544'4, 9.54, 3, 2),
+			ITM(9.454'4, 9.0, 1, 0),
+			ITM(9.454'4, 9.0, 2, 0),
+			ITM(9.454'4, 9.0, 3, 0),
+			ITM(9.454'4, 9.5, 3, 1),
+			ITM(9.454'4, 9.45, 3, 2),
+#	undef ITM
+		};
+
+		for (auto& i : samples)
+		{	const auto rounded = round_triple(i.original_, i.precision_, i.dec_);
+			if (std::max(std::abs(rounded), std::abs(i.expected_)) * DBL_EPSILON < std::abs(rounded - i.expected_))
+			{	std::stringstream buff;
+				buff.imbue(std::locale(std::cout.getloc(), new space_out));
+				buff << std::fixed << std::setprecision(8) <<
+					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) << '\n' <<
+					"Original:\t" << i.original_ << '\n' <<
+					"Expected:\t" << i.expected_ << '\n' <<
+					"Rounded:\t" << rounded << '\n' <<
+					std::endl;
+
+				std::cerr << buff.str();
+				assert(false);
+			}
+		}
+
+		return 0;
+
+	}(); // const auto unit_test_round
+
 	const auto unit_test_to_string = []
 	{
-		struct I { int line_; duration_t original_; std::string_view expected_; unsigned char precision_{ 2 }; unsigned char dec_{ 1 }; }; //-V802 //-V730
-		static constexpr I samples[] = {
-			{__LINE__, 0s, "0.0ps"},
-			{__LINE__, 0ms, "0.00ps", 3, 2},
-			{__LINE__, 9.4_ps, "0.0ps"},
-			{__LINE__, 9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
-			{__LINE__, 0.1_ps, "0.0ps"},
-			{__LINE__, 1.0_ps, "0.0ps"},
-			{__LINE__, 10.0_ps, "10.0ps"},
-			{__LINE__, 11.0_ps, "11.0ps"},
-			{__LINE__, 1454.4us, "1ms", 3, 0},
-			{__LINE__, 1.4544ms, "1.5ms", 3, 1},
-			{__LINE__, 1.4544ms, "1.45ms", 3, 2},
+		static constexpr struct
+		{	int line_;
+			duration_t original_;
+			std::string_view expected_;
+			unsigned char precision_{ 2 };
+			unsigned char dec_{ 1 };
+		} //-V802 //-V730
+		samples[] = {
+#	define ITM(v, ...) {__LINE__, (v), __VA_ARGS__}
+			ITM(0s, "0.0ps"),
+			ITM(0ms, "0.00ps", 3, 2),
+			ITM(9.4_ps, "0.0ps"),
+			ITM(9.9999_ps, "10.0ps"), // The lower limit of accuracy is 10ps.
+			ITM(0.1_ps, "0.0ps"),
+			ITM(1.0_ps, "0.0ps"),
+			ITM(10.0_ps, "10.0ps"),
+			ITM(11.0_ps, "11.0ps"),
+			ITM(1454.4us, "1ms", 3, 0),
+			ITM(1.4544ms, "1.5ms", 3, 1),
+			ITM(1.4544ms, "1.45ms", 3, 2),
 
-			{__LINE__, 0s, "0.0ps"},
-			{__LINE__, 0.01234567891s, "12.346ms", 6, 0},
-			{__LINE__, 0.01234567891s, "12.35ms", 5, 2},
-			{__LINE__, 0.1_ps, "0.0ps"},
-			{__LINE__, 1_ps, "0.0ps"}, // The lower limit of accuracy is 10ps.
-			{__LINE__, 10.01ms, "10.0ms"},
-			{__LINE__, 10.1ms, "10.0ms"},
-			{__LINE__, 10_ps, "10.0ps"},
-			{__LINE__, 100_ps, "100.0ps"},
-			{__LINE__, 100ms, "100.0ms"},
-			{__LINE__, 100ns, "100.0ns"},
-			{__LINE__, 100s, "100.0s "},
-			{__LINE__, 100us, "100.0us"},
-			{__LINE__, 10ms, "10.0ms"},
-			{__LINE__, 10ns, "10.0ns"},
-			{__LINE__, 10s, "10.0s "},
-			{__LINE__, 10us, "10.0us"},
-			{__LINE__, 12.34567891s, "12.346s ", 6, 0},
-			{__LINE__, 12.34567891s, "12.35s ", 5, 2},
-			{__LINE__, 123.456789_ks, "123.457ks", 6, 0},
-			{__LINE__, 123.4ns, "100ns", 1, 0},
-			{__LINE__, 123.4ns, "120.0ns", 2, 1},
-			{__LINE__, 123.4ns, "120.0ns", 2},
-			{__LINE__, 123.4ns, "123.00ns", 3, 2},
-			{__LINE__, 123.4ns, "123.0ns", 3},
-			{__LINE__, 123.4ns, "123.40ns", 4, 2},
-			{__LINE__, 123.4ns, "123.4ns", 4},
-			{__LINE__, 1234.56789_ks, "1.2Ms", 3, 1},
-			{__LINE__, 1h, "3.6ks"},
-			{__LINE__, 1min, "60.0s "},
-			{__LINE__, 1ms, "1.0ms"},
-			{__LINE__, 1ns, "1.0ns"},
-			{__LINE__, 1s, "1.0s "},
-			{__LINE__, 1us, "1.0us"},
-			{__LINE__, 4.499999999999ns, "4.50ns", 3, 2},
-			{__LINE__, 4.499999999999ns, "4.50ns", 4, 2},
-			{__LINE__, 4.499999999999ns, "4.5ns", 2, 1},
-			{__LINE__, 4.499999999999ns, "4.5ns", 2},
-			{__LINE__, 4.499999999999ns, "4.5ns", 3},
-			{__LINE__, 4.499999999999ns, "4.5ns", 4},
-			{__LINE__, 4.499999999999ns, "4ns", 1, 0},
-			{__LINE__, 4.999999999999_ps, "0.00ps", 3, 2},
-			{__LINE__, 4.999999999999_ps, "0.00ps", 4, 2},
-			{__LINE__, 4.999999999999_ps, "0.0ps", 2, 1},
-			{__LINE__, 4.999999999999_ps, "0.0ps", 2},
-			{__LINE__, 4.999999999999_ps, "0.0ps", 3},
-			{__LINE__, 4.999999999999_ps, "0.0ps", 4},
-			{__LINE__, 4.999999999999_ps, "0ps", 1, 0},
-			{__LINE__, 4.999999999999ns, "5.00ns", 3, 2},
-			{__LINE__, 4.999999999999ns, "5.00ns", 4, 2},
-			{__LINE__, 4.999999999999ns, "5.0ns", 2, 1},
-			{__LINE__, 4.999999999999ns, "5.0ns", 2},
-			{__LINE__, 4.999999999999ns, "5.0ns", 3},
-			{__LINE__, 4.999999999999ns, "5.0ns", 4},
-			{__LINE__, 4.999999999999ns, "5ns", 1, 0},
-			{__LINE__, 5.000000000000_ps, "0.00ps", 3, 2},
-			{__LINE__, 5.000000000000_ps, "0.00ps", 4, 2},
-			{__LINE__, 5.000000000000_ps, "0.0ps", 2},
-			{__LINE__, 5.000000000000_ps, "0.0ps", 3},
-			{__LINE__, 5.000000000000_ps, "0.0ps", 4},
-			{__LINE__, 5.000000000000_ps, "0ps", 1, 0},
-			{__LINE__, 5.000000000000ns, "5.00ns", 3, 2},
-			{__LINE__, 5.000000000000ns, "5.00ns", 4, 2},
-			{__LINE__, 5.000000000000ns, "5.0ns", 2, 1},
-			{__LINE__, 5.000000000000ns, "5.0ns", 2},
-			{__LINE__, 5.000000000000ns, "5.0ns", 3},
-			{__LINE__, 5.000000000000ns, "5.0ns", 4},
-			{__LINE__, 5.000000000000ns, "5ns", 1, 0},
+			ITM(0s, "0.0ps"),
+			ITM(0.01234567891s, "12.346ms", 6, 0),
+			ITM(0.01234567891s, "12.35ms", 5, 2),
+			ITM(0.1_ps, "0.0ps"),
+			ITM(1_ps, "0.0ps"), // The lower limit of accuracy is 10ps.
+			ITM(10.01ms, "10.0ms"),
+			ITM(10.1ms, "10.0ms"),
+			ITM(10_ps, "10.0ps"),
+			ITM(100_ps, "100.0ps"),
+			ITM(100ms, "100.0ms"),
+			ITM(100ns, "100.0ns"),
+			ITM(100s, "100.0s "),
+			ITM(100us, "100.0us"),
+			ITM(10ms, "10.0ms"),
+			ITM(10ns, "10.0ns"),
+			ITM(10s, "10.0s "),
+			ITM(10us, "10.0us"),
+			ITM(12.34567891s, "12.346s ", 6, 0),
+			ITM(12.34567891s, "12.35s ", 5, 2),
+			ITM(123.456789_ks, "123.457ks", 6, 0),
+			ITM(123.4ns, "100ns", 1, 0),
+			ITM(123.4ns, "120.0ns", 2, 1),
+			ITM(123.4ns, "120.0ns", 2),
+			ITM(123.4ns, "123.00ns", 3, 2),
+			ITM(123.4ns, "123.0ns", 3),
+			ITM(123.4ns, "123.40ns", 4, 2),
+			ITM(123.4ns, "123.4ns", 4),
+			ITM(1234.56789_ks, "1.2Ms", 3, 1),
+			ITM(1h, "3.6ks"),
+			ITM(1min, "60.0s "),
+			ITM(1ms, "1.0ms"),
+			ITM(1ns, "1.0ns"),
+			ITM(1s, "1.0s "),
+			ITM(1us, "1.0us"),
+			ITM(4.499999999999ns, "4.50ns", 3, 2),
+			ITM(4.499999999999ns, "4.50ns", 4, 2),
+			ITM(4.499999999999ns, "4.5ns", 2, 1),
+			ITM(4.499999999999ns, "4.5ns", 2),
+			ITM(4.499999999999ns, "4.5ns", 3),
+			ITM(4.499999999999ns, "4.5ns", 4),
+			ITM(4.499999999999ns, "4ns", 1, 0),
+			ITM(4.999999999999_ps, "0.00ps", 3, 2),
+			ITM(4.999999999999_ps, "0.00ps", 4, 2),
+			ITM(4.999999999999_ps, "0.0ps", 2, 1),
+			ITM(4.999999999999_ps, "0.0ps", 2),
+			ITM(4.999999999999_ps, "0.0ps", 3),
+			ITM(4.999999999999_ps, "0.0ps", 4),
+			ITM(4.999999999999_ps, "0ps", 1, 0),
+			ITM(4.999999999999ns, "5.00ns", 3, 2),
+			ITM(4.999999999999ns, "5.00ns", 4, 2),
+			ITM(4.999999999999ns, "5.0ns", 2, 1),
+			ITM(4.999999999999ns, "5.0ns", 2),
+			ITM(4.999999999999ns, "5.0ns", 3),
+			ITM(4.999999999999ns, "5.0ns", 4),
+			ITM(4.999999999999ns, "5ns", 1, 0),
+			ITM(5.000000000000_ps, "0.00ps", 3, 2),
+			ITM(5.000000000000_ps, "0.00ps", 4, 2),
+			ITM(5.000000000000_ps, "0.0ps", 2),
+			ITM(5.000000000000_ps, "0.0ps", 3),
+			ITM(5.000000000000_ps, "0.0ps", 4),
+			ITM(5.000000000000_ps, "0ps", 1, 0),
+			ITM(5.000000000000ns, "5.00ns", 3, 2),
+			ITM(5.000000000000ns, "5.00ns", 4, 2),
+			ITM(5.000000000000ns, "5.0ns", 2, 1),
+			ITM(5.000000000000ns, "5.0ns", 2),
+			ITM(5.000000000000ns, "5.0ns", 3),
+			ITM(5.000000000000ns, "5.0ns", 4),
+			ITM(5.000000000000ns, "5ns", 1, 0),
 			//**********************************
-			{__LINE__, 0.0_ps, "0.0ps"},
-			{__LINE__, 0.123456789us, "123.5ns", 4},
-			{__LINE__, 1.23456789s, "1s ", 1, 0},
-			{__LINE__, 1.23456789s, "1.2s ", 3},
-			{__LINE__, 1.23456789s, "1.2s "},
-			{__LINE__, 1.23456789us, "1.2us"},
-			{__LINE__, 1004.4ns, "1.0us", 2},
-			{__LINE__, 12.3456789s, "10s ", 1, 0},
-			{__LINE__, 12.3456789s, "12.3s ", 3},
-			{__LINE__, 12.3456789us, "12.3us", 3},
-			{__LINE__, 12.3456s, "12.0s "},
-			{__LINE__, 12.34999999ms, "10ms", 1, 0},
-			{__LINE__, 12.34999999ms, "12.3ms", 3},
-			{__LINE__, 12.34999999ms, "12.3ms", 4},
-			{__LINE__, 12.4999999ms, "12.0ms"},
-			{__LINE__, 12.4999999ms, "12.5ms", 3},
-			{__LINE__, 12.5000000ms, "13.0ms"},
-			{__LINE__, 123.456789ms, "123.0ms", 3},
-			{__LINE__, 123.456789us, "120.0us"},
-			{__LINE__, 123.4999999ms, "123.5ms", 4},
-			{__LINE__, 1234.56789us, "1.2ms"},
-			{__LINE__, 245.0_ps, "250.0ps"},
-			{__LINE__, 49.999_ps, "50.0ps"},
-			{__LINE__, 50.0_ps, "50.0ps"},
-			{__LINE__, 9.49999_ps, "0.0ps"},
-			{__LINE__, 9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
-			{__LINE__, 9.999ns, "10.0ns"},
-			{__LINE__, 99.49999_ps, "99.0ps"},
-			{__LINE__, 99.4999ns, "99.0ns"},
-			{__LINE__, 99.4ms, "99.0ms"},
-			{__LINE__, 99.5_ps, "100.0ps"},
-			{__LINE__, 99.5ms, "100.0ms"},
-			{__LINE__, 99.5ns, "100.0ns"},
-			{__LINE__, 99.5us, "100.0us"},
-			{__LINE__, 99.999_ps, "100.0ps"},
-			{__LINE__, 999.0_ps, "1.0ns"},
-			{__LINE__, 999.45ns, "1us", 1, 0},
-			{__LINE__, 999.45ns, "1.0us", 2},
-			{__LINE__, 999.45ns, "999.0ns", 3},
-			{__LINE__, 999.45ns, "999.5ns", 4},
-			{__LINE__, 999.45ns, "999.45ns", 5, 2},
-			{__LINE__, 999.55ns, "1.0us", 3},
-			{__LINE__, 99ms, "99.0ms"},
+			ITM(0.0_ps, "0.0ps"),
+			ITM(0.123456789us, "123.5ns", 4),
+			ITM(1.23456789s, "1s ", 1, 0),
+			ITM(1.23456789s, "1.2s ", 3),
+			ITM(1.23456789s, "1.2s "),
+			ITM(1.23456789us, "1.2us"),
+			ITM(1004.4ns, "1.0us", 2),
+			ITM(12.3456789s, "10s ", 1, 0),
+			ITM(12.3456789s, "12.3s ", 3),
+			ITM(12.3456789us, "12.3us", 3),
+			ITM(12.3456s, "12.0s "),
+			ITM(12.34999999ms, "10ms", 1, 0),
+			ITM(12.34999999ms, "12.3ms", 3),
+			ITM(12.34999999ms, "12.3ms", 4),
+			ITM(12.4999999ms, "12.0ms"),
+			ITM(12.4999999ms, "12.5ms", 3),
+			ITM(12.5000000ms, "13.0ms"),
+			ITM(123.456789ms, "123.0ms", 3),
+			ITM(123.456789us, "120.0us"),
+			ITM(123.4999999ms, "123.5ms", 4),
+			ITM(1234.56789us, "1.2ms"),
+			ITM(245.0_ps, "250.0ps"),
+			ITM(49.999_ps, "50.0ps"),
+			ITM(50.0_ps, "50.0ps"),
+			ITM(9.49999_ps, "0.0ps"),
+			ITM(9.9999_ps, "10.0ps"), // The lower limit of accuracy is 10ps.
+			ITM(9.999ns, "10.0ns"),
+			ITM(99.49999_ps, "99.0ps"),
+			ITM(99.4999ns, "99.0ns"),
+			ITM(99.4ms, "99.0ms"),
+			ITM(99.5_ps, "100.0ps"),
+			ITM(99.5ms, "100.0ms"),
+			ITM(99.5ns, "100.0ns"),
+			ITM(99.5us, "100.0us"),
+			ITM(99.999_ps, "100.0ps"),
+			ITM(999.0_ps, "1.0ns"),
+			ITM(999.45ns, "1us", 1, 0),
+			ITM(999.45ns, "1.0us", 2),
+			ITM(999.45ns, "999.0ns", 3),
+			ITM(999.45ns, "999.5ns", 4),
+			ITM(999.45ns, "999.45ns", 5, 2),
+			ITM(999.55ns, "1.0us", 3),
+			ITM(99ms, "99.0ms"),
 		};
 
 		for (auto& i : samples)
@@ -384,7 +385,8 @@ namespace
 		}
 
 		return 0;
-	}();
+
+	}(); // const auto unit_test_to_string
 #endif // #ifndef NDEBUG
 
 	inline std::ostream& operator<<(std::ostream& os, const duration_t& d)
