@@ -46,18 +46,17 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <cstdio>
 #	include <string>
 #else
+#	if defined( __STDC_NO_ATOMICS__)
+//		"<...> we left out support for some C11 optional features such as atomics <...>" [Microsoft]
+//		[https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
+#		error "Atomic objects and the atomic operation library are not supported."
+#	endif
 #	include <stdatomic.h>
 #	include <stdint.h>
 #	include <stdio.h>
 #endif
 
 #include "common.h"
-
-#if !defined(__cplusplus) && defined( __STDC_NO_ATOMICS__)
-// "<...> we left out support for some C11 optional features such as atomics <...>" [Microsoft]
-//	[https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
-#	error "Atomic objects and the atomic operation library are not supported."
-#endif
 
 // Define VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
 #if defined(_WIN32) // Windows x86 or x64
