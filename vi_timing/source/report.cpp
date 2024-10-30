@@ -592,7 +592,7 @@ VI_OPTIMIZE_ON
 			auto max_len_amount = static_cast<std::size_t>(std::floor(std::log10(itm.on_amount_)));
 			max_len_amount += max_len_amount / 3; // for thousand separators
 			max_len_amount += 1U;
-			traits.max_len_amount_ = max_len_amount;
+			traits.max_len_amount_ = std::max(traits.max_len_amount_, max_len_amount);
 		}
 
 		return 1; // Continue enumerate.
