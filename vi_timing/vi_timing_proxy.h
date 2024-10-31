@@ -1,5 +1,5 @@
-#ifndef _VI_TIMING_PROXY_H_
-#	define _VI_TIMING_PROXY_H_ "3.0.0.1"
+#ifndef VI_TIMING_PROXY_H_
+#	define VI_TIMING_PROXY_H_ "3.0.0.1"
 #	pragma once
 
 #	if !defined(VI_TM_DISABLE) && __has_include(<vi_timing/timing.h>)
@@ -18,4 +18,4 @@
 #		define VI_TM_CLEAR ((void)0)
 #	endif
 
-#endif // #ifndef _VI_TIMING_PROXY_H_
+#endif // #ifndef VI_TIMING_PROXY_H_

@@ -33,7 +33,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <cassert>
 #include <mutex>
 #include <string>
-#include <unordered_map>
+#include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
 
 namespace
 {
@@ -48,6 +48,7 @@ namespace
 	std::mutex s_instance_guard;
 	auto s_instance = []
 		{	std::unordered_map<std::string, item_t> result;
+			result.max_load_factor(0.7F);
 			result.reserve(16);
 			return result;
 		}();
@@ -72,7 +73,8 @@ int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data)
 {	int result = -1;
 	std::scoped_lock lg_{ s_instance_guard };
 	for (const auto& [name, item] : s_instance)
-	{	assert(item.calls_cnt_ && item.counter_ >= item.calls_cnt_);
+	{	assert(item.counter_ >= item.calls_cnt_);
+		assert(item.amount_ && item.calls_cnt_ || !item.amount_ && !item.calls_cnt_);
 		if (!name.empty() && 0 == fn(name.c_str(), item.amount_, item.counter_, item.calls_cnt_, data))
 		{	result = 0;
 			break;
@@ -87,13 +89,23 @@ void VI_TM_CALL vi_tmInit(std::size_t n)
 	s_instance.reserve(n);
 }
 
-void VI_TM_CALL vi_tmClear(void)
+void VI_TM_CALL vi_tmClear(const char* name)
 {	std::scoped_lock lg_{ s_instance_guard };
-	for (auto& [name, item] : s_instance)
-	{	item.amount_ = 0;
-		item.counter_ = 0;
-		item.calls_cnt_ = 0;
-	}
+	if (!name)
+	{	for (auto &[name, item] : s_instance)
+		{	item.amount_ = 0;
+			item.counter_ = 0;
+			item.calls_cnt_ = 0;
+		}
 
-	s_dummy_amount = 0U;
+		s_dummy_amount = 0U;
+	}
+	else if (const auto it = s_instance.find(name); it != s_instance.end())
+	{	it->second.amount_ = 0;
+		it->second.counter_ = 0;
+		it->second.calls_cnt_ = 0;
+	}
+	else
+	{	assert(false);
+	}
 }
