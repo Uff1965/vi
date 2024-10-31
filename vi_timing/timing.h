@@ -47,8 +47,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <string>
 #else
 #	if defined( __STDC_NO_ATOMICS__)
-//		"<...> we left out support for some C11 optional features such as atomics <...>" [Microsoft]
-//		[https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
+//		At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
+//		"<...> we left out support for some C11 optional features such as atomics <...>" [Microsoft
+//		https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
 #		error "Atomic objects and the atomic operation library are not supported."
 #	endif
 #	include <stdatomic.h>
@@ -100,13 +101,11 @@ extern "C" {
 #endif
 
 // Definition of vi_tmGetTicks() function for different platforms. vvvvvvvvvvvv
-#if defined(vi_tmGetTicks)
-// Custom define
-#else
+#ifndef vi_tmGetTicks
 #	if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
-		{	uint32_t _; // будет удалён оптимизатором
-			const uint64_t result = __rdtscp(&_);
+		{	VI_STD(uint32_t) _; // будет удалён оптимизатором
+			const VI_STD(uint64_t) result = __rdtscp(&_);
 			//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
 			//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
 			//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
@@ -147,7 +146,7 @@ extern "C" {
 	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmClear(void);
+	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name);
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -237,13 +236,16 @@ namespace vi_tm
 #		define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #		define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #		define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
+#		define VI_TM_CLEAR ((void)0)
 #	else
 #		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
 #		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
 #		define VI_TM_REPORT(...) vi_tmReport(__VA_ARGS__)
+#		define VI_TM_CLEAR vi_tmClear(NULL)
 #	endif
 
 #	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
+
 #endif // #if !defined(__cplusplus) ^^^
 
 #endif // #ifndef VI_TIMING_VI_TIMING_H

@@ -567,16 +567,20 @@ VI_OPTIMIZE_ON
 	{
 		assert(data);
 		auto& traits = *static_cast<traits_t*>(data);
-		assert(calls_cnt && amount >= calls_cnt);
+		assert(amount >= calls_cnt);
+		assert(calls_cnt && amount || !calls_cnt && !amount);
 
 		const auto sort = traits.flags_ & static_cast<uint32_t>(vi_tmSortMask);
 
 		auto& itm = traits.meterages_.emplace_back(name, total, amount, calls_cnt);
 
 		constexpr auto dirty = 1.0; // A fair odds would be 1.0
-		if (const auto total_over_ticks = traits.measurement_cost_ * dirty * itm.on_calls_cnt_; itm.on_total_ > total_over_ticks)
-		{
-			itm.total_time_ = traits.tick_duration_ * (itm.on_total_ - total_over_ticks);
+		if (0 == itm.on_amount_)
+		{	itm.total_txt_ = "<n/a>";
+			itm.average_txt_ = "<n/a>";
+		}
+		else if (const auto total_over_ticks = traits.measurement_cost_ * dirty * itm.on_calls_cnt_; itm.on_total_ > total_over_ticks)
+		{	itm.total_time_ = traits.tick_duration_ * (itm.on_total_ - total_over_ticks);
 			itm.average_ = itm.total_time_ / itm.on_amount_;
 			itm.total_txt_ = to_string(itm.total_time_);
 			itm.average_txt_ = to_string(itm.average_);
@@ -587,8 +591,7 @@ VI_OPTIMIZE_ON
 		traits.max_len_name_ = std::max(traits.max_len_name_, itm.on_name_.length());
 
 		if (itm.on_amount_ > traits.max_amount_)
-		{
-			traits.max_amount_ = itm.on_amount_;
+		{	traits.max_amount_ = itm.on_amount_;
 			auto max_len_amount = static_cast<std::size_t>(std::floor(std::log10(itm.on_amount_)));
 			max_len_amount += max_len_amount / 3; // for thousand separators
 			max_len_amount += 1U;
@@ -659,8 +662,7 @@ VI_OPTIMIZE_ON
 			:traits_{ traits }, fn_{ fn }, data_{ data }
 		{
 			if (auto size = traits_.meterages_.size(); size >= 1)
-			{
-				number_len_ = 1 + static_cast<int>(std::floor(std::log10(size)));
+			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size)));
 			}
 		}
 
@@ -708,7 +710,7 @@ VI_OPTIMIZE_ON
 			};
 			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t)); //-V2511
 
-			const char fill = (traits_.meterages_.size() > 4 && 0 != (n_ - 1) % 2) ? ' ' : '.';
+			const char fill = (traits_.meterages_.size() > 4 && n_ % 2) ? '.' : ' ';
 			str << std::setw(number_len_) << n_ << ". ";
 			str << std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.on_name_ << ": ";
 			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [";
@@ -726,7 +728,7 @@ VI_OPTIMIZE_ON
 
 VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
-	warming(false, 512ms);
+	warming(0, 512ms);
 
 	traits_t traits{ flags };
 	vi_tmResults(collector_meterages, &traits);
