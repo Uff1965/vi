@@ -8,9 +8,32 @@
 #include <threads.h>
 
 //VI_OPTIMIZE_OFF
-void foo(void)
+void bar_c(void)
 {
-	struct vi_tmItem_t const foo_tm = vi_tmStart("foo", 1);
+	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
+	thrd_yield();
+
+	{	const vi_tmTicks_t start = vi_tmGetTicks();
+
+		{
+			thrd_sleep(&(struct timespec) { .tv_nsec = 30000000 }, NULL);
+		}
+
+		const vi_tmTicks_t finish = vi_tmGetTicks();
+		vi_tmAdd(vi_tmItem("bar", 1), finish - start);
+	}
+}
+//VI_OPTIMIZE_ON
+
+//VI_OPTIMIZE_OFF
+void foo_c(void)
+{
+	thrd_yield();
+	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
+
+	bar_c();
+
+	struct vi_tmItem_t const foo_tm = vi_tmStart("foo_c", 1);
 
 	printf("\n%s... ", __func__); //-V2600
 
