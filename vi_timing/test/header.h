@@ -3,7 +3,8 @@ extern "C"
 {
 #endif
 
-	void foo(void);
+	void foo_c(void);
+	void bar_c(void);
 
 #ifdef __cplusplus
 }

@@ -155,7 +155,7 @@ int main()
 	std::cout << "done";
 	endl(std::cout);
 
-	foo();
+	foo_c();
 	test_multithreaded();
 	test_quant();
 
