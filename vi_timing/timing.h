@@ -1,12 +1,12 @@
 ﻿/********************************************************************\
-'vi_timing' is a small library for measuring the time execution of
+'vi_timing' is a compact library designed for measuring the execution time of
 code in C and C++.
 
 Copyright (C) 2024 A.Prograamar
 
-This library was created to experiment for educational purposes.
-Do not expect much from it. If you spot a bug or can suggest any
-improvement to the code, please email me at eMail:programmer.amateur@proton.me.
+This library was developed for experimental and educational purposes.
+Please temper your expectations accordingly. If you encounter any bugs or have
+suggestions for improvements, kindly contact me at programmer.amateur@proton.me.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
