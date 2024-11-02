@@ -43,15 +43,16 @@ namespace
 		std::size_t calls_cnt_{ 0 };
 	};
 
-	decltype(item_t::amount_) s_dummy_amount{};
-
 	std::mutex s_instance_guard;
+
 	auto s_instance = []
 		{	std::unordered_map<std::string, item_t> result;
 			result.max_load_factor(0.7F);
-			result.reserve(16);
+			result.reserve(32);
 			return result;
 		}();
+
+	vi_tmAtomicTicks_t s_dummy_amount{};
 }
 
 vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)

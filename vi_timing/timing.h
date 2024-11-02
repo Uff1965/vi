@@ -185,14 +185,13 @@ extern "C" {
 	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#	ifdef __cplusplus
+#ifdef __cplusplus
 } // extern "C" {
 
 namespace vi_tm
 {
 	class timer_t: public vi_tmItem_t
-	{
-		timer_t(const timer_t&) = delete;
+	{	timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
 		timer_t(const char *name, std::size_t cnt = 1) noexcept
@@ -205,8 +204,7 @@ namespace vi_tm
 	};
 
 	class init_t
-	{
-		std::string title_;
+	{	std::string title_;
 		vi_tmLogSTR_t cb_;
 		void* data_;
 		std::uint32_t flags_;
@@ -243,9 +241,8 @@ namespace vi_tm
 #		define VI_TM_REPORT(...) vi_tmReport(__VA_ARGS__)
 #		define VI_TM_CLEAR vi_tmClear(NULL)
 #	endif
-
 #	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 
-#endif // #if !defined(__cplusplus) ^^^
+#endif // #ifdef __cplusplus
 
 #endif // #ifndef VI_TIMING_VI_TIMING_H
