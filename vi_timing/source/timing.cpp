@@ -43,9 +43,9 @@ namespace
 		std::size_t calls_cnt_{ 0 };
 	};
 
-	auto lock_storage()
-	{	static std::mutex storage_guard_;
-		static auto storage_ = []
+	auto lock_and_get()
+	{	static std::mutex storage_guard;
+		static auto storage = []
 		{	std::unordered_map<std::string, item_t> result;
 			result.max_load_factor(0.7F);
 			result.reserve(32);
@@ -53,15 +53,15 @@ namespace
 		}();
 
 		class wrapper_t
-		{	std::scoped_lock<std::mutex> lock_{ storage_guard_ };
+		{	std::scoped_lock<std::mutex> lock_{ storage_guard };
 			wrapper_t(const wrapper_t &) = delete;
 			wrapper_t &operator =(const wrapper_t &) = delete;
 		public:
 			wrapper_t() = default;
-			auto &operator[](const char *key) const { return storage_[key]; }
-			auto &operator[](const std::string &key) const { return storage_[key]; }
-			auto &operator*() const { return storage_; }
-			auto operator->() const { return &storage_; }
+			auto &operator[](const char *key) const { return storage[key]; }
+			auto &operator[](const std::string &key) const { return storage[key]; }
+			auto &operator*() const { return storage; }
+			auto operator->() const { return &storage; }
 		};
 
 		return wrapper_t{};
@@ -72,7 +72,7 @@ namespace
 } // namespace
 
 void VI_TM_CALL vi_tmInit(std::size_t n)
-{	auto locked_storage = lock_storage();
+{	auto locked_storage = lock_and_get();
 	assert(locked_storage->empty());
 	locked_storage->reserve(n);
 }
@@ -80,7 +80,7 @@ void VI_TM_CALL vi_tmInit(std::size_t n)
 vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
 {	vi_tmAtomicTicks_t* result;
 	if (nullptr != name)
-	{	auto locked_storage = lock_storage();
+	{	auto locked_storage = lock_and_get();
 		auto &item = locked_storage[name];
 		item.calls_cnt_ += 1;
 		item.counter_ += amount;
@@ -94,7 +94,7 @@ vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
 
 int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data)
 {	int result = -1;
-	auto locked_storage = lock_storage();
+	auto locked_storage = lock_and_get();
 	for (const auto& [name, item] : *locked_storage)
 	{	assert(item.counter_ >= item.calls_cnt_);
 		assert(item.amount_ && item.calls_cnt_ || !item.amount_ && !item.calls_cnt_);
@@ -112,7 +112,7 @@ void VI_TM_CALL vi_tmClear(const char* name)
 			item.counter_ = 0;
 			item.calls_cnt_ = 0;
 		};
-	auto locked_storage = lock_storage();
+	auto locked_storage = lock_and_get();
 	
 	if (!name)
 	{	for (auto &[name, item] : *locked_storage)
