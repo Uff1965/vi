@@ -43,22 +43,45 @@ namespace
 		std::size_t calls_cnt_{ 0 };
 	};
 
-	decltype(item_t::amount_) s_dummy_amount{};
-
-	std::mutex s_instance_guard;
-	auto s_instance = []
+	auto lock_storage()
+	{	static std::mutex storage_guard_;
+		static auto storage_ = []
 		{	std::unordered_map<std::string, item_t> result;
 			result.max_load_factor(0.7F);
-			result.reserve(16);
+			result.reserve(32);
 			return result;
 		}();
+
+		class wrapper_t
+		{	std::scoped_lock<std::mutex> lock_{ storage_guard_ };
+			wrapper_t(const wrapper_t &) = delete;
+			wrapper_t &operator =(const wrapper_t &) = delete;
+		public:
+			wrapper_t() = default;
+			auto &operator[](const char *key) const { return storage_[key]; }
+			auto &operator[](const std::string &key) const { return storage_[key]; }
+			auto &operator*() const { return storage_; }
+			auto operator->() const { return &storage_; }
+		};
+
+		return wrapper_t{};
+	};
+
+	vi_tmAtomicTicks_t s_dummy_amount{};
+
+} // namespace
+
+void VI_TM_CALL vi_tmInit(std::size_t n)
+{	auto locked_storage = lock_storage();
+	assert(locked_storage->empty());
+	locked_storage->reserve(n);
 }
 
 vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
 {	vi_tmAtomicTicks_t* result;
 	if (nullptr != name)
-	{	std::scoped_lock lg_{ s_instance_guard };
-		auto& item = s_instance[name];
+	{	auto locked_storage = lock_storage();
+		auto &item = locked_storage[name];
 		item.calls_cnt_ += 1;
 		item.counter_ += amount;
 		result = &item.amount_;
@@ -71,8 +94,8 @@ vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
 
 int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data)
 {	int result = -1;
-	std::scoped_lock lg_{ s_instance_guard };
-	for (const auto& [name, item] : s_instance)
+	auto locked_storage = lock_storage();
+	for (const auto& [name, item] : *locked_storage)
 	{	assert(item.counter_ >= item.calls_cnt_);
 		assert(item.amount_ && item.calls_cnt_ || !item.amount_ && !item.calls_cnt_);
 		if (!name.empty() && 0 == fn(name.c_str(), item.amount_, item.counter_, item.calls_cnt_, data))
@@ -83,27 +106,22 @@ int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data)
 	return result;
 }
 
-void VI_TM_CALL vi_tmInit(std::size_t n)
-{	std::scoped_lock lg_{ s_instance_guard };
-	assert(s_instance.empty());
-	s_instance.reserve(n);
-}
-
 void VI_TM_CALL vi_tmClear(const char* name)
-{	std::scoped_lock lg_{ s_instance_guard };
-	if (!name)
-	{	for (auto &[name, item] : s_instance)
+{	auto clear = [](item_t& item)
 		{	item.amount_ = 0;
 			item.counter_ = 0;
 			item.calls_cnt_ = 0;
+		};
+	auto locked_storage = lock_storage();
+	
+	if (!name)
+	{	for (auto &[name, item] : *locked_storage)
+		{	clear(item);
 		}
-
 		s_dummy_amount = 0U;
 	}
-	else if (const auto it = s_instance.find(name); it != s_instance.end())
-	{	it->second.amount_ = 0;
-		it->second.counter_ = 0;
-		it->second.calls_cnt_ = 0;
+	else if (const auto it = locked_storage->find(name); it != locked_storage->end())
+	{	clear(it->second);
 	}
 	else
 	{	assert(false);
