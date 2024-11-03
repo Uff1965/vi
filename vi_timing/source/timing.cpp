@@ -43,10 +43,12 @@ namespace
 		std::size_t calls_cnt_{ 0 };
 	};
 
+	using storage_t = std::unordered_map<std::string, item_t>;
+
 	auto lock_and_get()
 	{	static std::mutex storage_guard;
 		static auto storage = []
-		{	std::unordered_map<std::string, item_t> result;
+		{	storage_t result;
 			result.max_load_factor(0.7F);
 			result.reserve(32);
 			return result;
@@ -54,14 +56,15 @@ namespace
 
 		class wrapper_t
 		{	std::scoped_lock<std::mutex> lock_{ storage_guard };
-			wrapper_t(const wrapper_t &) = delete;
-			wrapper_t &operator =(const wrapper_t &) = delete;
 		public:
 			wrapper_t() = default;
-			auto &operator[](const char *key) const { return storage[key]; }
-			auto &operator[](const std::string &key) const { return storage[key]; }
-			auto &operator*() const { return storage; }
-			auto operator->() const { return &storage; }
+			wrapper_t(const wrapper_t &) = delete;
+			wrapper_t &operator=(const wrapper_t &) = delete;
+			auto &operator[](const char *key) const & { return storage[key]; }
+			auto &operator*() const & { return storage; }
+			auto &operator*() const && = delete;
+			auto operator->() const & { return &storage; }
+			auto operator->() const && = delete;
 		};
 
 		return wrapper_t{};
@@ -97,7 +100,7 @@ int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data)
 	auto locked_storage = lock_and_get();
 	for (const auto& [name, item] : *locked_storage)
 	{	assert(item.counter_ >= item.calls_cnt_);
-		assert(item.amount_ && item.calls_cnt_ || !item.amount_ && !item.calls_cnt_);
+		assert((0 == item.amount_) == (0 == item.calls_cnt_));
 		if (!name.empty() && 0 == fn(name.c_str(), item.amount_, item.counter_, item.calls_cnt_, data))
 		{	result = 0;
 			break;
@@ -115,7 +118,7 @@ void VI_TM_CALL vi_tmClear(const char* name)
 	auto locked_storage = lock_and_get();
 	
 	if (!name)
-	{	for (auto &[name, item] : *locked_storage)
+	{	for (auto &[_, item] : *locked_storage)
 		{	clear(item);
 		}
 		s_dummy_amount = 0U;
