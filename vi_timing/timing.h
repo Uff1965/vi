@@ -140,13 +140,14 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve);
-	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt);
+	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
+	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
 	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name);
+	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name VI_DEFAULT(NULL));
+	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -155,7 +156,7 @@ extern "C" {
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
 	} vi_tmItem_t;
 
-	static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount) VI_NOEXCEPT
+	static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	vi_tmItem_t result;
 		result.amount_ = vi_tmItem(name, amount);
 		result.start_ = vi_tmGetTicks();
@@ -182,7 +183,11 @@ extern "C" {
 		vi_tmShowMask = 0xF0,
 	};
 
-	VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, VI_STD(uint32_t) flags);
+	VI_TM_API int VI_TM_CALL vi_tmReport
+	(	vi_tmLogSTR_t callback VI_DEFAULT(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs)),
+		void* data VI_DEFAULT(stdout),
+		VI_STD(uint32_t) flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
+	);
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #ifdef __cplusplus

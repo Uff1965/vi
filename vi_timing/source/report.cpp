@@ -46,6 +46,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <thread>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace ch = std::chrono;
@@ -53,7 +54,22 @@ using namespace std::literals;
 
 namespace
 {
-	struct space_out: std::numpunct<char>
+	template<typename T, typename std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+	constexpr bool equal(T l, T r)
+	{	if (std::isnan(l) || std::isnan(r))
+		{	return false;
+		}
+		return std::abs(l - r) <= std::max(std::abs(l), std::abs(r)) * std::numeric_limits<T>::epsilon();
+	}
+
+#if __cpp_lib_to_underlying
+	using std::underlying_type_t;
+#else
+	template< class Enum >
+	constexpr auto to_underlying(Enum e) noexcept { return static_cast<std::underlying_type_t<Enum>>(e); }
+#endif
+
+	struct space_out final: std::numpunct<char>
 	{	char do_thousands_sep() const override { return '\''; }  // separate with '
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
@@ -67,36 +83,42 @@ namespace
 	constexpr auto operator""_Gs(long double v) noexcept { return ch::duration<double, std::giga>(v); };
 	constexpr auto operator""_Gs(unsigned long long v) noexcept { return ch::duration<double, std::giga>(v); };
 
-	constexpr unsigned char PRECISION = 2;
-	constexpr unsigned char DEC = 1;
+	constexpr int PRECISION = 2;
+	constexpr int DEC = 1;
 
-	[[nodiscard]] double round_triple(double num, int prec = PRECISION, int dec = DEC, int group = 3)
-	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
-		constexpr auto EPS = std::numeric_limits<decltype(num)>::epsilon();
-		assert(num >= .0 && dec >= 0 && group > 0 && prec > dec && group > dec);
-		if (num <= .0 || dec < 0 || group <= 0 || prec <= dec)
-		{	return num;
+	int mod_normalize(int num, int den)
+	{	assert(den > 0); // num may be negative!
+		auto result = num % den; // Now: -den < result && result < den;
+		if (result <= 0)
+		{	result += den;
 		}
-		if (dec >= group)
-		{	dec %= group;
-		}
+		return result; // Now: 0 < result && result <= den
+	}
 
-		const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
-		assert(0.1 * (1.0 - EPS) <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 1.0 + EPS);
-
-		auto num_ext = exp % group;
-		if (num_ext <= 0)
-		{	num_ext += group;
-		}
-
-		if (num_ext < prec)
+	int restrict_prec(int prec, int exp, int dec, int group)
+	{	if (const auto num_ext = mod_normalize(exp, group); num_ext < prec)
 		{	if (const auto prec_ext = (prec - num_ext) % group; prec_ext > dec)
 			{	prec -= prec_ext - dec;
 			}
 		}
+		return prec;
+	}
 
-		const auto factor = std::pow(10, prec - exp);
-		return std::round(factor * (num * (1 + EPS))) / factor;
+	[[nodiscard]] double round_ext(double num, int prec = PRECISION, int dec = DEC, int group = 3)
+	{ // Rounding to 'dec' decimal place and no more than 'prec' significant symbols.
+		constexpr auto EPS = std::numeric_limits<decltype(num)>::epsilon();
+		assert(num >= .0 && dec >= 0 && group > 0 && prec > dec && group > dec);
+		if (num > .0 && dec >= 0 && group > 0 && prec > dec)
+		{	if (dec >= group)
+			{	dec %= group;
+			}
+
+			const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
+			assert(0.1 * (1.0 - EPS) <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 1.0 + EPS);
+			const auto factor = std::pow(10, restrict_prec(prec, exp, dec, group) - exp);
+			num = std::round(factor * (num * (1.0 + EPS))) / factor;
+		}
+		return num;
 	}
 
 	struct duration_t : ch::duration<double> // A new type is defined to be able to overload the 'operator<'.
@@ -104,31 +126,24 @@ namespace
 		template<typename T>
 		constexpr duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
 
-		[[nodiscard]] friend std::string to_string(duration_t sec, unsigned char precision = PRECISION, unsigned char dec = DEC)
-		{	assert(sec.count() >= 0.0 && dec >= 0 && precision > dec);
-			sec = round_triple(sec.count(), precision, dec);
-			const auto exp = static_cast<int>(std::floor(std::log10(sec.count())));
-			const auto triple = exp - 3 * ((precision - dec - 1) / 3);
+		[[nodiscard]] friend std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC)
+		{	assert(d.count() >= 0.0 && dec >= 0 && precision > dec);
+			auto sec = round_ext(d.count(), precision, dec);
+			const auto triple = static_cast<int>(std::floor(std::log10(sec))) - 3 * ((precision - dec - 1) / 3);
 
-			std::ostringstream ss;
-			ss << std::fixed << std::setprecision(dec);
-			
-			struct { std::string_view suffix_; double factor_; } k;
-				
-			if ( -11 > triple)
-			{	sec = 0.0;
-				k = { "ps"sv, 1e12 };
-			}
+			struct { std::string_view suffix_; double factor_; } k{ "ps"sv, 1e12 };
+			if (-11 > triple) { sec = 0.0; }
 			else if (-9 > triple) { k = { "ps"sv, 1e12 }; }
 			else if (-6 > triple) { k = { "ns"sv, 1e9 }; }
 			else if (-3 > triple) { k = { "us"sv, 1e6 }; }
-			else if ( 0 > triple) { k = { "ms"sv, 1e3 }; }
+			else if (0 > triple) { k = { "ms"sv, 1e3 }; }
 			else if (+3 > triple) { k = { "s "sv, 1e0 }; }
 			else if (+6 > triple) { k = { "ks"sv, 1e-3 }; }
 			else if (+9 > triple) { k = { "Ms"sv, 1e-6 }; }
 			else { k = { "Gs"sv, 1e-9 }; }
 
-			ss << sec.count() * k.factor_ << k.suffix_;
+			std::ostringstream ss;
+			ss << std::fixed << std::setprecision(dec) << sec * k.factor_ << k.suffix_;
 			return ss.str();
 		}
 
@@ -143,13 +158,13 @@ namespace
 	}
 
 #ifndef NDEBUG
-	const auto unit_test_round= []
+	const auto unit_test_round = []
 	{	static constexpr struct
 		{	int line_;
 			double original_;
 			double expected_;
-			unsigned char precision_ = PRECISION;
-			unsigned char dec_ = DEC;
+			unsigned char precision_;
+			unsigned char dec_;
 		} //-V802 //-V730
 	samples[] = {
 			{__LINE__, 9.999'9, 10.0, 1, 0},
@@ -270,8 +285,8 @@ namespace
 		};
 
 		for (auto& i : samples)
-		{	const auto rounded = round_triple(i.original_, i.precision_, i.dec_);
-			if (std::max(std::abs(rounded), std::abs(i.expected_)) * DBL_EPSILON < std::abs(rounded - i.expected_))
+		{	const auto rounded = round_ext(i.original_, i.precision_, i.dec_);
+			if (!equal(rounded, i.expected_))
 			{	std::ostringstream buff;
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
 				buff << std::fixed << std::setprecision(8) <<
@@ -296,8 +311,8 @@ namespace
 		{	int line_;
 			duration_t original_;
 			std::string_view expected_;
-			unsigned char precision_ = PRECISION;
-			unsigned char dec_ = DEC;
+			unsigned char precision_ = 2;
+			unsigned char dec_ = 1;
 		} //-V802 //-V730
 		samples[] = {
 #	define ITM5(E, precition, dec, expected) {__LINE__, 5.555'555'555'555'555e##E, expected, precition, dec}
@@ -378,36 +393,10 @@ namespace
 	}(); // const auto unit_test_to_string
 #endif // #ifndef NDEBUG
 
-	void warming(int all, ch::milliseconds ms)
-	{
-		if (ch::milliseconds::zero() == ms)
-			return;
-		
-		std::atomic_bool done = false;
-		auto load = [&done] { while (!done) { volatile int n = 100'000; while (n) { n = n - 1; } } }; //-V776 Loading
-
-		static const auto hwcnt = std::thread::hardware_concurrency();
-		std::vector<std::thread> threads((0 != all && 1 < hwcnt) ? hwcnt - 1 : 0);
-		for (auto& t : threads)
-		{	t = std::thread{ load }; // Load the processor cores.
-		}
-
-		for (const auto stop = ch::steady_clock::now() + ms; ch::steady_clock::now() < stop;)
-		{/*Stressing the working thread.*/
-		}
-
-		done = true;
-
-		for (auto& t : threads)
-		{	t.join();
-		}
-	}
-
 	duration_t seconds_per_tick()
 	{
 		auto wait_for_the_time_changed = []
-		{
-			{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+		{	{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 				[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks(); // Preloading a function into cache
 				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
 			}
@@ -518,8 +507,7 @@ VI_OPTIMIZE_ON
 	struct traits_t
 	{
 		struct itm_t
-		{
-			std::string_view orig_name_; // Name
+		{	std::string_view orig_name_; // Name
 			vi_tmTicks_t orig_total_{}; // Total ticks duration
 			std::size_t orig_amount_{}; // Number of measured units
 			std::size_t orig_calls_cnt_{}; // To account for overheads
@@ -544,7 +532,7 @@ VI_OPTIMIZE_ON
 		
 		traits_t(std::uint32_t flags) : flags_{ flags }
 		{	auto max_len = &max_len_average_;
-			switch (flags_ & static_cast<uint32_t>(vi_tmSortMask))
+			switch (flags_ & to_underlying(vi_tmSortMask))
 			{
 			case vi_tmSortByAmount:
 				max_len = &max_len_amount_;
@@ -555,12 +543,16 @@ VI_OPTIMIZE_ON
 			case vi_tmSortByTime:
 				max_len = &max_len_total_;
 				break;
+			default:
+				break;
 			}
-			*max_len += (flags & static_cast<uint32_t>(vi_tmSortAscending)) ? Ascending.length(): Descending.length();
+			*max_len += (flags & to_underlying(vi_tmSortAscending)) ? Ascending.length(): Descending.length();
 		}
+
+		static int callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 	};
 
-	int ResultsCallback(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* data)
+	int traits_t::callback(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* data)
 	{	assert(data);
 		auto& traits = *static_cast<traits_t*>(data);
 		assert(amount >= calls_cnt);
@@ -578,15 +570,15 @@ VI_OPTIMIZE_ON
 			assert(itm.total_txt_ == NotAvailable);
 			assert(itm.average_txt_ == NotAvailable);
 		}
-		else if (const auto total_over_ticks = traits.measurement_cost_ * dirty * itm.orig_calls_cnt_; itm.orig_total_ > total_over_ticks)
+		else if (const auto total_over_ticks = traits.measurement_cost_ * dirty * itm.orig_calls_cnt_; itm.orig_total_ <= total_over_ticks)
+		{	itm.total_txt_ = TooFew;
+			itm.average_txt_ = TooFew;
+		}
+		else
 		{	itm.total_time_ = traits.tick_duration_ * (itm.orig_total_ - total_over_ticks);
 			itm.average_ = itm.total_time_ / itm.orig_amount_;
 			itm.total_txt_ = to_string(itm.total_time_);
 			itm.average_txt_ = to_string(itm.average_);
-		}
-		else
-		{	itm.total_txt_ = TooFew;
-			itm.average_txt_ = TooFew;
 		}
 
 		traits.max_len_total_ = std::max(traits.max_len_total_, itm.total_txt_.length());
@@ -605,10 +597,6 @@ VI_OPTIMIZE_ON
 	}
 
 	template<vi_tmReportFlags E> auto make_tuple(const traits_t::itm_t& v);
-	template<vi_tmReportFlags E> bool less(const traits_t::itm_t& l, const traits_t::itm_t& r)
-	{	return make_tuple<E>(r) < make_tuple<E>(l);
-	}
-
 	template<> auto make_tuple<vi_tmSortByName>(const traits_t::itm_t& v)
 	{	return std::tuple{ v.orig_name_ };
 	}
@@ -622,6 +610,10 @@ VI_OPTIMIZE_ON
 	{	return std::tuple{ v.orig_amount_, v.average_, v.total_time_, v.orig_name_ };
 	}
 
+	template<vi_tmReportFlags E> bool less(const traits_t::itm_t& l, const traits_t::itm_t& r)
+	{	return make_tuple<E>(r) < make_tuple<E>(l);
+	}
+
 	struct meterage_comparator_t
 	{
 		uint32_t flags_{};
@@ -629,26 +621,26 @@ VI_OPTIMIZE_ON
 		explicit meterage_comparator_t(uint32_t flags) noexcept : flags_{ flags } {}
 
 		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const {
-			auto pr = &less<vi_tmSortBySpeed>;
-			switch (flags_ & static_cast<uint32_t>(vi_tmSortMask))
+			auto pr = less<vi_tmSortBySpeed>;
+			switch (flags_ & to_underlying(vi_tmSortMask))
 			{
-			case static_cast<uint32_t>(vi_tmSortByName):
+			case to_underlying(vi_tmSortByName):
 				pr = less<vi_tmSortByName>;
 				break;
-			case static_cast<uint32_t>(vi_tmSortByAmount):
+			case to_underlying(vi_tmSortByAmount):
 				pr = less<vi_tmSortByAmount>;
 				break;
-			case static_cast<uint32_t>(vi_tmSortByTime):
+			case to_underlying(vi_tmSortByTime):
 				pr = less<vi_tmSortByTime>;
 				break;
-			case static_cast<uint32_t>(vi_tmSortBySpeed):
+			case to_underlying(vi_tmSortBySpeed):
 				break;
 			default:
 				assert(false);
 				break;
 			}
 
-			const bool desc = (0 == (static_cast<uint32_t>(vi_tmSortAscending) & flags_));
+			const bool desc = (0 == (to_underlying(vi_tmSortAscending) & flags_));
 			return desc ? pr(l, r) : pr(r, l);
 		}
 	};
@@ -671,9 +663,9 @@ VI_OPTIMIZE_ON
 
 		int header() const
 		{
-			const auto order = (traits_.flags_ & static_cast<uint32_t>(vi_tmSortAscending)) ? Ascending : Descending;
+			const auto order = (traits_.flags_ & to_underlying(vi_tmSortAscending)) ? Ascending : Descending;
 			auto sort = vi_tmSortBySpeed;
-			switch (auto s = traits_.flags_ & static_cast<uint32_t>(vi_tmSortMask))
+			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask))
 			{
 			case vi_tmSortBySpeed:
 				break;
@@ -706,12 +698,7 @@ VI_OPTIMIZE_ON
 			n_++;
 
 			std::ostringstream str;
-			struct thousands_sep_facet_t final : std::numpunct<char>
-			{
-				char do_thousands_sep() const override { return '\''; }
-				std::string do_grouping() const override { return "\x3"; }
-			};
-			str.imbue(std::locale(str.getloc(), new thousands_sep_facet_t)); //-V2511
+			str.imbue(std::locale(str.getloc(), new space_out)); //-V2511
 
 			const char fill = (traits_.meterages_.size() > 4 && n_ % 2) ? '.' : ' ';
 			str << std::setw(number_len_) << n_ << ". ";
@@ -731,24 +718,24 @@ VI_OPTIMIZE_ON
 
 VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
-	warming(0, 512ms);
+	vi_tmWarming(0, 512);
 
 	traits_t traits{ flags };
-	vi_tmResults(ResultsCallback, &traits);
+	vi_tmResults(traits_t::callback, &traits);
 
 	std::sort(traits.meterages_.begin(), traits.meterages_.end(), meterage_comparator_t{ flags });
 
 	int ret = 0;
-	if (flags & static_cast<std::uint32_t>(vi_tmShowMask))
+	if (flags & to_underlying(vi_tmShowMask))
 	{	std::ostringstream str;
 
-		if (flags & static_cast<uint32_t>(vi_tmShowOverhead))
+		if (flags & to_underlying(vi_tmShowOverhead))
 		{	str << "Measurement cost: " << duration_t(traits.tick_duration_ * traits.measurement_cost_) << " per measurement. ";
 		}
-		if (flags & static_cast<uint32_t>(vi_tmShowDuration))
+		if (flags & to_underlying(vi_tmShowDuration))
 		{	str << "Duration: " << duration() << ". ";
 		}
-		if (flags & static_cast<uint32_t>(vi_tmShowUnit))
+		if (flags & to_underlying(vi_tmShowUnit))
 		{	str << "One tick corresponds: " << traits.tick_duration_ << ". ";
 		}
 

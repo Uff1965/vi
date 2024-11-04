@@ -31,9 +31,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <timing.h>
 
 #include <cassert>
+#include <chrono>
 #include <mutex>
 #include <string>
 #include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
+
+namespace ch = std::chrono;
 
 namespace
 {
@@ -51,7 +54,7 @@ namespace
 		static auto storage = []
 		{	std::unordered_map<std::string, item_t> result;
 			result.max_load_factor(0.7F);
-			result.reserve(32);
+			result.reserve(64);
 			return result;
 		}();
 
@@ -119,5 +122,40 @@ void VI_TM_CALL vi_tmClear(const char* name)
 	}
 	else if (const auto [it, b] = locked_ptr->try_emplace(name); !b)
 	{	it->second.clear();
+	}
+}
+
+void VI_TM_CALL vi_tmWarming(unsigned int cnt, unsigned int ms)
+{
+	if (0 == ms)
+	{	return;
+	}
+
+	auto addition = cnt? std::min(cnt, std::thread::hardware_concurrency()): std::thread::hardware_concurrency();
+	if (addition)
+	{	--addition;
+	}
+
+	std::atomic_bool done = false;
+	auto loading = [&done]
+		{	while (!done)
+			{	for (volatile int n = 100'000; n; n = n - 1)
+				{/**/ }
+			}
+		};
+
+	std::vector<std::thread> threads(addition); // Additional threads
+	for (auto &t : threads)
+	{	t = std::thread{ loading };
+	}
+
+	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
+	{	// Stressing the current thread.
+	}
+
+	done = true;
+
+	for (auto &t : threads)
+	{	t.join();
 	}
 }

@@ -11,12 +11,13 @@
 
 #include "../timing.h"
 
+#include <atomic>
+#include <cassert>
+#include <chrono>
 #include <iomanip>
 #include <iostream>
-#include <chrono>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); // To automatically call the _CrtDumpMemoryLeaks function when the program ends
@@ -30,27 +31,17 @@ namespace {
 	using namespace std::literals;
 	namespace ch = std::chrono;
 
-	void warming(bool all, ch::milliseconds ms)
-	{
-		if (0 != ms.count())
-		{
-			std::atomic_bool done = false; // It must be defined before 'threads'!!!
-			auto load = [&done] {while (!done) {/**/}}; //-V776
-
-			const auto hwcnt = std::thread::hardware_concurrency();
-			std::vector<std::thread> threads((all && hwcnt > 1) ? hwcnt - 1 : 0);
-			for (auto& t : threads) { t = std::thread{ load }; }
-			for (const auto stop = ch::steady_clock::now() + ms; ch::steady_clock::now() < stop;) {/*The thread is fully loaded.*/ }
-			done = true;
-			for (auto& t : threads) { t.join(); }
-		}
-	}
-
+	VI_OPTIMIZE_OFF
 	bool test_multithreaded()
 	{
 		VI_TM_FUNC;
 
+#ifdef NDEBUG
+		static constexpr auto CNT = 2'000'000;
+#else
 		static constexpr auto CNT = 100'000;
+#endif
+
 		static std::atomic<std::size_t> v{};
 
 		std::cout << "\ntest_multithreaded()... " << std::endl;
@@ -59,12 +50,12 @@ namespace {
 		{	VI_TM("load");
 
 			for (auto n = CNT; n; --n)
-			{	VI_TM(("thread_" + std::to_string(n % 5)).c_str());
+			{	VI_TM(("check_" + std::to_string(n % 4)).c_str());
 				v++;
 			}
 		};
 
-		std::vector<std::thread> threads{std::thread::hardware_concurrency() + 8};
+		std::vector<std::thread> threads{ 2 * std::thread::hardware_concurrency() };
 		for (auto& t : threads)
 		{	t = std::thread{ load };
 		}
@@ -73,11 +64,14 @@ namespace {
 		{	t.join();
 		}
 
+		assert(v.load() == CNT * threads.size());
+
 		std::cout << "v: " << v << std::endl;
 		std::cout << "done" << std::endl;
 		return true;
 	}
 }
+VI_OPTIMIZE_ON
 
 VI_OPTIMIZE_OFF
 bool test_quant()
@@ -150,8 +144,15 @@ int main()
 #endif
 	endl(std::cout);
 
+	for (int n = 0; n <=8; ++n)
+	{
+		std::this_thread::sleep_for(4s);
+		vi_tmWarming(n, 8'000);
+	}
+	std::this_thread::sleep_for(4s);
+
 	std::cout << "\nWarming... ";
-	warming(true, 500ms);
+	vi_tmWarming(0, 500);
 	std::cout << "done";
 	endl(std::cout);
 
