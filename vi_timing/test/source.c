@@ -28,6 +28,8 @@ void bar_c(void)
 //VI_OPTIMIZE_OFF
 void foo_c(void)
 {
+	vi_tmWarming(0, 100);
+
 	thrd_yield();
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 

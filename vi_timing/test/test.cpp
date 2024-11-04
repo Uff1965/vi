@@ -144,15 +144,8 @@ int main()
 #endif
 	endl(std::cout);
 
-	for (int n = 0; n <=8; ++n)
-	{
-		std::this_thread::sleep_for(4s);
-		vi_tmWarming(n, 8'000);
-	}
-	std::this_thread::sleep_for(4s);
-
 	std::cout << "\nWarming... ";
-	vi_tmWarming(0, 500);
+	vi_tmWarming();
 	std::cout << "done";
 	endl(std::cout);
 
