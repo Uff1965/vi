@@ -34,6 +34,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <chrono>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
 
 namespace ch = std::chrono;
