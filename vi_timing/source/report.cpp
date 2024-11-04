@@ -505,23 +505,10 @@ VI_OPTIMIZE_ON
 	const std::string NotAvailable{ "<n/a>"s };
 
 	struct traits_t
-	{
-		struct itm_t
-		{	std::string_view orig_name_; // Name
-			vi_tmTicks_t orig_total_{}; // Total ticks duration
-			std::size_t orig_amount_{}; // Number of measured units
-			std::size_t orig_calls_cnt_{}; // To account for overheads
-
-			duration_t total_time_{.0}; // seconds
-			duration_t average_{.0}; // seconds
-			std::string total_txt_{ NotAvailable };
-			std::string average_txt_{ NotAvailable };
-			itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : orig_name_{ n }, orig_total_{ t }, orig_amount_{ a }, orig_calls_cnt_{ c } {}
-		};
+	{	struct itm_t;
 
 		std::vector<itm_t> meterages_;
-
-		std::uint32_t flags_;
+		std::uint32_t flags_{};
 		const duration_t tick_duration_ = seconds_per_tick();
 		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
@@ -530,27 +517,42 @@ VI_OPTIMIZE_ON
 		std::size_t max_len_average_{ TitleAverage.length() };
 		std::size_t max_len_amount_{ TitleAmount.length() };
 		
-		traits_t(std::uint32_t flags) : flags_{ flags }
-		{	auto max_len = &max_len_average_;
-			switch (flags_ & to_underlying(vi_tmSortMask))
-			{
-			case vi_tmSortByAmount:
-				max_len = &max_len_amount_;
-				break;
-			case vi_tmSortByName:
-				max_len = &max_len_name_;
-				break;
-			case vi_tmSortByTime:
-				max_len = &max_len_total_;
-				break;
-			default:
-				break;
-			}
-			*max_len += (flags & to_underlying(vi_tmSortAscending)) ? Ascending.length(): Descending.length();
-		}
-
+		traits_t(std::uint32_t flags);
 		static int callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 	};
+
+	struct traits_t::itm_t
+	{	std::string_view orig_name_; // Name
+		vi_tmTicks_t orig_total_{}; // Total ticks duration
+		std::size_t orig_amount_{}; // Number of measured units
+		std::size_t orig_calls_cnt_{}; // To account for overheads
+
+		duration_t total_time_{.0}; // seconds
+		duration_t average_{.0}; // seconds
+		std::string total_txt_{ NotAvailable };
+		std::string average_txt_{ NotAvailable };
+
+		itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : orig_name_{ n }, orig_total_{ t }, orig_amount_{ a }, orig_calls_cnt_{ c } {}
+	};
+
+	traits_t::traits_t(std::uint32_t flags) : flags_{ flags }
+	{	auto max_len = &max_len_average_;
+		switch (flags_ & to_underlying(vi_tmSortMask))
+		{
+		case vi_tmSortByAmount:
+			max_len = &max_len_amount_;
+			break;
+		case vi_tmSortByName:
+			max_len = &max_len_name_;
+			break;
+		case vi_tmSortByTime:
+			max_len = &max_len_total_;
+			break;
+		default:
+			break;
+		}
+		*max_len += (flags & to_underlying(vi_tmSortAscending)) ? Ascending.length(): Descending.length();
+	}
 
 	int traits_t::callback(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* data)
 	{	assert(data);
