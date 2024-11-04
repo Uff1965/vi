@@ -718,7 +718,7 @@ VI_OPTIMIZE_ON
 
 VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
 {
-	vi_tmWarming(0, 512);
+	vi_tmWarming(0, 500);
 
 	traits_t traits{ flags };
 	vi_tmResults(traits_t::callback, &traits);
