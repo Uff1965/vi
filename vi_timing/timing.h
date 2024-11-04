@@ -1,4 +1,4 @@
-ï»¿/********************************************************************\
+/********************************************************************\
 'vi_timing' is a compact library designed for measuring the execution time of
 code in C and C++.
 
@@ -104,11 +104,11 @@ extern "C" {
 #ifndef vi_tmGetTicks
 #	if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
-		{	VI_STD(uint32_t) _; // Ð±ÑƒÐ´ÐµÑ‚ ÑƒÐ´Ð°Ð»Ñ‘Ð½ Ð¾Ð¿Ñ‚Ð¸Ð¼Ð¸Ð·Ð°Ñ‚Ð¾Ñ€Ð¾Ð¼
+		{	VI_STD(uint32_t) _; // áóäåò óäàë¸í îïòèìèçàòîðîì
 			const VI_STD(uint64_t) result = __rdtscp(&_);
-			//	Â«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
-			//	(including any memory accesses), it can execute LFENCE immediately after RDTSCPÂ» - 
-			//	(IntelÂ® 64 and IA-32 Architectures Software Developerâ€™s Manual Combined Volumes:
+			//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
+			//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
+			//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
 			//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
 			_mm_lfence();
 			return result;
