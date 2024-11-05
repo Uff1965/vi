@@ -308,7 +308,7 @@ namespace
 	const auto unit_test_to_string = []
 	{
 		static constexpr struct
-		{	int line_;
+		{	int line_{};
 			duration_t original_;
 			std::string_view expected_;
 			unsigned char precision_ = 2;
@@ -508,7 +508,7 @@ VI_OPTIMIZE_ON
 	{	struct itm_t;
 
 		std::vector<itm_t> meterages_;
-		std::uint32_t flags_{};
+		int flags_{};
 		const duration_t tick_duration_ = seconds_per_tick();
 		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
@@ -517,9 +517,9 @@ VI_OPTIMIZE_ON
 		std::size_t max_len_average_{ TitleAverage.length() };
 		std::size_t max_len_amount_{ TitleAmount.length() };
 		
-		traits_t(std::uint32_t flags);
+		traits_t(int flags);
 		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
-		static int callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
+		static int VI_SYS_CALL callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 	};
 
 	struct traits_t::itm_t
@@ -536,7 +536,7 @@ VI_OPTIMIZE_ON
 		itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : orig_name_{ n }, orig_total_{ t }, orig_amount_{ a }, orig_calls_cnt_{ c } {}
 	};
 
-	traits_t::traits_t(std::uint32_t flags) : flags_{ flags }
+	traits_t::traits_t(int flags) : flags_{ flags }
 	{	auto max_len = &max_len_average_;
 		switch (flags_ & to_underlying(vi_tmSortMask))
 		{
@@ -555,9 +555,9 @@ VI_OPTIMIZE_ON
 		*max_len += (flags & to_underlying(vi_tmSortAscending)) ? Ascending.length(): Descending.length();
 	}
 
-	int traits_t::callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
+	int VI_SYS_CALL traits_t::callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
-		return static_cast<traits_t *>(data)->append(name, total, amount, calls_cnt);
+		return static_cast<traits_t*>(data)->append(name, total, amount, calls_cnt);
 	}
 
 	int traits_t::append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt)
@@ -589,7 +589,6 @@ VI_OPTIMIZE_ON
 		max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
 		max_len_name_ = std::max(max_len_name_, itm.orig_name_.length());
-
 		if (itm.orig_amount_ > max_amount_)
 		{	max_amount_ = itm.orig_amount_;
 			max_len_amount_ = static_cast<std::size_t>(std::floor(std::log10(max_amount_)));
@@ -619,13 +618,13 @@ VI_OPTIMIZE_ON
 	}
 
 	struct meterage_comparator_t
-	{
-		uint32_t flags_{};
-
-		explicit meterage_comparator_t(uint32_t flags) noexcept : flags_{ flags } {}
-
-		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const {
-			auto pr = less<vi_tmSortBySpeed>;
+	{	std::underlying_type_t<vi_tmReportFlags> flags_{};
+		explicit meterage_comparator_t(int flags) noexcept
+			: flags_{ flags }
+		{	static_assert(std::is_same_v<decltype(flags), std::underlying_type_t<vi_tmReportFlags>>);
+		}
+		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const
+		{	auto pr = less<vi_tmSortBySpeed>;
 			switch (flags_ & to_underlying(vi_tmSortMask))
 			{
 			case to_underlying(vi_tmSortByName):
@@ -644,8 +643,7 @@ VI_OPTIMIZE_ON
 				break;
 			}
 
-			const bool desc = (0 == (to_underlying(vi_tmSortAscending) & flags_));
-			return desc ? pr(l, r) : pr(r, l);
+			return (flags_ & to_underlying(vi_tmSortAscending)) ? pr(r, l) : pr(l, r);
 		}
 	};
 
@@ -657,7 +655,7 @@ VI_OPTIMIZE_ON
 		std::size_t number_len_{0};
 		mutable std::size_t n_{ 0 };
 
-		meterage_format_t(traits_t& traits, vi_tmLogSTR_t fn, void* data)
+		meterage_format_t(const traits_t& traits, vi_tmLogSTR_t fn, void* data)
 		:	traits_{ traits }, fn_{ fn }, data_{ data }
 		{	if (auto size = traits_.meterages_.size(); size >= 1)
 			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size)));
@@ -716,7 +714,7 @@ VI_OPTIMIZE_ON
 	};
 } // namespace {
 
-VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
+VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, int flags)
 {	vi_tmWarming(0, 500);
 
 	traits_t traits{ flags };
