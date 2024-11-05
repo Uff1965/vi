@@ -186,7 +186,7 @@ extern "C" {
 	VI_TM_API int VI_TM_CALL vi_tmReport
 	(	vi_tmLogSTR_t callback VI_DEFAULT(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs)),
 		void* data VI_DEFAULT(stdout),
-		VI_STD(uint32_t) flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
+		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
 	);
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -212,13 +212,13 @@ namespace vi_tm
 	{	std::string title_;
 		vi_tmLogSTR_t cb_;
 		void* data_;
-		std::uint32_t flags_;
+		int flags_;
 	public:
 		init_t
 		(	const char* title = "Timing report:\n",
 			vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs),
 			void* data = stdout,
-			std::uint32_t flags = vi_tmSortByTime | vi_tmSortDescending,
+			int flags = vi_tmSortByTime | vi_tmSortDescending,
 			std::size_t reserve = 64
 		)
 		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }
