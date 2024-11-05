@@ -572,12 +572,12 @@ VI_OPTIMIZE_ON
 			assert(itm.total_txt_ == NotAvailable);
 			assert(itm.average_txt_ == NotAvailable);
 		}
-		else if (const auto total_over_ticks = traits.measurement_cost_ * dirty * itm.orig_calls_cnt_; itm.orig_total_ <= total_over_ticks)
+		else if (const auto burden = std::llround(traits.measurement_cost_ * dirty) * itm.orig_calls_cnt_; itm.orig_total_ <= burden)
 		{	itm.total_txt_ = TooFew;
 			itm.average_txt_ = TooFew;
 		}
 		else
-		{	itm.total_time_ = traits.tick_duration_ * (itm.orig_total_ - total_over_ticks);
+		{	itm.total_time_ = traits.tick_duration_ * (itm.orig_total_ - burden);
 			itm.average_ = itm.total_time_ / itm.orig_amount_;
 			itm.total_txt_ = to_string(itm.total_time_);
 			itm.average_txt_ = to_string(itm.average_);
