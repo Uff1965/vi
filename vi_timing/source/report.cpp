@@ -518,6 +518,7 @@ VI_OPTIMIZE_ON
 		std::size_t max_len_amount_{ TitleAmount.length() };
 		
 		traits_t(std::uint32_t flags);
+		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
 		static int callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 	};
 
@@ -554,45 +555,46 @@ VI_OPTIMIZE_ON
 		*max_len += (flags & to_underlying(vi_tmSortAscending)) ? Ascending.length(): Descending.length();
 	}
 
-	int traits_t::callback(const char* name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void* data)
+	int traits_t::callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
-		auto& traits = *static_cast<traits_t*>(data);
-		assert(amount >= calls_cnt);
-		assert((0 == calls_cnt) == (0 == amount));
+		return static_cast<traits_t *>(data)->append(name, total, amount, calls_cnt);
+	}
 
-		auto& itm = traits.meterages_.emplace_back(name, total, amount, calls_cnt);
+	int traits_t::append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt)
+	{	assert(amount >= calls_cnt);
+		assert((0 == calls_cnt) == (0 == amount));
+		auto& itm = meterages_.emplace_back(name, total, amount, calls_cnt);
 
 		constexpr auto dirty = 1.0; // A fair odds would be 1.0
 		if (0 == itm.orig_amount_)
 		{	assert( 0 == itm.orig_total_);
 			assert( 0 == itm.orig_amount_);
 			assert( 0 == itm.orig_calls_cnt_);
-			assert( 0.0 == itm.total_time_.count());
-			assert( 0.0 == itm.average_.count());
+			assert( duration_t::zero() == itm.total_time_);
+			assert( duration_t::zero() == itm.average_);
 			assert(itm.total_txt_ == NotAvailable);
 			assert(itm.average_txt_ == NotAvailable);
 		}
-		else if (const auto burden = std::llround(traits.measurement_cost_ * dirty) * itm.orig_calls_cnt_; itm.orig_total_ <= burden)
+		else if (const auto burden = std::llround(measurement_cost_ * dirty) * itm.orig_calls_cnt_; itm.orig_total_ <= burden)
 		{	itm.total_txt_ = TooFew;
 			itm.average_txt_ = TooFew;
 		}
 		else
-		{	itm.total_time_ = traits.tick_duration_ * (itm.orig_total_ - burden);
+		{	itm.total_time_ = tick_duration_ * (itm.orig_total_ - burden);
 			itm.average_ = itm.total_time_ / itm.orig_amount_;
 			itm.total_txt_ = to_string(itm.total_time_);
 			itm.average_txt_ = to_string(itm.average_);
 		}
 
-		traits.max_len_total_ = std::max(traits.max_len_total_, itm.total_txt_.length());
-		traits.max_len_average_ = std::max(traits.max_len_average_, itm.average_txt_.length());
-		traits.max_len_name_ = std::max(traits.max_len_name_, itm.orig_name_.length());
+		max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
+		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
+		max_len_name_ = std::max(max_len_name_, itm.orig_name_.length());
 
-		if (itm.orig_amount_ > traits.max_amount_)
-		{	traits.max_amount_ = itm.orig_amount_;
-			auto max_len_amount = static_cast<std::size_t>(std::floor(std::log10(itm.orig_amount_)));
-			max_len_amount += max_len_amount / 3; // for thousand separators
-			max_len_amount += 1U;
-			traits.max_len_amount_ = std::max(traits.max_len_amount_, max_len_amount);
+		if (itm.orig_amount_ > max_amount_)
+		{	max_amount_ = itm.orig_amount_;
+			max_len_amount_ = static_cast<std::size_t>(std::floor(std::log10(max_amount_)));
+			max_len_amount_ += max_len_amount_ / 3; // for thousand separators
+			max_len_amount_ += 1U;
 		}
 
 		return 1; // Continue enumerate.
@@ -656,16 +658,14 @@ VI_OPTIMIZE_ON
 		mutable std::size_t n_{ 0 };
 
 		meterage_format_t(traits_t& traits, vi_tmLogSTR_t fn, void* data)
-			:traits_{ traits }, fn_{ fn }, data_{ data }
-		{
-			if (auto size = traits_.meterages_.size(); size >= 1)
+		:	traits_{ traits }, fn_{ fn }, data_{ data }
+		{	if (auto size = traits_.meterages_.size(); size >= 1)
 			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size)));
 			}
 		}
 
 		int header() const
-		{
-			const auto order = (traits_.flags_ & to_underlying(vi_tmSortAscending)) ? Ascending : Descending;
+		{	const auto order = (traits_.flags_ & to_underlying(vi_tmSortAscending)) ? Ascending : Descending;
 			auto sort = vi_tmSortBySpeed;
 			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask))
 			{
@@ -696,12 +696,10 @@ VI_OPTIMIZE_ON
 		}
 
 		int operator ()(int init, const traits_t::itm_t& i) const
-		{
-			n_++;
-
-			std::ostringstream str;
+		{	std::ostringstream str;
 			str.imbue(std::locale(str.getloc(), new space_out)); //-V2511
 
+			n_++;
 			const char fill = (traits_.meterages_.size() > 4 && n_ % 2) ? '.' : ' ';
 			str << std::setw(number_len_) << n_ << ". ";
 			str << std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.orig_name_ << ": ";
@@ -719,8 +717,7 @@ VI_OPTIMIZE_ON
 } // namespace {
 
 VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, std::uint32_t flags)
-{
-	vi_tmWarming(0, 500);
+{	vi_tmWarming(0, 500);
 
 	traits_t traits{ flags };
 	vi_tmResults(traits_t::callback, &traits);
