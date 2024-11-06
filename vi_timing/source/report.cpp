@@ -461,8 +461,7 @@ namespace
 
 VI_OPTIMIZE_OFF
 	double measurement_cost()
-	{
-		constexpr auto CNT = 100U;
+	{	constexpr auto CNT = 100U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		auto e = vi_tmGetTicks(); // Preloading a function into cache
@@ -520,6 +519,7 @@ VI_OPTIMIZE_ON
 		traits_t(int flags);
 		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
 		static int VI_SYS_CALL callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
+		void sort();
 	};
 
 	struct traits_t::itm_t
@@ -618,7 +618,7 @@ VI_OPTIMIZE_ON
 	}
 
 	struct meterage_comparator_t
-	{	std::underlying_type_t<vi_tmReportFlags> flags_{};
+	{	const std::underlying_type_t<vi_tmReportFlags> flags_{};
 		explicit meterage_comparator_t(int flags) noexcept
 			: flags_{ flags }
 		{	static_assert(std::is_same_v<decltype(flags), std::underlying_type_t<vi_tmReportFlags>>);
@@ -647,7 +647,11 @@ VI_OPTIMIZE_ON
 		}
 	};
 
-	struct meterage_format_t
+	void traits_t::sort()
+	{	std::sort(meterages_.begin(), meterages_.end(), meterage_comparator_t{ flags_ });
+	}
+
+	struct meterage_formatter_t
 	{
 		const traits_t& traits_;
 		const vi_tmLogSTR_t fn_;
@@ -655,9 +659,9 @@ VI_OPTIMIZE_ON
 		std::size_t number_len_{0};
 		mutable std::size_t n_{ 0 };
 
-		meterage_format_t(const traits_t& traits, vi_tmLogSTR_t fn, void* data)
+		meterage_formatter_t(const traits_t& traits, vi_tmLogSTR_t fn, void* data)
 		:	traits_{ traits }, fn_{ fn }, data_{ data }
-		{	if (auto size = traits_.meterages_.size(); size >= 1)
+		{	if (auto size = traits_.meterages_.size(); 0 != size)
 			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size)));
 			}
 		}
@@ -720,7 +724,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, int flags)
 	traits_t traits{ flags };
 	vi_tmResults(traits_t::callback, &traits);
 
-	std::sort(traits.meterages_.begin(), traits.meterages_.end(), meterage_comparator_t{ flags });
+	traits.sort();
 
 	int ret = 0;
 	if (flags & to_underlying(vi_tmShowMask))
@@ -740,7 +744,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, int flags)
 		ret = fn(str.str().c_str(), data);
 	}
 
-	meterage_format_t mf{ traits, fn, data };
+	meterage_formatter_t mf{ traits, fn, data };
 	ret += mf.header();
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }
