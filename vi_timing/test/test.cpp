@@ -126,6 +126,21 @@ VI_OPTIMIZE_ON
 
 int main()
 {
+	{
+		const char *version = nullptr;
+		const auto ver = vi_tmVersion(&version);
+		vi_tmVersion(&version);
+		vi_tmVersion();
+		std::cout << ver << '\n';
+		while (*version)
+		{
+			const auto len = strlen(version);
+			std::cout << version << '\n';
+			version += len + 1;
+		}
+		endl(std::cout);
+	}
+
 	struct space_out : std::numpunct<char> {
 		char do_thousands_sep() const override { return '\''; }  // separate with spaces
 		std::string do_grouping() const override { return "\3"; } // groups of 1 digit

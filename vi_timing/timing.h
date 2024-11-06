@@ -27,6 +27,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TIMING_VI_TIMING_H 3.0
 #	pragma once
 
+#define VI_TM_VERSION_MAJOR 3U
+#define VI_TM_VERSION_MINOR 1U
+#define VI_TM_VERSION_PATCH 1U
+#define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 100U + (VI_TM_VERSION_MINOR)) * 1000000U + (VI_TM_VERSION_PATCH))
+
 #if defined(_WIN32)
 #	include <Windows.h>
 #elif defined(__linux__)
@@ -148,6 +153,7 @@ extern "C" {
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name VI_DEFAULT(NULL));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
+	VI_TM_API unsigned int VI_TM_CALL vi_tmVersion(const char**pptr VI_DEFAULT(NULL));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv

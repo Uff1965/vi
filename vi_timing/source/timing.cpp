@@ -161,3 +161,17 @@ void VI_TM_CALL vi_tmWarming(unsigned int cnt, unsigned int ms)
 	{	t.join();
 	}
 }
+
+unsigned int VI_TM_CALL vi_tmVersion(const char **pptr)
+{
+	if (pptr)
+	{	static const char *ptr = []
+			{	static char str[40] = "";
+				auto n = 1 + snprintf(str, std::size(str), "%d.%02d.%02d", VI_TM_VERSION_MAJOR, VI_TM_VERSION_MINOR, VI_TM_VERSION_PATCH);
+				n += 1 + snprintf(str + n, std::size(str) - n, "%s %s", __DATE__, __TIME__);
+				return str;
+			}();
+		*pptr = ptr;
+	}
+	return VI_TM_VERSION;
+}
