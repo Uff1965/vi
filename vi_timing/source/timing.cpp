@@ -191,6 +191,15 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 			result = compiletime;
 		} break;
 
+		case VI_TM_BUILDTYPE:
+		{	
+#ifdef NDEBUG
+			result = "Release";
+#else
+			result = "Debug";
+#endif
+		} break;
+
 		default:
 		{	assert(false);
 		} break;

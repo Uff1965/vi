@@ -158,6 +158,7 @@ extern "C" {
 	{	VI_TM_INFO_VER,
 		VI_TM_INFO_VERSION,
 		VI_TM_INFO_TIME,
+		VI_TM_BUILDTYPE,
 	};
 	VI_NODISCARD VI_TM_API const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
