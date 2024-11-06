@@ -147,7 +147,7 @@ extern "C" {
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
-	VI_TM_API VI_NODISCARD vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
+	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
 	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
@@ -159,7 +159,7 @@ extern "C" {
 		VI_TM_INFO_VERSION,
 		VI_TM_INFO_TIME,
 	};
-	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
+	VI_NODISCARD VI_TM_API const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -168,7 +168,7 @@ extern "C" {
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
 	} vi_tmItem_t;
 
-	static inline VI_NODISCARD vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
+	VI_NODISCARD static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	vi_tmItem_t result;
 		result.amount_ = vi_tmItem(name, amount);
 		result.start_ = vi_tmGetTicks();
