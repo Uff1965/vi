@@ -258,7 +258,7 @@ namespace vi_tm
 #		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
 #		define VI_TM_REPORT(...) vi_tmReport(__VA_ARGS__)
 #		define VI_TM_CLEAR vi_tmClear(NULL)
-#		define VI_TM_INFO(f) vi_tmInfo(f)
+#		define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)
 #	endif
 #	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 

@@ -54,6 +54,8 @@ using namespace std::literals;
 
 namespace
 {
+	using report_flags_t = std::underlying_type_t<vi_tmReportFlags_e>;
+
 	template<typename T, typename std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
 	constexpr bool equal(T l, T r)
 	{	if (std::isnan(l) || std::isnan(r))
@@ -509,7 +511,7 @@ VI_OPTIMIZE_ON
 	{	struct itm_t;
 
 		std::vector<itm_t> meterages_;
-		int flags_{};
+		report_flags_t flags_{};
 		const duration_t tick_duration_ = seconds_per_tick();
 		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
@@ -518,7 +520,7 @@ VI_OPTIMIZE_ON
 		std::size_t max_len_average_{ TitleAverage.length() };
 		std::size_t max_len_amount_{ TitleAmount.length() };
 		
-		traits_t(int flags);
+		explicit traits_t(report_flags_t flags);
 		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
 		static int VI_SYS_CALL callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 		void sort();
@@ -538,7 +540,8 @@ VI_OPTIMIZE_ON
 		itm_t(const char* n, vi_tmTicks_t t, std::size_t a, std::size_t c) noexcept : orig_name_{ n }, orig_total_{ t }, orig_amount_{ a }, orig_calls_cnt_{ c } {}
 	};
 
-	traits_t::traits_t(int flags) : flags_{ flags }
+	traits_t::traits_t(report_flags_t flags)
+		: flags_{ flags }
 	{	auto max_len = &max_len_average_;
 		switch (flags_ & to_underlying(vi_tmSortMask))
 		{
@@ -620,8 +623,8 @@ VI_OPTIMIZE_ON
 	}
 
 	struct meterage_comparator_t
-	{	const std::underlying_type_t<vi_tmReportFlags_e> flags_{};
-		explicit meterage_comparator_t(int flags) noexcept
+	{	const report_flags_t flags_{};
+		explicit meterage_comparator_t(report_flags_t flags) noexcept
 			: flags_{ flags }
 		{
 		}
@@ -727,8 +730,12 @@ VI_OPTIMIZE_ON
 	};
 } // namespace {
 
-VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, int flags)
+VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, int flagsa)
 {	vi_tmWarming(0, 500);
+
+	report_flags_t flags = 0;
+	static_assert(sizeof(flags) == sizeof(flagsa));
+	std::memcpy(&flags, &flagsa, sizeof(flags));
 
 	traits_t traits{ flags };
 	vi_tmResults(traits_t::callback, &traits);
