@@ -154,6 +154,7 @@ extern "C" {
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name VI_DEFAULT(NULL));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
+
 	enum vi_tmInfo_e
 	{	VI_TM_INFO_VER,
 		VI_TM_INFO_VERSION,

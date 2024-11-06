@@ -30,6 +30,8 @@ void foo_c(void)
 {
 	vi_tmWarming(0, 100);
 
+	printf("Version: \'%s\' [%d]\n", vi_tmInfo(VI_TM_INFO_VERSION), vi_tmInfo(VI_TM_INFO_VER));
+
 	thrd_yield();
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 
