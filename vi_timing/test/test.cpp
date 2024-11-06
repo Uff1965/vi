@@ -126,32 +126,26 @@ VI_OPTIMIZE_ON
 
 int main()
 {
-	{
-		std::cout << "Ver: " << reinterpret_cast<std::ptrdiff_t>(VI_TM_INFO()) << "\n";
-		std::cout << "Version: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n";
-		std::cout << "Translation: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_TIME)) << "\n";
-		endl(std::cout);
-	}
-
-	struct space_out : std::numpunct<char> {
-		char do_thousands_sep() const override { return '\''; }  // separate with spaces
-		std::string do_grouping() const override { return "\3"; } // groups of 1 digit
-	};
-	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
-
 	const std::time_t tm = std::chrono::system_clock::to_time_t(ch::system_clock::now());
 #pragma warning(suppress: 4996)
 	std::cout << "Start: " << std::put_time(std::localtime(&tm), "%F %T.\n");
-
-	std::cout << "Build type: ";
-#ifdef NDEBUG
-	std::cout << "Release";
-#else
-	std::cout << "Debug";
-#endif
 	endl(std::cout);
 
-	std::cout << "\nWarming... ";
+	{
+		std::cout << "Build type: " << static_cast<const char*>(vi_tmInfo(VI_TM_BUILDTYPE)) << "\n";
+		std::cout << "Ver: " << reinterpret_cast<std::ptrdiff_t>(VI_TM_INFO()) << "\n";
+		std::cout << "Version: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n";
+		std::cout << "Compile time: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_TIME)) << "\n";
+		endl(std::cout);
+	}
+
+	struct space_out final: std::numpunct<char> {
+		char do_thousands_sep() const override { return '\''; }  // separate with '
+		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
+	};
+	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
+
+	std::cout << "Warming... ";
 	vi_tmWarming();
 	std::cout << "done";
 	endl(std::cout);
