@@ -5,6 +5,7 @@
 
 #include "../timing.h"
 
+#include <inttypes.h>
 #include <threads.h>
 
 //VI_OPTIMIZE_OFF
@@ -29,8 +30,8 @@ void bar_c(void)
 void foo_c(void)
 {
 	vi_tmWarming(0, 100);
-
-	printf("Version: \'%s\' [%d]\n", vi_tmInfo(VI_TM_INFO_VERSION), vi_tmInfo(VI_TM_INFO_VER));
+	
+	printf("Version: \'%s\' [%"PRIdPTR"]\n", (const char*)vi_tmInfo(VI_TM_INFO_VERSION), vi_tmInfo(VI_TM_INFO_VER));
 
 	thrd_yield();
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
