@@ -32,6 +32,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <cassert>
 #include <chrono>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <thread>
