@@ -289,7 +289,8 @@ namespace
 			if (!equal(rounded, i.expected_))
 			{	std::ostringstream buff;
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
-				buff << std::fixed << std::setprecision(8) <<
+				buff <<
+					std::fixed << std::setprecision(8) <<
 					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) << '\n' <<
 					"Original:\t" << i.original_ << '\n' <<
 					"Expected:\t" << i.expected_ << '\n' <<
@@ -376,12 +377,13 @@ namespace
 			if (i.expected_ != result)
 			{	std::ostringstream buff;
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
-				buff << std::fixed << std::setprecision(8) <<
-				"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) <<
-				"\nOriginal:\t" << i.original_.count()<<
-				"\nExpected:\t" << i.expected_ <<
-				"\nRounded:\t" << result <<
-				'\n' << std::endl;
+				buff <<
+					std::fixed << std::setprecision(8) <<
+					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) <<
+					"\nOriginal:\t" << i.original_.count()<<
+					"\nExpected:\t" << i.expected_ <<
+					"\nRounded:\t" << result <<
+					'\n' << std::endl;
 					
 				std::cerr << buff.str();
 				assert(false);
@@ -599,7 +601,7 @@ VI_OPTIMIZE_ON
 		return 1; // Continue enumerate.
 	}
 
-	template<vi_tmReportFlags E> auto make_tuple(const traits_t::itm_t& v);
+	template<vi_tmReportFlags_e E> auto make_tuple(const traits_t::itm_t& v);
 	template<> auto make_tuple<vi_tmSortByName>(const traits_t::itm_t& v)
 	{	return std::tuple{ v.orig_name_ };
 	}
@@ -613,19 +615,19 @@ VI_OPTIMIZE_ON
 	{	return std::tuple{ v.orig_amount_, v.average_, v.total_time_, v.orig_name_ };
 	}
 
-	template<vi_tmReportFlags E> bool less(const traits_t::itm_t& l, const traits_t::itm_t& r)
+	template<vi_tmReportFlags_e E> bool less(const traits_t::itm_t& l, const traits_t::itm_t& r)
 	{	return make_tuple<E>(r) < make_tuple<E>(l);
 	}
 
 	struct meterage_comparator_t
-	{	const std::underlying_type_t<vi_tmReportFlags> flags_{};
+	{	const std::underlying_type_t<vi_tmReportFlags_e> flags_{};
 		explicit meterage_comparator_t(int flags) noexcept
 			: flags_{ flags }
-		{	static_assert(std::is_same_v<decltype(flags), std::underlying_type_t<vi_tmReportFlags>>);
+		{	static_assert(std::is_same_v<decltype(flags), std::underlying_type_t<vi_tmReportFlags_e>>);
 		}
 		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const
 		{	auto pr = less<vi_tmSortBySpeed>;
-			switch (flags_ & to_underlying(vi_tmSortMask))
+			switch (flags_ & to_underlying(vi_tmSortMask) & ~to_underlying(vi_tmSortAscending))
 			{
 			case to_underlying(vi_tmSortByName):
 				pr = less<vi_tmSortByName>;
@@ -653,6 +655,7 @@ VI_OPTIMIZE_ON
 
 	struct meterage_formatter_t
 	{
+		static constexpr auto fill_symbol = '.';
 		const traits_t& traits_;
 		const vi_tmLogSTR_t fn_;
 		void* const data_;
@@ -669,27 +672,31 @@ VI_OPTIMIZE_ON
 		int header() const
 		{	const auto order = (traits_.flags_ & to_underlying(vi_tmSortAscending)) ? Ascending : Descending;
 			auto sort = vi_tmSortBySpeed;
-			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask))
+			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask) & ~to_underlying(vi_tmSortAscending))
 			{
 			case vi_tmSortBySpeed:
 				break;
 			case vi_tmSortByAmount:
 			case vi_tmSortByName:
 			case vi_tmSortByTime:
-				sort = static_cast<vi_tmReportFlags>(s);
+				sort = static_cast<vi_tmReportFlags_e>(s);
 				break;
 			default:
 				assert(false);
 				break;
 			}
+			auto sorted_sign = [&order, sort](vi_tmReportFlags_e s)
+				{	return sort == s ? order : "";
+				};
 
 			std::ostringstream str;
-			str << std::setw(number_len_) << "#" << "  ";
-			str << std::setw(traits_.max_len_name_) << std::left << (TitleName + (sort == vi_tmSortByName ? order : "")) << ": ";
-			str << std::setw(traits_.max_len_average_) << std::right << (TitleAverage + (sort == vi_tmSortBySpeed ? order : "")) << std::setfill(' ') << " [";
-			str << std::setw(traits_.max_len_total_) << (TitleTotal + (sort == vi_tmSortByTime ? order : "")) << " / ";
-			str << std::setw(traits_.max_len_amount_) << (TitleAmount + (sort == vi_tmSortByAmount ? order : "")) << "]";
-			str << "\n";
+			str << 
+				std::setw(number_len_) << "#" << "  " <<
+				std::setw(traits_.max_len_name_) << std::setfill(fill_symbol) << std::left << (TitleName + sorted_sign(vi_tmSortByName)) << ": " <<
+				std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << (TitleAverage + sorted_sign(vi_tmSortBySpeed)) << " [" <<
+				std::setw(traits_.max_len_total_) << (TitleTotal + sorted_sign(vi_tmSortByTime)) << " / " <<
+				std::setw(traits_.max_len_amount_) << (TitleAmount + sorted_sign(vi_tmSortByAmount)) << "]" <<
+				"\n";
 
 			auto result = str.str();
 			assert(number_len_ + 2 + traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
@@ -701,14 +708,16 @@ VI_OPTIMIZE_ON
 		{	std::ostringstream str;
 			str.imbue(std::locale(str.getloc(), new space_out)); //-V2511
 
+			constexpr auto step_guides = 3;
 			n_++;
-			const char fill = (traits_.meterages_.size() > 4 && n_ % 2) ? '.' : ' ';
-			str << std::setw(number_len_) << n_ << ". ";
-			str << std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.orig_name_ << ": ";
-			str << std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [";
-			str << std::setw(traits_.max_len_total_) << i.total_txt_ << " / ";
-			str << std::setw(traits_.max_len_amount_) << i.orig_amount_ << "]";
-			str << "\n";
+			const char fill = (traits_.meterages_.size() > step_guides + 1 && (0 == n_ % step_guides)) ? fill_symbol : ' ';
+			str << 
+				std::setw(number_len_) << n_ << ". " <<
+				std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.orig_name_ << ": " <<
+				std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [" <<
+				std::setw(traits_.max_len_total_) << i.total_txt_ << " / " <<
+				std::setw(traits_.max_len_amount_) << i.orig_amount_ << "]" <<
+				"\n";
 
 			auto result = str.str();
 			assert(number_len_ + 2 + traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
