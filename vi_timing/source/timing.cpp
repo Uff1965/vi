@@ -162,16 +162,37 @@ void VI_TM_CALL vi_tmWarming(unsigned int cnt, unsigned int ms)
 	}
 }
 
-unsigned int VI_TM_CALL vi_tmVersion(const char **pptr)
-{
-	if (pptr)
-	{	static const char* const ptr = []
-			{	static char str[40] = "";
-				auto n = 1 + snprintf(str, std::size(str), "%d.%02d.%02d", VI_TM_VERSION_MAJOR, VI_TM_VERSION_MINOR, VI_TM_VERSION_PATCH);
-				n += 1 + snprintf(str + n, std::size(str) - n, "%s %s", __DATE__, __TIME__);
-				return str;
-			}();
-		*pptr = ptr;
+const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
+{	const void *result = nullptr;
+	switch (info)
+	{
+		case VI_TM_INFO_VER:
+		{	static constexpr std::ptrdiff_t ver = VI_TM_VERSION;
+			static_assert(sizeof(result) == sizeof(ver));
+			std::memcpy(&result, &ver, sizeof(result));
+		} break;
+
+		case VI_TM_INFO_VERSION:
+		{	static const char *const version = []
+				{	static char buff[16] = "";
+					snprintf(buff, std::size(buff), "%u.%u.%u", VI_TM_VERSION_MAJOR, VI_TM_VERSION_MINOR, VI_TM_VERSION_PATCH);
+					return buff;
+				}();
+			result = version;
+		} break;
+
+		case VI_TM_INFO_TIME:
+		{	static const char *const compiletime = []
+				{	static char buff[32] = "";
+					snprintf(buff, std::size(buff), "%s %s", __DATE__, __TIME__);
+					return buff;
+				}();
+			result = compiletime;
+		} break;
+
+		default:
+		{	assert(false);
+		} break;
 	}
-	return VI_TM_VERSION;
+	return result;
 }

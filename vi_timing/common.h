@@ -34,6 +34,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_R_CAST(T, s) reinterpret_cast<T>(s)
 #	define VI_S_CAST(T, s) static_cast<T>(s)
 #	define VI_DEFAULT(v) = (v)
+#	define VI_NODISCARD [[nodiscard]]
 #else
 #	define VI_STD(s) s
 #	define VI_MEMORY_ORDER(s) s
@@ -41,6 +42,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_R_CAST(T, s) (T)s
 #	define VI_S_CAST(T, s) (T)s
 #	define VI_DEFAULT(v)
+#	define VI_NODISCARD
 #endif
 
 #ifdef _MSC_VER
@@ -63,8 +65,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	error Unknown compyler!
 #endif
 
-#define VI_STR_AUX( a, b ) a##b
-#define VI_STR( a, b ) VI_STR_AUX( a, b )
-#define VI_MAKE_UNIC_ID( prefix ) VI_STR( prefix, __LINE__ )
+#define VI_STR_AUX(s) #s
+#define VI_STR(s) VI_STR_AUX(s)
+#define VI_GUM_STR_AUX( a, b ) a##b
+#define VI_GUM_STR( a, b ) VI_GUM_STR_AUX( a, b )
+#define VI_MAKE_UNIC_ID( prefix ) VI_GUM_STR( prefix, __LINE__ )
 
 #endif // #ifndef VI_TIMING_VI_COMMON_H

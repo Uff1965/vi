@@ -24,13 +24,14 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
 #ifndef VI_TIMING_VI_TIMING_H
-#	define VI_TIMING_VI_TIMING_H 3.0
+#	define VI_TIMING_VI_TIMING_H
 #	pragma once
 
-#define VI_TM_VERSION_MAJOR 3U
-#define VI_TM_VERSION_MINOR 1U
-#define VI_TM_VERSION_PATCH 1U
-#define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 100U + (VI_TM_VERSION_MINOR)) * 1000000U + (VI_TM_VERSION_PATCH))
+#	define VI_TM_VERSION_MAJOR 3
+#	define VI_TM_VERSION_MINOR 2
+#	define VI_TM_VERSION_PATCH 1
+#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 100000U + (VI_TM_VERSION_PATCH))
+#	define VI_TM_VERSION_STRING VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
 
 #if defined(_WIN32)
 #	include <Windows.h>
@@ -146,14 +147,19 @@ extern "C" {
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
-	VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
+	VI_TM_API VI_NODISCARD vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
 	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name VI_DEFAULT(NULL));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
-	VI_TM_API unsigned int VI_TM_CALL vi_tmVersion(const char**pptr VI_DEFAULT(NULL));
+	enum vi_tmInfo_e
+	{	VI_TM_INFO_VER,
+		VI_TM_INFO_VERSION,
+		VI_TM_INFO_TIME,
+	};
+	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -162,7 +168,7 @@ extern "C" {
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
 	} vi_tmItem_t;
 
-	static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
+	static inline VI_NODISCARD vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	vi_tmItem_t result;
 		result.amount_ = vi_tmItem(name, amount);
 		result.start_ = vi_tmGetTicks();
@@ -174,7 +180,7 @@ extern "C" {
 		vi_tmAdd(itm->amount_, finish - itm->start_);
 	}
 
-	enum vi_tmReportFlags {
+	enum vi_tmReportFlags_e {
 		vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
 		vi_tmSortBySpeed = 0x02,
@@ -246,11 +252,13 @@ namespace vi_tm
 #		define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #		define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
 #		define VI_TM_CLEAR ((void)0)
+#		define VI_TM_INFO(f) NULL
 #	else
 #		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
 #		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
 #		define VI_TM_REPORT(...) vi_tmReport(__VA_ARGS__)
 #		define VI_TM_CLEAR vi_tmClear(NULL)
+#		define VI_TM_INFO(f) vi_tmInfo(f)
 #	endif
 #	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 
