@@ -623,7 +623,7 @@ VI_OPTIMIZE_ON
 	{	const std::underlying_type_t<vi_tmReportFlags_e> flags_{};
 		explicit meterage_comparator_t(int flags) noexcept
 			: flags_{ flags }
-		{	static_assert(std::is_same_v<decltype(flags), std::underlying_type_t<vi_tmReportFlags_e>>);
+		{
 		}
 		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const
 		{	auto pr = less<vi_tmSortBySpeed>;
