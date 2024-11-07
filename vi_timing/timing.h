@@ -27,10 +27,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TIMING_VI_TIMING_H
 #	pragma once
 
-#	define VI_TM_VERSION_MAJOR 3
-#	define VI_TM_VERSION_MINOR 2
+#	define VI_TM_VERSION_MAJOR 0
+#	define VI_TM_VERSION_MINOR 6
 #	define VI_TM_VERSION_PATCH 1
-#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 100000U + (VI_TM_VERSION_PATCH))
+#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 1000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STRING VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
 
 #if defined(_WIN32)
@@ -146,7 +146,8 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
+//Reserved	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
+//Reserved	VI_TM_API void VI_TM_CALL vi_tmFinit();
 	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
 	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
@@ -236,7 +237,7 @@ namespace vi_tm
 			std::size_t reserve = 64
 		)
 		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }
-		{	vi_tmInit(reserve);
+		{	//Reserved vi_tmInit(reserve);
 		}
 
 		~init_t()
@@ -245,6 +246,7 @@ namespace vi_tm
 			}
 
 			vi_tmReport(cb_, data_, flags_);
+			//Reserved vi_tmFinit();
 		}
 	};
 } // namespace vi_tm {

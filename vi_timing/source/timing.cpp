@@ -87,6 +87,10 @@ void VI_TM_CALL vi_tmInit(std::size_t n)
 	locked_ptr->reserve(n);
 }
 
+void VI_TM_CALL vi_tmFinit()
+{
+}
+
 vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
 {	vi_tmAtomicTicks_t* result;
 	if (nullptr != name)

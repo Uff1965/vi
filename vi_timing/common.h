@@ -1,7 +1,4 @@
 /*****************************************************************************\
-'vi_timing' is a compact library designed for measuring the execution time of
-code in C and C++.
-
 Copyright (C) 2024 A.Prograamar
 
 This library was developed for experimental and educational purposes.
@@ -28,21 +25,21 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	pragma once
 
 #ifdef __cplusplus
-#	define VI_STD(s) std::s
-#	define VI_MEMORY_ORDER(s) std::memory_order::s
+#	define VI_DEFAULT(v) = (v)
 #	define VI_NOEXCEPT noexcept
 #	define VI_R_CAST(T, s) reinterpret_cast<T>(s)
 #	define VI_S_CAST(T, s) static_cast<T>(s)
-#	define VI_DEFAULT(v) = (v)
 #	define VI_NODISCARD [[nodiscard]]
+#	define VI_STD(s) std::s
+#	define VI_MEMORY_ORDER(s) std::memory_order::s
 #else
-#	define VI_STD(s) s
-#	define VI_MEMORY_ORDER(s) s
+#	define VI_DEFAULT(v)
 #	define VI_NOEXCEPT
 #	define VI_R_CAST(T, s) (T)s
 #	define VI_S_CAST(T, s) (T)s
-#	define VI_DEFAULT(v)
 #	define VI_NODISCARD
+#	define VI_STD(s) s
+#	define VI_MEMORY_ORDER(s) s
 #endif
 
 #ifdef _MSC_VER
