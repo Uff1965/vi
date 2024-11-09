@@ -75,8 +75,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 #	ifdef vi_timing_EXPORTS
 #		define VI_TM_API __declspec(dllexport)
-#	else
+#	elif defined(VI_TM_SHARED)
 #		define VI_TM_API __declspec(dllimport)
+#	else
+#		define VI_TM_API
 #	endif
 #elif defined(__ANDROID__)
 #	define VI_TM_DISABLE "Android not supported yet."
@@ -146,8 +148,8 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-//Reserved	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
-//Reserved	VI_TM_API void VI_TM_CALL vi_tmFinit();
+	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
+	VI_TM_API void VI_TM_CALL vi_tmFinit();
 	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
 	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
@@ -237,7 +239,7 @@ namespace vi_tm
 			std::size_t reserve = 64
 		)
 		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }
-		{	//Reserved vi_tmInit(reserve);
+		{	vi_tmInit(reserve);
 		}
 
 		~init_t()
@@ -246,7 +248,7 @@ namespace vi_tm
 			}
 
 			vi_tmReport(cb_, data_, flags_);
-			//Reserved vi_tmFinit();
+			vi_tmFinit();
 		}
 	};
 } // namespace vi_tm {

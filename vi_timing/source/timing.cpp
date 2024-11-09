@@ -88,7 +88,9 @@ void VI_TM_CALL vi_tmInit(std::size_t n)
 }
 
 void VI_TM_CALL vi_tmFinit()
-{
+{	auto locked_ptr = lock_and_get_pointer();
+	locked_ptr->clear();
+	s_dummy_amount = 0U;
 }
 
 vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
