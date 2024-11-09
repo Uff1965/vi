@@ -499,14 +499,14 @@ VI_OPTIMIZE_OFF
 	}
 VI_OPTIMIZE_ON
 
-	const std::string TitleName{ "Name"s };
-	const std::string TitleAverage{ "Average"s };
-	const std::string TitleTotal{ "Total"s };
-	const std::string TitleAmount{ "Amount"s };
-	const std::string Ascending { " (^)"s };
-	const std::string Descending{ " (v)"s };
-	const std::string TooFew{ "<too few>"s };
-	const std::string NotAvailable{ "<n/a>"s };
+	constexpr char TitleName[] = { "Name" };
+	constexpr char TitleAverage[] = { "Average" };
+	constexpr char TitleTotal[] = { "Total" };
+	constexpr char TitleAmount[] = { "Amount" };
+	constexpr char Ascending [] = { " (^)" };
+	constexpr char Descending[] = { " (v)" };
+	constexpr char TooFew[] = { "<too few>" };
+	constexpr char NotAvailable[] = { "<n/a>" };
 
 	struct traits_t
 	{	struct itm_t;
@@ -516,10 +516,10 @@ VI_OPTIMIZE_ON
 		const duration_t tick_duration_ = seconds_per_tick();
 		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
-		std::size_t max_len_name_{ TitleName.length()};
-		std::size_t max_len_total_{ TitleTotal.length() };
-		std::size_t max_len_average_{ TitleAverage.length() };
-		std::size_t max_len_amount_{ TitleAmount.length() };
+		std::size_t max_len_name_{ std::size(TitleName) - 1};
+		std::size_t max_len_total_{ std::size(TitleTotal) - 1};
+		std::size_t max_len_average_{ std::size(TitleAverage) - 1};
+		std::size_t max_len_amount_{ std::size(TitleAmount) - 1};
 		
 		explicit traits_t(report_flags_t flags);
 		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
@@ -558,7 +558,7 @@ VI_OPTIMIZE_ON
 		default:
 			break;
 		}
-		*max_len += (flags & to_underlying(vi_tmSortAscending)) ? Ascending.length(): Descending.length();
+		*max_len += ((flags & to_underlying(vi_tmSortAscending)) ? std::size(Ascending): std::size(Descending)) - 1;
 	}
 
 	int VI_SYS_CALL traits_t::callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
@@ -597,9 +597,10 @@ VI_OPTIMIZE_ON
 		max_len_name_ = std::max(max_len_name_, itm.orig_name_.length());
 		if (itm.orig_amount_ > max_amount_)
 		{	max_amount_ = itm.orig_amount_;
-			max_len_amount_ = static_cast<std::size_t>(std::floor(std::log10(max_amount_)));
-			max_len_amount_ += max_len_amount_ / 3; // for thousand separators
-			max_len_amount_ += 1U;
+			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount_)));
+			len += len / 3; // for thousand separators
+			len += 1U;
+			max_len_amount_ = std::max(max_len_amount_, len);
 		}
 
 		return 1; // Continue enumerate.
@@ -689,17 +690,19 @@ VI_OPTIMIZE_ON
 				assert(false);
 				break;
 			}
-			auto sorted_sign = [&order, sort](vi_tmReportFlags_e s)
-				{	return sort == s ? order : "";
+			auto title = [&order, sort](const char *name, vi_tmReportFlags_e s)
+				{	std::string result = name;
+					result += (sort == s ? order : "");
+					return result;
 				};
 
 			std::ostringstream str;
 			str << 
 				std::setw(number_len_) << "#" << "  " <<
-				std::setw(traits_.max_len_name_) << std::setfill(fill_symbol) << std::left << (TitleName + sorted_sign(vi_tmSortByName)) << ": " <<
-				std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << (TitleAverage + sorted_sign(vi_tmSortBySpeed)) << " [" <<
-				std::setw(traits_.max_len_total_) << (TitleTotal + sorted_sign(vi_tmSortByTime)) << " / " <<
-				std::setw(traits_.max_len_amount_) << (TitleAmount + sorted_sign(vi_tmSortByAmount)) << "]" <<
+				std::setw(traits_.max_len_name_) << std::setfill(fill_symbol) << std::left << title(TitleName, vi_tmSortByName) << ": " <<
+				std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
+				std::setw(traits_.max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
+				std::setw(traits_.max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]" <<
 				"\n";
 
 			auto result = str.str();
