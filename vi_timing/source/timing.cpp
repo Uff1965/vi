@@ -147,7 +147,7 @@ void VI_TM_CALL vi_tmWarming(unsigned int cnt, unsigned int ms)
 
 	std::atomic_bool done = false;
 	auto loading = [&done]
-		{	while (!done)
+		{	while (!done) //-V776
 			{	for (volatile int n = 100'000; n; n = n - 1)
 				{/**/ }
 			}

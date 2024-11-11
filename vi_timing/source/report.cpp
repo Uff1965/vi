@@ -31,7 +31,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <timing.h>
 
 #include <algorithm>
-#include <atomic>
+//#include <atomic>
 #include <cassert>
 #include <cfloat>
 #include <chrono>
@@ -597,7 +597,7 @@ VI_OPTIMIZE_ON
 		max_len_name_ = std::max(max_len_name_, itm.orig_name_.length());
 		if (itm.orig_amount_ > max_amount_)
 		{	max_amount_ = itm.orig_amount_;
-			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount_)));
+			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount_))); //-V203
 			len += len / 3; // for thousand separators
 			len += 1U;
 			max_len_amount_ = std::max(max_len_amount_, len);
@@ -670,7 +670,7 @@ VI_OPTIMIZE_ON
 		meterage_formatter_t(const traits_t& traits, vi_tmLogSTR_t fn, void* data)
 		:	traits_{ traits }, fn_{ fn }, data_{ data }
 		{	if (auto size = traits_.meterages_.size(); 0 != size)
-			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size)));
+			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size))); //-V203
 			}
 		}
 
