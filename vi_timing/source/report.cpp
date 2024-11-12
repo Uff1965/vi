@@ -293,9 +293,9 @@ namespace
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
 				buff <<
 					std::fixed << std::setprecision(8) <<
-					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) << '\n' <<
-					"Original:\t" << i.original_ << '\n' <<
-					"Expected:\t" << i.expected_ << '\n' <<
+					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) << "\n"
+					"Original:\t" << i.original_ << "\n"
+					"Expected:\t" << i.expected_ << "\n"
 					"Rounded:\t" << rounded << '\n' <<
 					std::endl;
 
@@ -381,11 +381,11 @@ namespace
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
 				buff <<
 					std::fixed << std::setprecision(8) <<
-					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) <<
-					"\nOriginal:\t" << i.original_.count()<<
-					"\nExpected:\t" << i.expected_ <<
-					"\nRounded:\t" << result <<
-					'\n' << std::endl;
+					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) << "\n"
+					"Original:\t" << i.original_.count() << "\n"
+					"Expected:\t" << i.expected_ << "\n"
+					"Rounded:\t" << result << '\n' <<
+					std::endl;
 					
 				std::cerr << buff.str();
 				assert(false);
@@ -674,8 +674,7 @@ VI_OPTIMIZE_ON
 		}
 
 		int header() const
-		{	const auto order = (traits_.flags_ & to_underlying(vi_tmSortAscending)) ? Ascending : Descending;
-			auto sort = vi_tmSortBySpeed;
+		{	auto sort = vi_tmSortBySpeed;
 			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask) & ~to_underlying(vi_tmSortAscending))
 			{
 			case vi_tmSortBySpeed:
@@ -689,10 +688,10 @@ VI_OPTIMIZE_ON
 				assert(false);
 				break;
 			}
-			auto title = [&order, sort](const char *name, vi_tmReportFlags_e s)
-				{	std::string result = name;
-					result += (sort == s ? order : "");
-					return result;
+
+			auto title = [sort, order = (traits_.flags_ & to_underlying(vi_tmSortAscending)) ? Ascending : Descending]
+				(const char *name, vi_tmReportFlags_e s)
+				{	return std::string{ name } + (sort == s ? order : "");
 				};
 
 			std::ostringstream str;
@@ -704,7 +703,7 @@ VI_OPTIMIZE_ON
 				std::setw(traits_.max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]" <<
 				"\n";
 
-			auto result = str.str();
+			const auto result = str.str();
 			assert(number_len_ + 2 + traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
 
 			return fn_(result.c_str(), data_);

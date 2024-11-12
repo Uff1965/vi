@@ -30,6 +30,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <timing.h>
 
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -174,25 +175,31 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 	switch (info)
 	{
 		case VI_TM_INFO_VER:
-		{	static constexpr std::ptrdiff_t ver = VI_TM_VERSION;
+		{	static constexpr std::intptr_t ver = VI_TM_VERSION;
 			static_assert(sizeof(result) == sizeof(ver));
 			std::memcpy(&result, &ver, sizeof(result));
 		} break;
 
 		case VI_TM_INFO_VERSION:
 		{	static const char *const version = []
-				{	static char buff[16] = "";
-					snprintf(buff, std::size(buff), "%u.%u.%u", VI_TM_VERSION_MAJOR, VI_TM_VERSION_MINOR, VI_TM_VERSION_PATCH);
-					return buff;
+				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1000 && VI_TM_VERSION_PATCH < 1000);
+#	ifdef VI_TM_SHARED
+					static constexpr char type[] = "shared";
+#	else
+					static constexpr char type[] = "static";
+#	endif
+					static std::array<char, std::size("99.999.999 ") - 1 + std::size(type)> buff;
+					snprintf(buff.data(), buff.size(), "%u.%u.%u %s", VI_TM_VERSION_MAJOR, VI_TM_VERSION_MINOR, VI_TM_VERSION_PATCH, type);
+					return buff.data();
 				}();
 			result = version;
 		} break;
 
 		case VI_TM_INFO_TIME:
 		{	static const char *const compiletime = []
-				{	static char buff[32] = "";
-					snprintf(buff, std::size(buff), "%s %s", __DATE__, __TIME__);
-					return buff;
+				{	static std::array<char, 32> buff;
+					snprintf(buff.data(), buff.size(), "%s %s", __DATE__, __TIME__);
+					return buff.data();
 				}();
 			result = compiletime;
 		} break;
