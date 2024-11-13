@@ -28,7 +28,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	pragma once
 
 #	define VI_TM_VERSION_MAJOR 0
-#	define VI_TM_VERSION_MINOR 6
+#	define VI_TM_VERSION_MINOR 7
 #	define VI_TM_VERSION_PATCH 1
 #	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 1000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
@@ -111,7 +111,7 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. vvvvvvvvvvvv
 #ifndef vi_tmGetTicks
 #	if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
+		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
 		{	VI_STD(uint32_t) _; // будет удалён оптимизатором
 			const VI_STD(uint64_t) result = __rdtscp(&_);
 			//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
@@ -122,19 +122,19 @@ extern "C" {
 			return result;
 		}
 #	elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
+		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
 		{	VI_STD(uint64_t) result;
 			__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
 			return result;
 		}
 #	elif defined(_WIN32) // Windows
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
+		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
 		{	LARGE_INTEGER cnt;
 			QueryPerformanceCounter(&cnt);
 			return cnt.QuadPart;
 		}
 #	elif defined(__linux__)
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void)
+		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
 		{	struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 			return 1000000000ULL * ts.tv_sec + ts.tv_nsec;
@@ -148,14 +148,18 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	typedef struct vi_tmInstance_t* VI_TM_HANDLE;
+
 	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
 	VI_TM_API void VI_TM_CALL vi_tmFinit();
-	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, VI_STD(size_t) cnt VI_DEFAULT(1));
+	VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(VI_STD(size_t) reserve VI_DEFAULT(64));
+	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
+	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(VI_TM_HANDLE h, const char* name, VI_STD(size_t) cnt VI_DEFAULT(1)) VI_NOEXCEPT;
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
 	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
-	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name VI_DEFAULT(NULL));
+	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
+	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -166,14 +170,14 @@ extern "C" {
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
 	} vi_tmItem_t;
 
-	VI_NODISCARD static inline vi_tmItem_t vi_tmStart(const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
+	VI_NODISCARD static inline vi_tmItem_t vi_tmStart(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	vi_tmItem_t result;
-		result.amount_ = vi_tmItem(name, amount);
+		result.amount_ = vi_tmItem(h, name, amount);
 		result.start_ = vi_tmGetTicks();
 		return result;
 	}
 
-	static inline void vi_tmFinish(const vi_tmItem_t *itm) VI_NOEXCEPT
+	static inline void vi_tmFinish(const vi_tmItem_t *itm)
 	{	const vi_tmTicks_t finish = vi_tmGetTicks();
 		vi_tmAdd(itm->amount_, finish - itm->start_);
 	}
@@ -193,7 +197,8 @@ extern "C" {
 		vi_tmShowMask = 0xF0,
 	};
 	VI_TM_API int VI_TM_CALL vi_tmReport
-	(	vi_tmLogSTR_t callback VI_DEFAULT(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs)),
+	(	VI_TM_HANDLE h,
+		vi_tmLogSTR_t callback VI_DEFAULT(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs)),
 		void* data VI_DEFAULT(stdout),
 		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
 	);
@@ -218,7 +223,7 @@ namespace vi_tm
 		timer_t& operator=(const timer_t&) = delete;
 	public:
 		timer_t(const char *name, std::size_t cnt = 1) noexcept
-			: vi_tmItem_t{ vi_tmStart(name, cnt) }
+			: vi_tmItem_t{ vi_tmStart(nullptr, name, cnt) }
 		{
 		}
 		~timer_t() noexcept
@@ -248,7 +253,7 @@ namespace vi_tm
 			{	cb_(title_.c_str(), data_);
 			}
 
-			vi_tmReport(cb_, data_, flags_);
+			vi_tmReport(nullptr, cb_, data_, flags_);
 			vi_tmFinit();
 		}
 	};
@@ -263,8 +268,8 @@ namespace vi_tm
 #	else
 #		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
 #		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
-#		define VI_TM_REPORT(...) vi_tmReport(__VA_ARGS__)
-#		define VI_TM_CLEAR vi_tmClear(NULL)
+#		define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
+#		define VI_TM_CLEAR vi_tmClear(NULL, NULL)
 #		define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)
 #	endif
 #	define VI_TM_FUNC VI_TM( VI_FUNCNAME )

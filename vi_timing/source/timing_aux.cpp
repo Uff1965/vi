@@ -429,7 +429,7 @@ namespace
 
 		auto foo = [] {
 			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmFinish()' further apart.
-			auto itm = vi_tmStart("", 1);
+			auto itm = vi_tmStart(nullptr, "", 1);
 			vi_tmFinish(&itm);
 		};
 
@@ -733,7 +733,7 @@ VI_OPTIMIZE_ON
 	};
 } // namespace {
 
-VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, int flagsa)
+VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h,vi_tmLogSTR_t fn, void* data, int flagsa)
 {	vi_tmWarming(0, 500);
 
 	report_flags_t flags = 0;
@@ -741,7 +741,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(vi_tmLogSTR_t fn, void* data, int flagsa)
 	std::memcpy(&flags, &flagsa, sizeof(flags));
 
 	traits_t traits{ flags };
-	vi_tmResults(traits_t::callback, &traits);
+	vi_tmResults(h, traits_t::callback, &traits);
 
 	traits.sort();
 
