@@ -38,13 +38,15 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 namespace
 {
 	struct item_t
-	{	vi_tmAtomicTicks_t amount_{ 0 };
-		std::size_t counter_{ 0 };
-		std::size_t calls_cnt_{ 0 };
+	{	static vi_tmAtomicTicks_t amount_dummy;
+		vi_tmAtomicTicks_t amount_ = 0U;
+		std::size_t counter_ = 0U;
+		std::size_t calls_cnt_ = 0U;
 		void clear() noexcept
-		{	amount_ = counter_ = calls_cnt_ = 0;
+		{	amount_ = counter_ = calls_cnt_ = 0U;
 		};
 	};
+	vi_tmAtomicTicks_t item_t::amount_dummy = 0U;
 
 	auto lock_and_get_pointer()
 	{	static std::mutex storage_guard;
@@ -71,8 +73,6 @@ namespace
 		return pointer_to_locked_item_t{};
 	};
 
-	vi_tmAtomicTicks_t s_dummy_amount{};
-
 } // namespace
 
 void VI_TM_CALL vi_tmInit(std::size_t n)
@@ -84,7 +84,7 @@ void VI_TM_CALL vi_tmInit(std::size_t n)
 void VI_TM_CALL vi_tmFinit()
 {	auto locked_ptr = lock_and_get_pointer();
 	locked_ptr->clear();
-	s_dummy_amount = 0U;
+	item_t::amount_dummy = 0U;
 }
 
 vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
@@ -97,7 +97,7 @@ vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(const char* name, std::size_t amount)
 		result = &item.amount_;
 	}
 	else
-	{	result = &s_dummy_amount;
+	{	result = &item_t::amount_dummy;
 	}
 	return result;
 }
@@ -121,7 +121,7 @@ void VI_TM_CALL vi_tmClear(const char* name)
 	{	for (auto &[_, item] : *locked_ptr)
 		{	item.clear();
 		}
-		s_dummy_amount = 0U;
+		item_t::amount_dummy = 0U;
 	}
 	else if (const auto [it, b] = locked_ptr->try_emplace(name); !b)
 	{	it->second.clear();

@@ -77,7 +77,7 @@ PRIVATE
 if(VI_TM_BUILD_SHARED)
     target_compile_definitions(${PROJECT_NAME}
     PRIVATE
-        "vi_timing_EXPORTS"
+        "VI_TM_EXPORTS"
     PUBLIC
         "VI_TM_SHARED"
     )

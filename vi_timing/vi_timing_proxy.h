@@ -9,9 +9,9 @@
 #			define VI_TM_DISABLE 1
 #		endif
 
-#		define VI_GUM_STR_AUX( a, b ) a##b
-#		define VI_GUM_STR( a, b ) VI_GUM_STR_AUX( a, b )
-#		define VI_MAKE_UNIC_ID( prefix ) VI_GUM_STR( prefix, __LINE__ )
+#		define VI_STR_GUM_AUX( a, b ) a##b
+#		define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
+#		define VI_MAKE_UNIC_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
 
 #		define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_) = 0
 #		define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_) = 0

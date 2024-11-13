@@ -31,7 +31,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_VERSION_MINOR 6
 #	define VI_TM_VERSION_PATCH 1
 #	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 1000U + (VI_TM_VERSION_PATCH))
-#	define VI_TM_VERSION_STRING VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
+#	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
 
 #if defined(_WIN32)
 #	include <Windows.h>
@@ -65,7 +65,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include "common.h"
 
-// Define VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
+// Define VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
 #if defined(_WIN32) // Windows x86 or x64
 #	define VI_SYS_CALL __cdecl
 #	ifdef _WIN64
@@ -73,7 +73,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	else
 #		define VI_TM_CALL __fastcall
 #	endif
-#	ifdef vi_timing_EXPORTS
+#	ifdef VI_TM_EXPORT
 #		define VI_TM_API __declspec(dllexport)
 #	elif defined(VI_TM_SHARED)
 #		define VI_TM_API __declspec(dllimport)
@@ -85,7 +85,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #elif defined (__linux__)
 #	define VI_SYS_CALL
 #	define VI_TM_CALL
-#	ifdef vi_timing_EXPORTS
+#	ifdef VI_TM_EXPORT
 #		define VI_TM_API __attribute__((visibility("default")))
 #	else
 #		define VI_TM_API

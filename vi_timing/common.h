@@ -64,8 +64,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #define VI_STR_AUX(s) #s
 #define VI_STR(s) VI_STR_AUX(s)
-#define VI_GUM_STR_AUX( a, b ) a##b
-#define VI_GUM_STR( a, b ) VI_GUM_STR_AUX( a, b )
-#define VI_MAKE_UNIC_ID( prefix ) VI_GUM_STR( prefix, __LINE__ )
+#define VI_STR_GUM_AUX( a, b ) a##b
+#define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
+#define VI_MAKE_UNIC_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
 
 #endif // #ifndef VI_TIMING_VI_COMMON_H
