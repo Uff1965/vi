@@ -73,7 +73,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	else
 #		define VI_TM_CALL __fastcall
 #	endif
-#	ifdef VI_TM_EXPORT
+#	ifdef VI_TM_EXPORTS
 #		define VI_TM_API __declspec(dllexport)
 #	elif defined(VI_TM_SHARED)
 #		define VI_TM_API __declspec(dllimport)
@@ -85,7 +85,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #elif defined (__linux__)
 #	define VI_SYS_CALL
 #	define VI_TM_CALL
-#	ifdef VI_TM_EXPORT
+#	ifdef VI_TM_EXPORTS
 #		define VI_TM_API __attribute__((visibility("default")))
 #	else
 #		define VI_TM_API

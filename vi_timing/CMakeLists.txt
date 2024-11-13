@@ -42,6 +42,7 @@ else()
 endif()
 
 add_library(${PROJECT_NAME} ${BUILD_TYPE} ${SOURCE_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES DEFINE_SYMBOL "VI_TM_EXPORTS")
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
@@ -76,8 +77,6 @@ PRIVATE
 
 if(VI_TM_BUILD_SHARED)
     target_compile_definitions(${PROJECT_NAME}
-    PRIVATE
-        "VI_TM_EXPORTS"
     PUBLIC
         "VI_TM_SHARED"
     )
