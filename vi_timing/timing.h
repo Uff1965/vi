@@ -152,7 +152,7 @@ extern "C" {
 
 	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
 	VI_TM_API void VI_TM_CALL vi_tmFinit();
-	VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(VI_STD(size_t) reserve VI_DEFAULT(64));
+	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(VI_STD(size_t) reserve VI_DEFAULT(64));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
 	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(VI_TM_HANDLE h, const char* name, VI_STD(size_t) cnt VI_DEFAULT(1)) VI_NOEXCEPT;
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
@@ -222,8 +222,8 @@ namespace vi_tm
 	{	timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
-		timer_t(const char *name, std::size_t cnt = 1) noexcept
-			: vi_tmItem_t{ vi_tmStart(nullptr, name, cnt) }
+		timer_t(VI_TM_HANDLE h, const char *name, std::size_t cnt = 1) noexcept
+			: vi_tmItem_t{ vi_tmStart(h, name, cnt) }
 		{
 		}
 		~timer_t() noexcept
@@ -267,7 +267,7 @@ namespace vi_tm
 #		define VI_TM_INFO(f) NULL
 #	else
 #		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
-#		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {__VA_ARGS__}
+#		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
 #		define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
 #		define VI_TM_CLEAR vi_tmClear(NULL, NULL)
 #		define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)

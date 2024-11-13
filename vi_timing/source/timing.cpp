@@ -47,120 +47,123 @@ namespace
 	};
 
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
+	constexpr auto DEF_CAPACITY = 64U;
 	using storage_t = std::unordered_map<std::string, item_t>;
 
-	class Instance_t
+	class timing_inst_t
 	{	std::mutex storage_guard_;
 		storage_t storage_;
-	protected:
-		vi_tmAtomicTicks_t amount_dummy_ = 0U;
-		Instance_t(std::size_t reserve = 64U)
-		{	storage_.max_load_factor(MAX_LOAD_FACTOR);
-			storage_.reserve(reserve);
-		}
 
 		class guard_t
 		{	std::scoped_lock<std::mutex> lock_;
-			Instance_t &inst_;
+			timing_inst_t &inst_;
 		public:
-			guard_t() = delete;
-			guard_t(const guard_t &) = delete;
-			guard_t &operator=(const guard_t &) = delete;
-			guard_t(Instance_t &inst)
+			explicit guard_t(timing_inst_t &inst)
 			:	lock_{ inst.storage_guard_ },
 				inst_{ inst }
 			{
 			}
-			//auto& operator[](const char *key) const & { return inst_.storage_[key]; }
+			auto& operator[](const char* key) const & { return inst_.storage_[key]; }
+			auto &operator[](const char *key) const && = delete;
 			auto& operator*() const & { return inst_.storage_; }
 			auto& operator*() const && = delete;
 			auto* operator->() const & { return &inst_.storage_; }
-			auto* operator->() const && = delete;
+			auto *operator->() const && = delete;
 		};
 
+	protected:
 		auto storage() { return guard_t{ *this }; }
+
+	public:
+		explicit timing_inst_t(std::size_t reserve = DEF_CAPACITY)
+		{	storage_.max_load_factor(MAX_LOAD_FACTOR);
+			storage_.reserve(reserve);
+		}
 	};
 
 } // namespace
 
-struct vi_tmInstance_t: public Instance_t
-{
-	using Instance_t::Instance_t;
+struct vi_tmInstance_t: public timing_inst_t
+{	vi_tmAtomicTicks_t amount_dummy_ = 0U;
 
-	static vi_tmInstance_t *create(size_t reserve)
-	{	return new vi_tmInstance_t{ reserve };
-	}
+	using timing_inst_t::timing_inst_t;
 
 	void init(size_t reserve)
 	{	auto guard = storage();
 		guard->reserve(reserve);
 	}
 
-	vi_tmAtomicTicks_t *item(const char *name, std::size_t amount)
-	{	
-		if (name)
+	vi_tmAtomicTicks_t& item(const char *name, std::size_t amount)
+	{	if (name)
 		{	auto guard = storage();
-			auto &item = (*guard)[name];
+			auto &item = guard[name];
 			item.calls_cnt_ += 1;
 			item.counter_ += amount;
-			return &item.amount_;
+			return item.amount_;
 		}
 
-		return &amount_dummy_;
+		return amount_dummy_;
 	}
 
 	int results(vi_tmLogRAW_t fn, void *data)
-	{	int result = -1;
-		auto guard = storage();
-		for (const auto& [name, item] : *guard)
-		{	assert(item.counter_ >= item.calls_cnt_);
-			assert((0 == item.amount_) == (0 == item.calls_cnt_));
+	{	auto guard = storage();
+		for (const auto &[name, item] : *guard)
+		{	assert(item.counter_ >= item.calls_cnt_ && (0 == item.amount_) == (0 == item.calls_cnt_));
 			if (!name.empty() && 0 == fn(name.c_str(), item.amount_, item.counter_, item.calls_cnt_, data))
-			{	result = 0;
-				break;
+			{	return 0;
 			}
 		}
-		return result;
+		return -1;
 	}
 	
 	void clear(const char *name)
 	{	if (auto guard = storage(); !name)
-		{	for (auto &[_, item] : *guard)
+		{	amount_dummy_ = 0U;
+			for (auto &[_, item] : *guard)
 			{	item.clear();
 			}
-			amount_dummy_ = 0U;
 		}
 		else if (const auto [it, b] = guard->try_emplace(name); !b)
 		{	it->second.clear();
 		}
 	}
 
-	static vi_tmInstance_t &instance()
-	{	static vi_tmInstance_t inst{ 64 };
+	static vi_tmInstance_t &global()
+	{	static vi_tmInstance_t inst{ DEF_CAPACITY };
 		return inst;
 	}
 
-	static vi_tmInstance_t *from_handle(vi_tmInstance_t *p)
-	{	return p? p: &vi_tmInstance_t::instance();
+	friend vi_tmInstance_t *from_handle(vi_tmInstance_t *p)
+	{	return p? p: &global();
 	}
-};
+}; // struct vi_tmInstance_t
 
-void VI_TM_CALL vi_tmInit(std::size_t n)
-{	vi_tmInstance_t::instance().init(n);
+/******************************************************************************************************/
+
+void VI_TM_CALL vi_tmInit(std::size_t reserve)
+{	vi_tmInstance_t::global().init(reserve);
 }
 
 void VI_TM_CALL vi_tmFinit()
-{	vi_tmInstance_t::instance().clear(nullptr);
+{	vi_tmInstance_t::global().clear(nullptr);
+}
+
+VI_TM_HANDLE VI_TM_CALL vi_tmCreate(std::size_t reserve)
+{	return new vi_tmInstance_t{ reserve };
+}
+
+void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
+{	delete h;
 }
 
 vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(VI_TM_HANDLE h, const char* name, std::size_t amount) noexcept
-{	return vi_tmInstance_t::from_handle(h)->item(name, amount);
+{	return &from_handle(h)->item(name, amount);
 }
 
 void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
-{	vi_tmInstance_t::from_handle(h)->clear(name);
+{	from_handle(h)->clear(name);
 }
 
 int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
-{	return vi_tmInstance_t::from_handle(h)->results(fn, data);
+{	return from_handle(h)->results(fn, data);
 }

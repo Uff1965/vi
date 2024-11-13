@@ -128,6 +128,7 @@ namespace
 	{
 		template<typename T>
 		constexpr duration_t(T&& v) : ch::duration<double>{ std::forward<T>(v) } {}
+		constexpr duration_t() : duration_t{ 0.0 } {}
 
 		[[nodiscard]] friend std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC)
 		{	assert(d.count() >= 0.0 && dec >= 0 && precision > dec);
@@ -163,7 +164,7 @@ namespace
 #ifndef NDEBUG
 	const auto unit_test_round = []
 	{	static constexpr struct
-		{	int line_;
+		{	int line_; //-V802
 			double original_;
 			double expected_;
 			unsigned char precision_;
@@ -312,7 +313,7 @@ namespace
 	const auto unit_test_to_string = []
 	{
 		static constexpr struct
-		{	int line_{};
+		{	int line_{}; //-V802
 			duration_t original_;
 			std::string_view expected_;
 			unsigned char precision_ = 2;
@@ -499,6 +500,23 @@ VI_OPTIMIZE_OFF
 	}
 VI_OPTIMIZE_ON
 
+	const auto& props()
+	{	struct properties_t
+		{	duration_t tick_duration_;
+			double measurement_cost_;
+			duration_t duration_;
+
+			properties_t()
+			{	vi_tmWarming(0, 500);
+				tick_duration_ = seconds_per_tick();
+				measurement_cost_ = measurement_cost();
+				duration_ = duration();
+			}
+		};
+		static const properties_t inst_;
+		return inst_;
+	}
+
 	constexpr char TitleName[] = { "Name" };
 	constexpr char TitleAverage[] = { "Average" };
 	constexpr char TitleTotal[] = { "Total" };
@@ -513,8 +531,6 @@ VI_OPTIMIZE_ON
 
 		std::vector<itm_t> meterages_;
 		report_flags_t flags_{};
-		const duration_t tick_duration_ = seconds_per_tick();
-		const double measurement_cost_ = measurement_cost(); // ticks
 		std::size_t max_amount_{};
 		std::size_t max_len_name_{ std::size(TitleName) - 1};
 		std::size_t max_len_total_{ std::size(TitleTotal) - 1};
@@ -581,12 +597,12 @@ VI_OPTIMIZE_ON
 			assert(itm.total_txt_ == NotAvailable);
 			assert(itm.average_txt_ == NotAvailable);
 		}
-		else if (const auto burden = std::llround(measurement_cost_ * dirty) * itm.orig_calls_cnt_; itm.orig_total_ <= burden)
+		else if (const auto burden = std::llround(props().measurement_cost_ * dirty) * itm.orig_calls_cnt_; itm.orig_total_ <= burden)
 		{	itm.total_txt_ = TooFew;
 			itm.average_txt_ = TooFew;
 		}
 		else
-		{	itm.total_time_ = tick_duration_ * (itm.orig_total_ - burden);
+		{	itm.total_time_ = props().tick_duration_ * (itm.orig_total_ - burden);
 			itm.average_ = itm.total_time_ / itm.orig_amount_;
 			itm.total_txt_ = to_string(itm.total_time_);
 			itm.average_txt_ = to_string(itm.average_);
@@ -734,11 +750,11 @@ VI_OPTIMIZE_ON
 } // namespace {
 
 VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h,vi_tmLogSTR_t fn, void* data, int flagsa)
-{	vi_tmWarming(0, 500);
-
-	report_flags_t flags = 0;
+{	report_flags_t flags = 0;
 	static_assert(sizeof(flags) == sizeof(flagsa));
 	std::memcpy(&flags, &flagsa, sizeof(flags));
+
+	props(); // Preventing deadlock in traits_t::callback().
 
 	traits_t traits{ flags };
 	vi_tmResults(h, traits_t::callback, &traits);
@@ -750,13 +766,13 @@ VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h,vi_tmLogSTR_t fn, void* data
 	{	std::ostringstream str;
 
 		if (flags & to_underlying(vi_tmShowOverhead))
-		{	str << "Measurement cost: " << duration_t(traits.tick_duration_ * traits.measurement_cost_) << " per measurement. ";
+		{	str << "Measurement cost: " << duration_t(props().tick_duration_ * props().measurement_cost_) << " per measurement. ";
 		}
 		if (flags & to_underlying(vi_tmShowDuration))
-		{	str << "Duration: " << duration() << ". ";
+		{	str << "Duration: " << props().duration_ << ". ";
 		}
 		if (flags & to_underlying(vi_tmShowUnit))
-		{	str << "One tick corresponds: " << traits.tick_duration_ << ". ";
+		{	str << "One tick corresponds: " << props().tick_duration_ << ". ";
 		}
 
 		str << '\n';
@@ -780,7 +796,7 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 
 		case VI_TM_INFO_VERSION:
 		{	static const char *const version = []
-				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1000 && VI_TM_VERSION_PATCH < 1000);
+				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1000 && VI_TM_VERSION_PATCH < 1000); //-V590
 #	ifdef VI_TM_SHARED
 					static constexpr char type[] = "shared";
 #	else
