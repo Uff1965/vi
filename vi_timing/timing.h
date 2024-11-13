@@ -156,18 +156,11 @@ extern "C" {
 	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(const char* name VI_DEFAULT(NULL));
-	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
-
-	enum vi_tmInfo_e
-	{	VI_TM_INFO_VER,
-		VI_TM_INFO_VERSION,
-		VI_TM_INFO_TIME,
-		VI_TM_BUILDTYPE,
-	};
-	VI_NODISCARD VI_TM_API const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
+
 	typedef struct vi_tmItem_t
 	{	vi_tmAtomicTicks_t* amount_;
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
@@ -199,12 +192,20 @@ extern "C" {
 		vi_tmShowDuration = 0x40,
 		vi_tmShowMask = 0xF0,
 	};
-
 	VI_TM_API int VI_TM_CALL vi_tmReport
 	(	vi_tmLogSTR_t callback VI_DEFAULT(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs)),
 		void* data VI_DEFAULT(stdout),
 		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
 	);
+
+	enum vi_tmInfo_e
+	{	VI_TM_INFO_VER,
+		VI_TM_INFO_VERSION,
+		VI_TM_INFO_TIME,
+		VI_TM_BUILDTYPE,
+	};
+	VI_NODISCARD VI_TM_API const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
+
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #ifdef __cplusplus

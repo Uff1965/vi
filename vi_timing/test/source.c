@@ -30,7 +30,8 @@ void bar_c(void)
 //VI_OPTIMIZE_OFF
 void foo_c(void)
 {
-	vi_tmWarming(0, 100);
+	vi_tmWarming(2, 100);
+	vi_tmWarming(16, 100);
 	
 	printf("Version: \'%s\' [%" PRIdPTR "]\n", (const char*)vi_tmInfo(VI_TM_INFO_VERSION), (intptr_t)vi_tmInfo(VI_TM_INFO_VER));
 

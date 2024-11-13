@@ -30,17 +30,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <timing.h>
 
-#include <array>
 #include <cassert>
-#include <chrono>
-#include <cstring>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
-#include <vector>
-
-namespace ch = std::chrono;
 
 namespace
 {
@@ -133,89 +126,4 @@ void VI_TM_CALL vi_tmClear(const char* name)
 	else if (const auto [it, b] = locked_ptr->try_emplace(name); !b)
 	{	it->second.clear();
 	}
-}
-
-void VI_TM_CALL vi_tmWarming(unsigned int cnt, unsigned int ms)
-{
-	if (0 == ms)
-	{	return;
-	}
-
-	auto addition = cnt? std::min(cnt, std::thread::hardware_concurrency()): std::thread::hardware_concurrency();
-	if (addition)
-	{	--addition;
-	}
-
-	std::atomic_bool done = false;
-	auto loading = [&done]
-		{	while (!done) //-V776
-			{	for (volatile int n = 100'000; n; n = n - 1)
-				{/**/ }
-			}
-		};
-
-	std::vector<std::thread> threads(addition); // Additional threads
-	for (auto &t : threads)
-	{	t = std::thread{ loading };
-	}
-
-	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
-	{	// Stressing the current thread.
-	}
-
-	done = true;
-
-	for (auto &t : threads)
-	{	t.join();
-	}
-}
-
-const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
-{	const void *result = nullptr;
-	switch (info)
-	{
-		case VI_TM_INFO_VER:
-		{	static constexpr std::intptr_t ver = VI_TM_VERSION;
-			static_assert(sizeof(result) == sizeof(ver));
-			std::memcpy(&result, &ver, sizeof(result));
-		} break;
-
-		case VI_TM_INFO_VERSION:
-		{	static const char *const version = []
-				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1000 && VI_TM_VERSION_PATCH < 1000);
-#	ifdef VI_TM_SHARED
-					static constexpr char type[] = "shared";
-#	else
-					static constexpr char type[] = "static";
-#	endif
-					static std::array<char, std::size("99.999.999 ") - 1 + std::size(type)> buff;
-					snprintf(buff.data(), buff.size(), "%u.%u.%u %s", VI_TM_VERSION_MAJOR, VI_TM_VERSION_MINOR, VI_TM_VERSION_PATCH, type);
-					return buff.data();
-				}();
-			result = version;
-		} break;
-
-		case VI_TM_INFO_TIME:
-		{	static const char *const compiletime = []
-				{	static std::array<char, 32> buff;
-					snprintf(buff.data(), buff.size(), "%s %s", __DATE__, __TIME__);
-					return buff.data();
-				}();
-			result = compiletime;
-		} break;
-
-		case VI_TM_BUILDTYPE:
-		{	
-#ifdef NDEBUG
-			result = "Release";
-#else
-			result = "Debug";
-#endif
-		} break;
-
-		default:
-		{	assert(false);
-		} break;
-	}
-	return result;
 }
