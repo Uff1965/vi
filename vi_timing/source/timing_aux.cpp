@@ -861,7 +861,7 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 
 	std::vector<std::thread> threads(addition); // Additional threads
 	for (auto &t : threads)
-	{	t.swap(std::thread{ thread_func });
+	{	t = std::thread{ thread_func };
 	}
 
 	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
