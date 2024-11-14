@@ -128,7 +128,7 @@ struct vi_tmInstance_t: public timing_inst_t
 		}
 	}
 
-	static vi_tmInstance_t &global()
+	static vi_tmInstance_t& global()
 	{	static vi_tmInstance_t inst{ DEF_CAPACITY };
 		return inst;
 	}
@@ -138,7 +138,7 @@ struct vi_tmInstance_t: public timing_inst_t
 	}
 }; // struct vi_tmInstance_t
 
-/******************************************************************************************************/
+//vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 void VI_TM_CALL vi_tmInit(std::size_t reserve)
 {	vi_tmInstance_t::global().init(reserve);
@@ -167,3 +167,5 @@ void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
 int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
 {	return from_handle(h)->results(fn, data);
 }
+
+//^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
