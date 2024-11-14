@@ -154,9 +154,9 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmFinit();
 	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(VI_STD(size_t) reserve VI_DEFAULT(64));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
-	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmItem(VI_TM_HANDLE h, const char* name, VI_STD(size_t) cnt VI_DEFAULT(1)) VI_NOEXCEPT;
-	inline void vi_tmAdd(vi_tmAtomicTicks_t *amount, vi_tmTicks_t ticks)
-	{	VI_STD(atomic_fetch_add_explicit)(amount, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
+	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt VI_DEFAULT(1)) VI_NOEXCEPT;
+	inline void vi_tmAdd(vi_tmAtomicTicks_t *total, vi_tmTicks_t ticks)
+	{	VI_STD(atomic_fetch_add_explicit)(total, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
@@ -166,20 +166,20 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
 
 	typedef struct vi_tmItem_t
-	{	vi_tmAtomicTicks_t* amount_;
+	{	vi_tmAtomicTicks_t* total_;
 		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
 	} vi_tmItem_t;
 
 	VI_NODISCARD static inline vi_tmItem_t vi_tmStart(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	vi_tmItem_t result;
-		result.amount_ = vi_tmItem(h, name, amount);
+		result.total_ = vi_tmTotalTicks(h, name, amount);
 		result.start_ = vi_tmGetTicks();
 		return result;
 	}
 
 	static inline void vi_tmFinish(const vi_tmItem_t *itm)
 	{	const vi_tmTicks_t finish = vi_tmGetTicks();
-		vi_tmAdd(itm->amount_, finish - itm->start_);
+		vi_tmAdd(itm->total_, finish - itm->start_);
 	}
 
 	enum vi_tmReportFlags_e {

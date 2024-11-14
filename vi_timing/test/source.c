@@ -22,7 +22,7 @@ void bar_c(void)
 		}
 
 		const vi_tmTicks_t finish = vi_tmGetTicks();
-		vi_tmAdd(vi_tmItem(NULL, "bar", 1), finish - start);
+		vi_tmAdd(vi_tmTotalTicks(NULL, "bar", 1), finish - start);
 	}
 }
 //VI_OPTIMIZE_ON
