@@ -33,7 +33,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <array>
 #include <algorithm>
 #include <cassert>
-#include <cfloat>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -66,7 +65,7 @@ namespace
 	}
 
 #if __cpp_lib_to_underlying
-	using std::underlying_type_t;
+	using std::to_underlying;
 #else
 	template< class Enum >
 	constexpr auto to_underlying(Enum e) noexcept { return static_cast<std::underlying_type_t<Enum>>(e); }
@@ -98,7 +97,7 @@ namespace
 		return result; // Now: 0 < result && result <= den
 	}
 
-	int restrict_prec(int prec, int exp, int dec, int group)
+	int prec_restrict(int prec, int exp, int dec, int group)
 	{	if (const auto num_ext = mod_normalize(exp, group); num_ext < prec)
 		{	if (const auto prec_ext = (prec - num_ext) % group; prec_ext > dec)
 			{	prec -= prec_ext - dec;
@@ -112,14 +111,11 @@ namespace
 		constexpr auto EPS = std::numeric_limits<decltype(num)>::epsilon();
 		assert(num >= .0 && dec >= 0 && group > 0 && prec > dec && group > dec);
 		if (num > .0 && dec >= 0 && group > 0 && prec > dec)
-		{	if (dec >= group)
-			{	dec %= group;
-			}
-
-			const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
+		{	dec %= group;
+			const auto exp = static_cast<int>(std::ceil(std::log10(num)));
 			assert(0.1 * (1.0 - EPS) <= num * std::pow(10, -exp) && num * std::pow(10, -exp) < 1.0 + EPS);
-			const auto factor = std::pow(10, restrict_prec(prec, exp, dec, group) - exp);
-			num = std::round(factor * (num * (1.0 + EPS))) / factor;
+			const auto factor = std::pow(10, prec_restrict(prec, exp, dec, group) - exp);
+			num = std::round(num * (1.0 + EPS) * factor) / factor;
 		}
 		return num;
 	}
@@ -382,9 +378,10 @@ namespace
 			{	std::ostringstream buff;
 				buff.imbue(std::locale(std::cout.getloc(), new space_out));
 				buff <<
-					std::fixed << std::setprecision(8) <<
+					std::setprecision(8) <<
 					"Line " << i.line_ << ": " << int(i.precision_) << '/' << int(i.dec_) << "\n"
-					"Original:\t" << i.original_.count() << "\n"
+					"Original:\t" << i.original_.count() << "\n" <<
+					std::fixed << 
 					"Expected:\t" << i.expected_ << "\n"
 					"Rounded:\t" << result << '\n' <<
 					std::endl;
@@ -399,11 +396,13 @@ namespace
 	}(); // const auto unit_test_to_string
 #endif // #ifndef NDEBUG
 
+VI_OPTIMIZE_OFF
 	duration_t seconds_per_tick()
 	{
-		auto wait_for_the_time_changed = []
-		{	{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-				[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks(); // Preloading a function into cache
+		auto start = []
+		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+			for(auto n = 0; n < 5; ++n)
+			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks(); // Preloading a function into cache
 				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
 			}
 
@@ -415,77 +414,83 @@ namespace
 			return std::tuple{ vi_tmGetTicks(), last };
 		};
 
-		const auto [tick1, time1] = wait_for_the_time_changed();
+		const auto [tick1, time1] = start();
 		// Load the thread at 100% for 256ms.
 		for (auto stop = time1 + 256ms; ch::steady_clock::now() < stop;)
 		{/**/}
-		const auto [tick2, time2] = wait_for_the_time_changed();
+		const auto [tick2, time2] = start();
 
 		return duration_t(time2 - time1) / (tick2 - tick1);
 	}
 
 	duration_t duration()
 	{
-		static constexpr auto CNT = 1'000U;
+		static constexpr auto CNT = 500U;
 
-		auto foo = [] {
-			// The order of calling the functions is deliberately broken. To push 'vi_tmGetTicks()' and 'vi_tmFinish()' further apart.
-			auto itm = vi_tmStart(nullptr, "", 1);
-			vi_tmFinish(&itm);
-		};
+		static auto gauge_zero = []
+			{	auto itm = vi_tmStart(nullptr, "", 1);
+				vi_tmFinish(&itm);
+			};
 
-		auto start = [] {
-			std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-			// Are waiting for the start of a new time interval.
-			auto last = ch::steady_clock::now();
-			for (const auto s = last; s == last; last = ch::steady_clock::now())
-			{/**/}
-			return last;
-		};
+		auto start = []
+			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
+				for (auto cnt = 5; cnt; --cnt)
+				{	gauge_zero(); // Create a service item with empty name "" and cache preload.
+				}
+				// Are waiting for the start of a new time interval.
+				auto result = ch::steady_clock::now();
+				for (const auto s = result; s == result; result = ch::steady_clock::now())
+				{/**/}
+				return result;
+			};
 
-		foo(); // Create a service item with empty name "".
-
-		auto b = start();
-		for (size_t cnt = CNT; cnt; --cnt)
-		{	foo();
+		auto s = start();
+		for (auto cnt = CNT; cnt; --cnt)
+		{	gauge_zero(); gauge_zero();
 		}
-		const auto pure = ch::steady_clock::now() - b;
+		const auto pure = ch::steady_clock::now() - s;
 
-		b = start();
-		static constexpr auto EXT = 10U;
-		for (size_t cnt = CNT; cnt; --cnt)
-		{	foo();
+		s = start();
+		static constexpr auto EXT = 20U;
+		for (auto cnt = CNT; cnt; --cnt)
+		{	gauge_zero(); gauge_zero();
 
 			// EXT calls
-			foo(); foo(); foo(); foo(); foo();
-			foo(); foo(); foo(); foo(); foo();
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 		}
-		const auto dirty = ch::steady_clock::now() - b;
+		const auto dirty = ch::steady_clock::now() - s;
 
 		return duration_t(dirty - pure) / (EXT * CNT);
 	}
 
-VI_OPTIMIZE_OFF
 	double measurement_cost()
-	{	constexpr auto CNT = 100U;
+	{	constexpr auto CNT = 500U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		auto e = vi_tmGetTicks(); // Preloading a function into cache
+		for (auto cnt = 5; cnt; --cnt)
+		{	e = vi_tmGetTicks();
+		}
+
 		auto s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
-		{
-			e = vi_tmGetTicks(); //-V519
-			e = vi_tmGetTicks(); //-V519
+		{	e = vi_tmGetTicks();
+			e = vi_tmGetTicks();
 		}
 		const auto pure = e - s;
 
-		constexpr auto EXT = 20U;
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		e = vi_tmGetTicks(); // Preloading a function into cache
+		for (auto cnt = 5; cnt; --cnt)
+		{	e = vi_tmGetTicks();
+		}
+
+		constexpr auto EXT = 20U;
 		s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
-		{
-			e = vi_tmGetTicks(); //-V761
+		{	e = vi_tmGetTicks();
 			e = vi_tmGetTicks();
 
 			// EXT calls
@@ -539,8 +544,8 @@ VI_OPTIMIZE_ON
 		
 		explicit traits_t(report_flags_t flags);
 		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
-		static int VI_SYS_CALL callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 		void sort();
+		static int VI_SYS_CALL callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 	};
 
 	struct traits_t::itm_t
@@ -847,16 +852,16 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	}
 
 	std::atomic_bool done = false;
-	auto loading = [&done]
+	auto thread_func = [&done]
 		{	while (!done) //-V776
 			{	for (volatile int n = 100'000; n; n = n - 1)
-				{/**/ }
+				{/**/}
 			}
 		};
 
 	std::vector<std::thread> threads(addition); // Additional threads
 	for (auto &t : threads)
-	{	t = std::thread{ loading };
+	{	t.swap(std::thread{ thread_func });
 	}
 
 	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
