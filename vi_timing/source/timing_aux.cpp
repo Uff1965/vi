@@ -801,7 +801,7 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 
 		case VI_TM_INFO_VERSION:
 		{	static const char *const version = []
-				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1000 && VI_TM_VERSION_PATCH < 1000); //-V590
+				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 1'000); //-V590
 #	ifdef VI_TM_SHARED
 					static constexpr char type[] = "shared";
 #	else
@@ -848,7 +848,7 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	static const auto cores_qty = std::thread::hardware_concurrency();
 	auto addition = threads_qty? std::min(threads_qty, cores_qty): cores_qty;
 	if (addition)
-	{	--addition;
+	{	--addition; // subtract the current thread
 	}
 
 	std::atomic_bool done = false;

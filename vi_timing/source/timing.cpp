@@ -66,13 +66,13 @@ struct vi_tmInstance_t
 	}
 
 	void init(size_t reserve)
-	{	std::scoped_lock lock{ storage_guard_ };
+	{	std::lock_guard lock{ storage_guard_ };
 		storage_.reserve(reserve);
 	}
 
 	vi_tmAtomicTicks_t& total(const char *name, std::size_t cnt)
 	{	if (name)
-		{	std::scoped_lock lock{ storage_guard_ };
+		{	std::lock_guard lock{ storage_guard_ };
 			auto &item = storage_[name];
 			item.calls_cnt_ += 1;
 			item.counter_ += cnt;
@@ -83,7 +83,7 @@ struct vi_tmInstance_t
 	}
 
 	int results(vi_tmLogRAW_t fn, void *data)
-	{	std::scoped_lock lock{ storage_guard_ };
+	{	std::lock_guard lock{ storage_guard_ };
 		for (const auto &[name, item] : storage_)
 		{	assert(item.counter_ >= item.calls_cnt_ && ((0 == item.total_) == (0 == item.calls_cnt_)));
 			if (!name.empty() && 0 == fn(name.c_str(), item.total_, item.counter_, item.calls_cnt_, data))
@@ -94,7 +94,7 @@ struct vi_tmInstance_t
 	}
 	
 	void clear(const char *name)
-	{	std::scoped_lock lock{ storage_guard_ };
+	{	std::lock_guard lock{ storage_guard_ };
 		if (!name)
 		{	total_dummy_ = 0U;
 			for (auto &[_, item] : storage_)
