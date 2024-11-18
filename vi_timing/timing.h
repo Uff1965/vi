@@ -150,9 +150,9 @@ extern "C" {
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef struct vi_tmInstance_t* VI_TM_HANDLE;
 
-	VI_TM_API void VI_TM_CALL vi_tmInit(VI_STD(size_t) reserve VI_DEFAULT(64));
+	VI_TM_API void VI_TM_CALL vi_tmInit(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmFinit();
-	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(VI_STD(size_t) reserve VI_DEFAULT(64));
+	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
 	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt VI_DEFAULT(1)) VI_NOEXCEPT;
 	inline void vi_tmAdd(vi_tmAtomicTicks_t *total, vi_tmTicks_t ticks)
@@ -242,7 +242,7 @@ namespace vi_tm
 			vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs),
 			void* data = stdout,
 			int flags = vi_tmSortByTime | vi_tmSortDescending,
-			std::size_t reserve = 64
+			int reserve = -1
 		)
 		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }
 		{	vi_tmInit(reserve);
