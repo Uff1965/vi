@@ -28,7 +28,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	pragma once
 
 #	define VI_TM_VERSION_MAJOR 0
-#	define VI_TM_VERSION_MINOR 8
+#	define VI_TM_VERSION_MINOR 9
 #	define VI_TM_VERSION_PATCH 1
 #	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 1000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
@@ -79,6 +79,19 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define VI_TM_API __declspec(dllimport)
 #	else
 #		define VI_TM_API
+#	endif
+#	ifdef VI_TM_SHARED
+#		ifdef NDEBUG
+#			pragma comment(lib, "vi_timing_s.lib")
+#		else
+#			pragma comment(lib, "vi_timing_sd.lib")
+#		endif
+#	elif !defined(VI_TM_EXPORTS)
+#		ifdef NDEBUG
+#			pragma comment(lib, "vi_timing.lib")
+#		else
+#			pragma comment(lib, "vi_timing_d.lib")
+#		endif
 #	endif
 #elif defined(__ANDROID__)
 #	define VI_TM_DISABLE "Android not supported yet."
@@ -210,6 +223,7 @@ namespace vi_tm
 	class timer_t
 	{	vi_tmAtomicTicks_t& total_;
 		const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
+
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
@@ -222,6 +236,25 @@ namespace vi_tm
 			vi_tmAdd(&total_, finish - start_);
 		}
 	};
+
+	//template<std::size_t N>
+	//class timer_l_t
+	//{	const VI_TM_HANDLE h_;
+	//	const char (&name_)[N];
+	//	const std::size_t cnt_;
+	//	const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
+
+	//	timer_l_t(const timer_l_t&) = delete;
+	//	timer_l_t& operator=(const timer_l_t&) = delete;
+	//public:
+	//	timer_l_t(VI_TM_HANDLE h, const char (&name)[N], std::size_t cnt = 1) noexcept
+	//		: h_{ h }, name_{ name }, cnt_{ cnt }
+	//	{
+	//	}
+	//	~timer_l_t() noexcept
+	//	{	vi_tmFinish(h_, name_, start_, cnt_);
+	//	}
+	//};
 
 	class init_t
 	{	std::string title_;
