@@ -48,6 +48,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #ifdef __cplusplus
 #	include <atomic>
+#	include <cassert>
 #	include <cstdint>
 #	include <cstdio>
 #	include <string>
@@ -257,20 +258,45 @@ namespace vi_tm
 	};
 
 	class init_t
-	{	std::string title_;
-		vi_tmLogSTR_t cb_;
-		void* data_;
-		int flags_;
+	{	std::string title_ = "Timing report:\n";
+		vi_tmLogSTR_t cb_ = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs);
+		void* data_ = reinterpret_cast<void*>(stdout);
+		int flags_ = 0;
+		int reserve_ = -1;
 	public:
-		init_t
-		(	const char* title = "Timing report:\n",
-			vi_tmLogSTR_t fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs),
-			void* data = stdout,
-			int flags = vi_tmSortByTime | vi_tmSortDescending,
-			int reserve = -1
-		)
-		: title_{ title }, cb_{ fn }, data_{ data }, flags_{ flags }
-		{	vi_tmInit(reserve);
+		template<typename... Args>
+		init_t(Args&&... args)
+		{	init(std::forward<Args>(args)...);
+		}
+		void init()
+		{	vi_tmInit(reserve_);
+		}
+		template<typename T, typename... Args>
+		void init(T &&a, Args&&... args)
+		{
+			if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<T>>, vi_tmReportFlags_e>)
+			{	flags_ |= a;
+			}
+			else if constexpr (std::is_integral_v<T>)
+			{	assert(reserve_ == -1);
+				reserve_ = a;
+			}
+			else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<T>>, vi_tmLogSTR_t>)
+			{	assert(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs) == cb_ && nullptr != a);
+				cb_ = a;
+			}
+			else if constexpr (std::is_pointer_v<T>)
+			{	assert(reinterpret_cast<void*>(stdout) == data_);
+				data_ = a;
+			}
+			else if constexpr (std::is_convertible_v<T, decltype(title_)>)
+			{	title_ = a;
+			}
+			else
+			{	assert(false);
+			}
+
+			init(std::forward<Args>(args)...);
 		}
 
 		~init_t()
