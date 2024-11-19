@@ -40,67 +40,67 @@ void foo_c(void)
 
 	bar_c();
 
-	struct vi_tmItem_t const foo_tm = vi_tmStart(NULL, "foo_c", 1);
+	const vi_tmTicks_t foo_tm = vi_tmGetTicks();
 
 	printf("\n%s... ", __func__); //-V2600
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 10us", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 10000 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 10us", start, 1);
 	}
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 100us", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 100000 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 100us", start, 1);
 	}
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 1ms", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 1000000 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 1ms", start, 1);
 	}
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 10ms", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 10000000 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 10ms", start, 1);
 	}
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 14ms", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 14000000 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 14ms", start, 1);
 	}
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 20ms", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 20000000 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 20ms", start, 1);
 	}
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 30ms", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 30000000 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 30ms", start, 1);
 	}
 
 	{
 		thrd_yield();
-		struct vi_tmItem_t const tm = vi_tmStart(NULL, "thrd_sleep 1s", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_sec = 1 }, NULL);
-		vi_tmFinish(&tm);
+		vi_tmFinish(NULL, "thrd_sleep 1s", start, 1);
 	}
 
-	vi_tmFinish(&foo_tm);
+	vi_tmFinish(NULL, "foo_c", foo_tm, 1);
 	printf("done\n"); //-V2600
 }
 //VI_OPTIMIZE_ON

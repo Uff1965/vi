@@ -428,8 +428,8 @@ VI_OPTIMIZE_OFF
 		static constexpr auto CNT = 500U;
 
 		static auto gauge_zero = []
-			{	auto itm = vi_tmStart(nullptr, "", 1);
-				vi_tmFinish(&itm);
+			{	const auto start = vi_tmGetTicks();
+				vi_tmFinish(nullptr, "", start, 1);
 			};
 
 		auto start = []

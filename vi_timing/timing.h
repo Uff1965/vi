@@ -165,21 +165,10 @@ extern "C" {
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
 
-	typedef struct vi_tmItem_t
-	{	vi_tmAtomicTicks_t* total_;
-		vi_tmTicks_t start_; // Order matters!!! 'start_' must be initialized last!
-	} vi_tmItem_t;
-
-	VI_NODISCARD static inline vi_tmItem_t vi_tmStart(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
-	{	vi_tmItem_t result;
-		result.total_ = vi_tmTotalTicks(h, name, amount);
-		result.start_ = vi_tmGetTicks();
-		return result;
-	}
-
-	static inline void vi_tmFinish(const vi_tmItem_t *itm)
-	{	const vi_tmTicks_t finish = vi_tmGetTicks();
-		vi_tmAdd(itm->total_, finish - itm->start_);
+	VI_NODISCARD static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
+	{	const vi_tmTicks_t finish = vi_tmGetTicks(); // First of all!!!
+		vi_tmAtomicTicks_t *total = vi_tmTotalTicks(h, name, amount);
+		vi_tmAdd(total, finish - start);
 	}
 
 	enum vi_tmReportFlags_e {
@@ -218,16 +207,19 @@ extern "C" {
 
 namespace vi_tm
 {
-	class timer_t: public vi_tmItem_t
-	{	timer_t(const timer_t&) = delete;
+	class timer_t
+	{	vi_tmAtomicTicks_t& total_;
+		const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
+		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
 		timer_t(VI_TM_HANDLE h, const char *name, std::size_t cnt = 1) noexcept
-			: vi_tmItem_t{ vi_tmStart(h, name, cnt) }
+			: total_{ *vi_tmTotalTicks(h, name, cnt) }
 		{
 		}
 		~timer_t() noexcept
-		{	vi_tmFinish(this);
+		{	const vi_tmTicks_t finish = vi_tmGetTicks();
+			vi_tmAdd(&total_, finish - start_);
 		}
 	};
 
