@@ -478,7 +478,7 @@ VI_OPTIMIZE_OFF
 		auto s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
 		{	e = vi_tmGetTicks();
-			e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); //-V519
 		}
 		const auto pure = e - s;
 
