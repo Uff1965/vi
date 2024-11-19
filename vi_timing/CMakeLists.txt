@@ -93,8 +93,8 @@ if (WIN32)
   target_compile_options(${PROJECT_NAME}
   PRIVATE
     /MP /W3 /nologo /EHsc /Zi 
-    $<$<CONFIG:Release>: /MT  /O2 /Oi /GL /Gy>
-    $<$<CONFIG:Debug>:   /MTd /Od /RTC1>
+    $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
+    $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
   )
 elseif (UNIX)
   target_compile_options(${PROJECT_NAME}

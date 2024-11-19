@@ -237,24 +237,24 @@ namespace vi_tm
 		}
 	};
 
-	//template<std::size_t N>
-	//class timer_l_t
-	//{	const VI_TM_HANDLE h_;
-	//	const char (&name_)[N];
-	//	const std::size_t cnt_;
-	//	const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
+	template<std::size_t N>
+	class timer_l_t
+	{	const VI_TM_HANDLE h_;
+		const char (&name_)[N];
+		const std::size_t cnt_;
+		const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
 
-	//	timer_l_t(const timer_l_t&) = delete;
-	//	timer_l_t& operator=(const timer_l_t&) = delete;
-	//public:
-	//	timer_l_t(VI_TM_HANDLE h, const char (&name)[N], std::size_t cnt = 1) noexcept
-	//		: h_{ h }, name_{ name }, cnt_{ cnt }
-	//	{
-	//	}
-	//	~timer_l_t() noexcept
-	//	{	vi_tmFinish(h_, name_, start_, cnt_);
-	//	}
-	//};
+		timer_l_t(const timer_l_t&) = delete;
+		timer_l_t& operator=(const timer_l_t&) = delete;
+	public:
+		timer_l_t(VI_TM_HANDLE h, const char (&name)[N], std::size_t cnt = 1) noexcept
+			: h_{ h }, name_{ name }, cnt_{ cnt }
+		{
+		}
+		~timer_l_t() noexcept
+		{	vi_tmFinish(h_, name_, start_, cnt_);
+		}
+	};
 
 	class init_t
 	{	std::string title_;

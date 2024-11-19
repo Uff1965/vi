@@ -64,8 +64,8 @@ if (WIN32)
   PRIVATE
     /MP /W3 /nologo /EHsc /Zi
     /experimental:c11atomics # "Atomics are available in Visual Studio 2022 version 17.5 Preview 2 with the /experimental:c11atomics flag, in /std:c11 mode or later."
-    $<$<CONFIG:Release>: /MT  /O2 /Oi /GL /Gy>
-    $<$<CONFIG:Debug>:   /MTd /Od /RTC1>
+    $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
+    $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
   )
 elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
