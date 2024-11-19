@@ -165,7 +165,7 @@ extern "C" {
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
 
-	VI_NODISCARD static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
+	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	const vi_tmTicks_t finish = vi_tmGetTicks(); // First of all!!!
 		vi_tmAtomicTicks_t *total = vi_tmTotalTicks(h, name, amount);
 		vi_tmAdd(total, finish - start);
