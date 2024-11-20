@@ -396,7 +396,6 @@ namespace
 	}(); // const auto unit_test_to_string
 #endif // #ifndef NDEBUG
 
-VI_OPTIMIZE_OFF
 	duration_t seconds_per_tick()
 	{
 		auto start = []
@@ -428,10 +427,17 @@ VI_OPTIMIZE_OFF
 		static constexpr auto CNT = 500U;
 
 		static auto gauge_zero = []
+/*
 			{	const auto start = vi_tmGetTicks();
 				vi_tmFinish(nullptr, "", start, 1);
 			};
-
+/*/
+			{	auto total = vi_tmTotalTicks(nullptr, "", 1);
+				const auto start = vi_tmGetTicks();
+				const auto finish = vi_tmGetTicks();
+				vi_tmAdd(total, finish - start);
+			};
+//*/
 		auto start = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
 				for (auto cnt = 5; cnt; --cnt)
@@ -466,6 +472,7 @@ VI_OPTIMIZE_OFF
 		return duration_t(dirty - pure) / (EXT * CNT);
 	}
 
+VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{	constexpr auto CNT = 500U;
 
@@ -754,7 +761,7 @@ VI_OPTIMIZE_ON
 	};
 } // namespace {
 
-VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h,vi_tmLogSTR_t fn, void* data, int flagsa)
+VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, vi_tmLogSTR_t fn, void* data, int flagsa)
 {	report_flags_t flags = 0;
 	static_assert(sizeof(flags) == sizeof(flagsa));
 	std::memcpy(&flags, &flagsa, sizeof(flags));

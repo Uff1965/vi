@@ -57,7 +57,7 @@ struct vi_tmInstance_t
 
 	explicit vi_tmInstance_t(int reserve)
 	{	storage_.max_load_factor(MAX_LOAD_FACTOR);
-		storage_.reserve(reserve > 0 ? reserve : storage_capacity);
+		storage_.reserve(reserve >= 0 ? reserve : storage_capacity);
 	}
 
 	static vi_tmInstance_t& global()
@@ -66,7 +66,7 @@ struct vi_tmInstance_t
 	}
 
 	void init(int reserve)
-	{	if (reserve > 0)
+	{	if (reserve >= 0)
 		{	std::lock_guard lock{ storage_guard_ };
 			storage_.reserve(reserve);
 		}
@@ -116,7 +116,7 @@ struct vi_tmInstance_t
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 void VI_TM_CALL vi_tmInit(int reserve)
-{	if (reserve > 0)
+{	if (reserve >= 0)
 	{	storage_capacity = reserve;
 	}
 	vi_tmInstance_t::global().init(-1);

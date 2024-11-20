@@ -109,12 +109,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #endif
 // Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef VI_STD(uint64_t) vi_tmTicks_t;
-typedef int (VI_SYS_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
-typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 #ifdef __cplusplus
+	using vi_tmTicks_t = std::uint64_t;
 	using vi_tmAtomicTicks_t = std::atomic<vi_tmTicks_t>;
 #else
+	typedef uint64_t vi_tmTicks_t;
 	typedef _Atomic(vi_tmTicks_t) vi_tmAtomicTicks_t;
 #endif
 
@@ -163,13 +162,14 @@ extern "C" {
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef struct vi_tmInstance_t* VI_TM_HANDLE;
+	typedef int (VI_SYS_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 
 	VI_TM_API void VI_TM_CALL vi_tmInit(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmFinit();
 	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
 	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt VI_DEFAULT(1)) VI_NOEXCEPT;
-	inline void vi_tmAdd(vi_tmAtomicTicks_t *total, vi_tmTicks_t ticks)
+	static inline void vi_tmAdd(vi_tmAtomicTicks_t *total, vi_tmTicks_t ticks) VI_NOEXCEPT
 	{	VI_STD(atomic_fetch_add_explicit)(total, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
@@ -184,6 +184,15 @@ extern "C" {
 		vi_tmAtomicTicks_t *total = vi_tmTotalTicks(h, name, amount);
 		vi_tmAdd(total, finish - start);
 	}
+	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
+	{	return VI_STD(fputs)(str, VI_R_CAST(FILE*, data));
+	}
+
+#ifdef __cplusplus
+	using vi_tmLogSTR_t = decltype(&vi_tmReportCallback); // Must be compatible with std::fputs!
+#else
+	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
+#endif
 
 	enum vi_tmReportFlags_e {
 		vi_tmSortByTime = 0x00,
@@ -201,7 +210,7 @@ extern "C" {
 	};
 	VI_TM_API int VI_TM_CALL vi_tmReport
 	(	VI_TM_HANDLE h,
-		vi_tmLogSTR_t callback VI_DEFAULT(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs)),
+		vi_tmLogSTR_t callback VI_DEFAULT(vi_tmReportCallback),
 		void* data VI_DEFAULT(stdout),
 		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
 	);
@@ -258,9 +267,11 @@ namespace vi_tm
 	};
 
 	class init_t
-	{	std::string title_ = "Timing report:\n";
-		vi_tmLogSTR_t cb_ = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs);
-		void* data_ = reinterpret_cast<void*>(stdout);
+	{	static inline constexpr auto default_cb = &vi_tmReportCallback;
+		static inline const auto default_data = reinterpret_cast<void*>(stdout);
+		std::string title_ = "Timing report:\n";
+		vi_tmLogSTR_t cb_ = default_cb;
+		void* data_ = default_data;
 		int flags_ = 0;
 		int reserve_ = -1;
 	public:
@@ -272,25 +283,25 @@ namespace vi_tm
 		{	vi_tmInit(reserve_);
 		}
 		template<typename T, typename... Args>
-		void init(T &&a, Args&&... args)
+		void init(T &&v, Args&&... args)
 		{
-			if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<T>>, vi_tmReportFlags_e>)
-			{	flags_ |= a;
+			if constexpr (std::is_same_v<vi_tmReportFlags_e, std::remove_cv_t<std::remove_reference_t<T>>>)
+			{	flags_ |= v;
 			}
 			else if constexpr (std::is_integral_v<T>)
 			{	assert(reserve_ == -1);
-				reserve_ = a;
+				reserve_ = v;
 			}
-			else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<T>>, vi_tmLogSTR_t>)
-			{	assert(reinterpret_cast<vi_tmLogSTR_t>(&std::fputs) == cb_ && nullptr != a);
-				cb_ = a;
+			else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::remove_cv_t<std::remove_reference_t<T>>>)
+			{	assert(default_cb == cb_ && nullptr != v);
+				cb_ = v;
 			}
 			else if constexpr (std::is_pointer_v<T>)
-			{	assert(reinterpret_cast<void*>(stdout) == data_);
-				data_ = a;
+			{	assert(default_data == data_);
+				data_ = v;
 			}
 			else if constexpr (std::is_convertible_v<T, decltype(title_)>)
-			{	title_ = a;
+			{	title_ = v;
 			}
 			else
 			{	assert(false);
