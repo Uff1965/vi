@@ -125,7 +125,7 @@ extern "C" {
 #ifndef vi_tmGetTicks
 #	if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
 		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-		{	VI_STD(uint32_t) _; // будет удалён оптимизатором
+		{	VI_STD(uint32_t) _; // Will be removed by the optimizer.
 			const VI_STD(uint64_t) result = __rdtscp(&_);
 			//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
 			//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
@@ -185,7 +185,7 @@ extern "C" {
 		vi_tmAdd(total, finish - start);
 	}
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
-	{	return VI_STD(fputs)(str, VI_R_CAST(FILE*, data));
+	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
 
 #ifdef __cplusplus
