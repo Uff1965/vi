@@ -28,9 +28,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	pragma once
 
 #	define VI_TM_VERSION_MAJOR 0
-#	define VI_TM_VERSION_MINOR 9
+#	define VI_TM_VERSION_MINOR 10
 #	define VI_TM_VERSION_PATCH 1
-#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 1000U + (VI_TM_VERSION_PATCH))
+#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
 
 #if defined(_WIN32)

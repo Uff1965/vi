@@ -143,7 +143,7 @@ namespace
 			else { k = { "Gs"sv, 1e-9 }; }
 
 			std::ostringstream ss;
-			ss << std::fixed << std::setprecision(dec) << sec * k.factor_ << k.suffix_;
+			ss << std::fixed << std::setprecision(dec) << sec * k.factor_ << ' ' << k.suffix_;
 			return ss.str();
 		}
 
@@ -317,58 +317,58 @@ namespace
 		} //-V802 //-V730
 		samples[] = {
 #	define ITM5(E, precition, dec, expected) {__LINE__, 5.555'555'555'555'555e##E, expected, precition, dec}
-			ITM5(-2, 5, 0, "55556us"),
-			ITM5(-9, 4, 1, "5.6ns"),
-			ITM5(  0, 2, 1, "5.6s "),
-			ITM5(-12, 2, 1, "0.0ps"),
-			ITM5(-9, 3, 1, "5.6ns"),
-			ITM5(-2, 5, 2, "55.56ms"),
-			ITM5(-4, 5, 2, "555.56us"),
+			ITM5(-2, 5, 0, "55556 us"),
+			ITM5(-9, 4, 1, "5.6 ns"),
+			ITM5(  0, 2, 1, "5.6 s "),
+			ITM5(-12, 2, 1, "0.0 ps"),
+			ITM5(-9, 3, 1, "5.6 ns"),
+			ITM5(-2, 5, 2, "55.56 ms"),
+			ITM5(-4, 5, 2, "555.56 us"),
 #	undef ITM5
 #	define ITM(v, ...) {__LINE__, (v), __VA_ARGS__}
-			{__LINE__, 0.0_ps, "0.0ps"},
-			{__LINE__, 0.123456789us, "123.5ns", 4},
-			{__LINE__, 1.23456789s, "1s ", 1, 0},
-			{__LINE__, 1.23456789s, "1.2s ", 3},
-			{__LINE__, 1.23456789s, "1.2s "},
-			{__LINE__, 1.23456789us, "1.2us"},
-			{__LINE__, 1004.4ns, "1.0us", 2},
-			{__LINE__, 12.3456789s, "10s ", 1, 0},
-			{__LINE__, 12.3456789s, "12.3s ", 3},
-			{__LINE__, 12.3456789us, "12.3us", 3},
-			{__LINE__, 12.3456s, "12.0s "},
-			{__LINE__, 12.34999999ms, "10ms", 1, 0},
-			{__LINE__, 12.34999999ms, "12.3ms", 3},
-			{__LINE__, 12.34999999ms, "12.3ms", 4},
-			{__LINE__, 12.4999999ms, "12.0ms"},
-			{__LINE__, 12.4999999ms, "12.5ms", 3},
-			{__LINE__, 12.5000000ms, "13.0ms"},
-			{__LINE__, 123.456789ms, "123.0ms", 3},
-			{__LINE__, 123.456789us, "120.0us"},
-			{__LINE__, 123.4999999ms, "123.5ms", 4},
-			{__LINE__, 1234.56789us, "1.2ms"},
-			{__LINE__, 245.0_ps, "250.0ps"},
-			{__LINE__, 49.999_ps, "50.0ps"},
-			{__LINE__, 50.0_ps, "50.0ps"},
-			{__LINE__, 9.49999_ps, "0.0ps"},
-			{__LINE__, 9.9999_ps, "10.0ps"}, // The lower limit of accuracy is 10ps.
-			{__LINE__, 9.999ns, "10.0ns"},
-			{__LINE__, 99.49999_ps, "99.0ps"},
-			{__LINE__, 99.4999ns, "99.0ns"},
-			{__LINE__, 99.4ms, "99.0ms"},
-			{__LINE__, 99.5_ps, "100.0ps"},
-			{__LINE__, 99.5ms, "100.0ms"},
-			{__LINE__, 99.5ns, "100.0ns"},
-			{__LINE__, 99.5us, "100.0us"},
-			{__LINE__, 99.999_ps, "100.0ps"},
-			{__LINE__, 999.0_ps, "1.0ns"},
-			{__LINE__, 999.45ns, "1us", 1, 0},
-			{__LINE__, 999.45ns, "1.0us", 2},
-			{__LINE__, 999.45ns, "999.0ns", 3},
-			{__LINE__, 999.45ns, "999.5ns", 4},
-			{__LINE__, 999.45ns, "999.45ns", 5, 2},
-			{__LINE__, 999.55ns, "1.0us", 3},
-			{__LINE__, 99ms, "99.0ms"},
+			{__LINE__, 0.0_ps, "0.0 ps"},
+			{__LINE__, 0.123456789us, "123.5 ns", 4},
+			{__LINE__, 1.23456789s, "1 s ", 1, 0},
+			{__LINE__, 1.23456789s, "1.2 s ", 3},
+			{__LINE__, 1.23456789s, "1.2 s "},
+			{__LINE__, 1.23456789us, "1.2 us"},
+			{__LINE__, 1004.4ns, "1.0 us", 2},
+			{__LINE__, 12.3456789s, "10 s ", 1, 0},
+			{__LINE__, 12.3456789s, "12.3 s ", 3},
+			{__LINE__, 12.3456789us, "12.3 us", 3},
+			{__LINE__, 12.3456s, "12.0 s "},
+			{__LINE__, 12.34999999ms, "10 ms", 1, 0},
+			{__LINE__, 12.34999999ms, "12.3 ms", 3},
+			{__LINE__, 12.34999999ms, "12.3 ms", 4},
+			{__LINE__, 12.4999999ms, "12.0 ms"},
+			{__LINE__, 12.4999999ms, "12.5 ms", 3},
+			{__LINE__, 12.5000000ms, "13.0 ms"},
+			{__LINE__, 123.456789ms, "123.0 ms", 3},
+			{__LINE__, 123.456789us, "120.0 us"},
+			{__LINE__, 123.4999999ms, "123.5 ms", 4},
+			{__LINE__, 1234.56789us, "1.2 ms"},
+			{__LINE__, 245.0_ps, "250.0 ps"},
+			{__LINE__, 49.999_ps, "50.0 ps"},
+			{__LINE__, 50.0_ps, "50.0 ps"},
+			{__LINE__, 9.49999_ps, "0.0 ps"},
+			{__LINE__, 9.9999_ps, "10.0 ps"}, // The lower limit of accuracy is 10ps.
+			{__LINE__, 9.999ns, "10.0 ns"},
+			{__LINE__, 99.49999_ps, "99.0 ps"},
+			{__LINE__, 99.4999ns, "99.0 ns"},
+			{__LINE__, 99.4ms, "99.0 ms"},
+			{__LINE__, 99.5_ps, "100.0 ps"},
+			{__LINE__, 99.5ms, "100.0 ms"},
+			{__LINE__, 99.5ns, "100.0 ns"},
+			{__LINE__, 99.5us, "100.0 us"},
+			{__LINE__, 99.999_ps, "100.0 ps"},
+			{__LINE__, 999.0_ps, "1.0 ns"},
+			{__LINE__, 999.45ns, "1 us", 1, 0},
+			{__LINE__, 999.45ns, "1.0 us", 2},
+			{__LINE__, 999.45ns, "999.0 ns", 3},
+			{__LINE__, 999.45ns, "999.5 ns", 4},
+			{__LINE__, 999.45ns, "999.45 ns", 5, 2},
+			{__LINE__, 999.55ns, "1.0 us", 3},
+			{__LINE__, 99ms, "99.0 ms"},
 #	undef ITM
 		};
 
@@ -427,17 +427,9 @@ namespace
 		static constexpr auto CNT = 500U;
 
 		static auto gauge_zero = []
-/*
 			{	const auto start = vi_tmGetTicks();
 				vi_tmFinish(nullptr, "", start, 1);
 			};
-/*/
-			{	auto total = vi_tmTotalTicks(nullptr, "", 1);
-				const auto start = vi_tmGetTicks();
-				const auto finish = vi_tmGetTicks();
-				vi_tmAdd(total, finish - start);
-			};
-//*/
 		auto start = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
 				for (auto cnt = 5; cnt; --cnt)
@@ -452,14 +444,14 @@ namespace
 
 		auto s = start();
 		for (auto cnt = CNT; cnt; --cnt)
-		{	gauge_zero(); gauge_zero();
+		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 		}
 		const auto pure = ch::steady_clock::now() - s;
 
 		s = start();
 		static constexpr auto EXT = 20U;
 		for (auto cnt = CNT; cnt; --cnt)
-		{	gauge_zero(); gauge_zero();
+		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 
 			// EXT calls
 			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
