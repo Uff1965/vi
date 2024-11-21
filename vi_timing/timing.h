@@ -74,26 +74,27 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	else
 #		define VI_TM_CALL __fastcall
 #	endif
+
 #	ifdef VI_TM_EXPORTS
 #		define VI_TM_API __declspec(dllexport)
 #	elif defined(VI_TM_SHARED)
 #		define VI_TM_API __declspec(dllimport)
-#	else
-#		define VI_TM_API
-#	endif
-#	ifdef VI_TM_SHARED
+
 #		ifdef NDEBUG
 #			pragma comment(lib, "vi_timing_s.lib")
 #		else
 #			pragma comment(lib, "vi_timing_sd.lib")
 #		endif
-#	elif !defined(VI_TM_EXPORTS)
+#	else
+#		define VI_TM_API
+
 #		ifdef NDEBUG
 #			pragma comment(lib, "vi_timing.lib")
 #		else
 #			pragma comment(lib, "vi_timing_d.lib")
 #		endif
 #	endif
+
 #elif defined(__ANDROID__)
 #	define VI_TM_DISABLE "Android not supported yet."
 #elif defined (__linux__)
