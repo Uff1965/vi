@@ -308,7 +308,7 @@ namespace
 
 	const auto unit_test_to_string = []
 	{
-		static constexpr struct
+		static const struct
 		{	int line_{}; //-V802
 			duration_t original_;
 			std::string_view expected_;
@@ -316,7 +316,7 @@ namespace
 			unsigned char dec_ = 1;
 		} //-V802 //-V730
 		samples[] = {
-#	define ITM5(E, precition, dec, expected) {__LINE__, 5.555'555'555'555'555e##E, expected, precition, dec}
+#	define ITM5(E, precition, dec, expected) {__LINE__, 5.555'555'555'555 * std::pow(10, E), expected, precition, dec}
 			ITM5(-2, 5, 0, "55556 us"),
 			ITM5(-9, 4, 1, "5.6 ns"),
 			ITM5(  0, 2, 1, "5.6 s "),
