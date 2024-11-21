@@ -159,7 +159,7 @@ namespace
 
 #ifndef NDEBUG
 	const auto unit_test_round = []
-	{	static constexpr struct
+	{	static const struct
 		{	int line_; //-V802
 			double original_;
 			double expected_;
@@ -176,7 +176,7 @@ namespace
 			{__LINE__, 9.999'9, 10.0, 4, 1},
 			{__LINE__, 9.999'9, 10.0, 3, 2},
 			{__LINE__, 9.999'9, 10.0, 4, 2},
-#	define ITM(E, precition, dec, expected) {__LINE__, VI_STR_GUM_AUX(5.555'555'555'555e, E), expected, precition, dec}
+#	define ITM(E, precition, dec, expected) {__LINE__, 5.555'555'555'555 * std::pow(10, E), expected, precition, dec}
 			ITM(-3, 1, 0,   0.006),
 			ITM(-2, 1, 0,   0.060),
 			ITM(-1, 1, 0,   0.600),
