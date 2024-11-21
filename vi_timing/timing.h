@@ -39,10 +39,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <time.h> // for clock_gettime
 #endif
 
-#ifdef _MSC_VER
+#if defined(_M_X64) || defined(_M_AMD64) // MSVC on x86-64
 #	include <intrin.h>
 #	pragma intrinsic(__rdtscp, _mm_lfence)
-#elif defined(__GNUC__)
+#elif defined(__x86_64__) || defined(__amd64__) // GCC on x86_64
 #	include <x86intrin.h>
 #endif
 
