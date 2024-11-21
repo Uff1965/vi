@@ -72,16 +72,26 @@ VI_OPTIMIZE_ON
 
 int main()
 {
+#ifdef NDEBUG
+	static constexpr char build_type[] = "Release";
+#else
+	static constexpr char build_type[] = "Debug";
+#endif
+
 	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
 #pragma warning(suppress: 4996)
-	std::cout << "Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") << std::endl;
+	std::cout <<
+		"Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
+		"Build type: " << build_type << "\n" <<
+		std::endl;
 
 	{
 		std::cout <<
-			"Build type: " << static_cast<const char*>(vi_tmInfo(VI_TM_BUILDTYPE)) << "\n"
-			"Ver: " << reinterpret_cast<std::intptr_t>(VI_TM_INFO()) << "\n"
-			"Version: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
-			"Compile time: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_TIME)) << "\n" <<
+			"Information about the \'vi_timing\' library:" << "\n"
+			"\tBuild type: " << static_cast<const char*>(vi_tmInfo(VI_TM_BUILDTYPE)) << "\n"
+			"\tVer: " << reinterpret_cast<std::intptr_t>(VI_TM_INFO()) << "\n"
+			"\tVersion: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
+			"\tCompile time: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_TIME)) << "\n" <<
 			std::endl;
 	}
 
