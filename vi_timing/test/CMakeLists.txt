@@ -20,7 +20,7 @@ set(FILE_GROUP
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
-set(APPEND OUTPUT_NAME_SUFFIX "")
+set(OUTPUT_NAME_SUFFIX "")
 if(BUILD_SHARED_LIBS)
     string(APPEND OUTPUT_NAME_SUFFIX "s")
 endif()
