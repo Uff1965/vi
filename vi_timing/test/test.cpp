@@ -79,24 +79,22 @@ int main()
 #endif
 
 	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
-#pragma warning(suppress: 4996)
 	std::cout <<
+#pragma warning(suppress: 4996)
 		"Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
 		"Build type: " << build_type << "\n" <<
 		std::endl;
 
-	{
-		std::cout <<
-			"Information about the \'vi_timing\' library:" << "\n"
-			"\tBuild type: " << static_cast<const char*>(vi_tmInfo(VI_TM_BUILDTYPE)) << "\n"
-			"\tVer: " << reinterpret_cast<std::intptr_t>(VI_TM_INFO()) << "\n"
-			"\tVersion: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
-			"\tCompile time: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_TIME)) << "\n" <<
-			std::endl;
-	}
+	std::cout <<
+		"Information about the \'vi_timing\' library:" << "\n"
+		"\tBuild type: " << static_cast<const char*>(vi_tmInfo(VI_TM_BUILDTYPE)) << "\n"
+		"\tVer: " << reinterpret_cast<std::intptr_t>(VI_TM_INFO()) << "\n"
+		"\tVersion: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
+		"\tCompile time: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_TIME)) << "\n" <<
+		std::endl;
 
-	struct space_out final: std::numpunct<char> {
-		char do_thousands_sep() const override { return '\''; }  // separate with '
+	struct space_out final: std::numpunct<char>
+	{	char do_thousands_sep() const override { return '\''; }  // separate with '
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));

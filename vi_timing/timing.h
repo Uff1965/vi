@@ -192,7 +192,7 @@ extern "C" {
 #ifdef __cplusplus
 	using vi_tmLogSTR_t = decltype(&vi_tmReportCallback); // Must be compatible with std::fputs!
 #else
-	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
+	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char*, void*); // Must be compatible with std::fputs!
 #endif
 
 	enum vi_tmReportFlags_e {
@@ -293,7 +293,7 @@ namespace vi_tm
 			{	assert(reserve_ == -1);
 				reserve_ = v;
 			}
-			else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::remove_cv_t<std::remove_reference_t<T>>>)
+			else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::decay_t<T>>)
 			{	assert(default_cb == cb_ && nullptr != v);
 				cb_ = v;
 			}
