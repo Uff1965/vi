@@ -751,6 +751,37 @@ VI_OPTIMIZE_ON
 			return init + fn_(result.c_str(), data_);
 		}
 	};
+
+	static constexpr char MM[][4]{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+	constexpr unsigned TIME_STAMP()
+	{	auto ch = [](const char *b, std::size_t n) { return b[n] == ' ' ? 0 : b[n] - '0'; };
+
+		//__DATA__ "Mmm dd yyyy"
+		unsigned int result = 0U;
+		result += ch(__DATE__, 9) * 10 + ch(__DATE__, 10);
+
+		result *= 100;
+		for (unsigned n = 0; n < std::size(MM); ++n)
+		{	auto p = MM[n];
+			if (p[0] == __DATE__[0] && p[1] == __DATE__[1] && p[2] == __DATE__[2])
+			{	result += n + 1;
+				break;
+			}
+		}
+
+		result *= 100;
+		result += ch(__DATE__, 4) * 10 + ch(__DATE__, 5);
+
+		//__TIME__ "hh:mm:ss"
+		result *= 100;
+		result += ch(__TIME__, 0) * 10 + ch(__TIME__, 1);
+
+		result *= 100;
+		result += ch(__TIME__, 3) * 10 + ch(__TIME__, 4);
+
+		return result;
+	}
 } // namespace {
 
 VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, vi_tmLogSTR_t fn, void* data, int flagsa)
@@ -798,6 +829,12 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 			std::memcpy(&result, &ver, sizeof(result));
 		} break;
 
+		case VI_TM_INFO_BUILD_NUMBER:
+		{	static constexpr std::intptr_t ver = TIME_STAMP();
+			static_assert(sizeof(result) == sizeof(ver));
+			std::memcpy(&result, &ver, sizeof(result));
+		} break;
+
 		case VI_TM_INFO_VERSION:
 		{	static const char *const version = []
 				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 1'000); //-V590
@@ -806,8 +843,9 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 #	else
 					static constexpr char type[] = "static";
 #	endif
-					static std::array<char, std::size("99.999.999 ") - 1 + std::size(type)> buff;
-					snprintf(buff.data(), buff.size(), "%u.%u.%u %s", VI_TM_VERSION_MAJOR, VI_TM_VERSION_MINOR, VI_TM_VERSION_PATCH, type);
+					static std::array<char, std::size("99.999.9999 b.YYMMDDHHmm") - 1 + std::size(type)> buff;
+					const auto sz = snprintf(buff.data(), buff.size(), "%s b.%u %s", VI_TM_VERSION_STR, TIME_STAMP(), type);
+					assert(sz < buff.size());
 					return buff.data();
 				}();
 			result = version;

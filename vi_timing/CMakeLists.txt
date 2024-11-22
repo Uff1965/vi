@@ -44,6 +44,13 @@ endif()
 add_library(${PROJECT_NAME} ${BUILD_TYPE} ${SOURCE_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES DEFINE_SYMBOL "VI_TM_EXPORTS")
 
+add_custom_command(
+    TARGET ${PROJECT_NAME}
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E touch_nocreate "${VI_SOURCE_DIR}/timing_aux.cpp"
+    COMMENT "pre-build command: Change the modification time of the timing_aux.cpp file so that it recompiles and updates BUILD_NUMBER."
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
   C_STANDARD 17

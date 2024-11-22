@@ -89,6 +89,7 @@ int main()
 		"Information about the \'vi_timing\' library:" << "\n"
 		"\tBuild type: " << static_cast<const char*>(vi_tmInfo(VI_TM_BUILDTYPE)) << "\n"
 		"\tVer: " << reinterpret_cast<std::intptr_t>(VI_TM_INFO()) << "\n"
+		"\tBuild number: " << reinterpret_cast<std::intptr_t>(VI_TM_INFO(VI_TM_INFO_BUILD_NUMBER)) << "\n"
 		"\tVersion: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
 		"\tCompile time: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_TIME)) << "\n" <<
 		std::endl;

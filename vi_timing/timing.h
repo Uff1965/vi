@@ -27,9 +27,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TIMING_VI_TIMING_H
 #	pragma once
 
-#	define VI_TM_VERSION_MAJOR 0
-#	define VI_TM_VERSION_MINOR 10
-#	define VI_TM_VERSION_PATCH 1
+#	define VI_TM_VERSION_MAJOR 0	// 0 - 99
+#	define VI_TM_VERSION_MINOR 11	// 0 - 999
+#	define VI_TM_VERSION_PATCH 0	// 0 - 9999
 #	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
 
@@ -218,6 +218,7 @@ extern "C" {
 
 	enum vi_tmInfo_e
 	{	VI_TM_INFO_VER,
+		VI_TM_INFO_BUILD_NUMBER,
 		VI_TM_INFO_VERSION,
 		VI_TM_INFO_TIME,
 		VI_TM_BUILDTYPE,
