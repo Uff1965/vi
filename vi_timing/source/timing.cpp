@@ -28,6 +28,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <timing.h>
 
+#include <array>
 #include <cassert>
 #include <mutex>
 #include <string>
@@ -35,6 +36,42 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
+	constexpr char MM[][4]{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	constexpr unsigned TIME_STAMP()
+	{	auto c2d = [](const char *b, std::size_t n) { return b[n] == ' ' ? 0 : b[n] - '0'; };
+		auto date_c2d = [c2d](std::size_t n) { return c2d(__DATE__, n); };
+		auto time_c2d = [c2d](std::size_t n) { return c2d(__TIME__, n); };
+		unsigned result = 0U;
+		
+		enum {
+		//__DATE__ "MMM DD YYYY"
+			M1 = 0, M2, M3, D1 = 4, D2, Y1 = 7, Y2, Y3, Y4,
+		//__TIME__ "hh:mm:ss"
+			h1 = 0, h2, m1 = 3, m2, s1 = 6, s2,
+		};
+		result += date_c2d(Y3) * 10 + date_c2d(Y4);
+
+		result *= 100;
+		for (unsigned n = 0; n < std::size(MM); ++n)
+		{	auto const p = MM[n];
+			if (p[M1] == __DATE__[M1] && p[M2] == __DATE__[M2] && p[M3] == __DATE__[M3])
+			{	result += n + 1;
+				break;
+			}
+		}
+
+		result *= 100;
+		result += date_c2d(D1) * 10 + date_c2d(D2);
+
+		result *= 100;
+		result += time_c2d(h1) * 10 + time_c2d(h2);
+
+		result *= 100;
+		result += time_c2d(m1) * 10 + time_c2d(m2);
+
+		return result;
+	}
+
 	struct item_t
 	{	vi_tmAtomicTicks_t total_ = 0U;
 		std::size_t counter_ = 0U;
@@ -144,6 +181,58 @@ void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
 
 int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
 {	return from_handle(h).results(fn, data);
+}
+
+const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
+{	const void *result = nullptr;
+	switch (info)
+	{
+		case VI_TM_INFO_VER:
+		{	static constexpr std::intptr_t ver = VI_TM_VERSION;
+			static_assert(sizeof(result) == sizeof(ver));
+			std::memcpy(&result, &ver, sizeof(result));
+		} break;
+
+		case VI_TM_INFO_BUILDNUMBER:
+		{	static constexpr std::intptr_t ver = TIME_STAMP();
+			static_assert(sizeof(result) == sizeof(ver));
+			std::memcpy(&result, &ver, sizeof(result));
+		} break;
+
+		case VI_TM_INFO_VERSION:
+		{	static const char *const version = []
+				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 1'000); //-V590
+#	ifdef VI_TM_SHARED
+					static constexpr char type[] = "shared";
+#	else
+					static constexpr char type[] = "static";
+#	endif
+					static std::array<char, std::size("99.999.9999 b.YYMMDDHHmm") - 1 + std::size(type)> buff;
+					const auto sz = snprintf(buff.data(), buff.size(), VI_TM_VERSION_STR " b.%u %s", TIME_STAMP(), type);
+					assert(sz < buff.size());
+					return buff.data();
+				}();
+			result = version;
+		} break;
+
+		case VI_TM_INFO_BUILDTIME:
+		{	result = VI_STR(__DATE__) " " VI_STR(__TIME__);
+		} break;
+
+		case VI_TM_INFO_BUILDTYPE:
+		{	
+#ifdef NDEBUG
+			result = "Release";
+#else
+			result = "Debug";
+#endif
+		} break;
+
+		default:
+		{	assert(false);
+		} break;
+	}
+	return result;
 }
 
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

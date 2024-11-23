@@ -175,10 +175,18 @@ extern "C" {
 	}
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
+	enum vi_tmInfo_e
+	{	VI_TM_INFO_VER,
+		VI_TM_INFO_VERSION,
+		VI_TM_INFO_BUILDTYPE,
+		VI_TM_INFO_BUILDNUMBER,
+		VI_TM_INFO_BUILDTIME,
+	};
+	VI_NODISCARD VI_TM_API const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned int threads VI_DEFAULT(0), unsigned int ms VI_DEFAULT(500));
+	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEFAULT(0), unsigned ms VI_DEFAULT(500));
 
 	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	const vi_tmTicks_t finish = vi_tmGetTicks(); // First of all!!!
@@ -215,15 +223,6 @@ extern "C" {
 		void* data VI_DEFAULT(stdout),
 		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
 	);
-
-	enum vi_tmInfo_e
-	{	VI_TM_INFO_VER,
-		VI_TM_INFO_BUILD_NUMBER,
-		VI_TM_INFO_VERSION,
-		VI_TM_INFO_TIME,
-		VI_TM_BUILDTYPE,
-	};
-	VI_NODISCARD VI_TM_API const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
