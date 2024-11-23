@@ -169,7 +169,7 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmFinit();
 	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
-	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt VI_DEFAULT(1)) VI_NOEXCEPT;
+	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt) VI_NOEXCEPT;
 	static inline void vi_tmAdd(vi_tmAtomicTicks_t *total, vi_tmTicks_t ticks) VI_NOEXCEPT
 	{	VI_STD(atomic_fetch_add_explicit)(total, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
 	}
