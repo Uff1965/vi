@@ -30,6 +30,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <array>
 #include <cassert>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
