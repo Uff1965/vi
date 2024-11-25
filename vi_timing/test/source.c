@@ -36,10 +36,16 @@ void bar_c(void)
 		vi_tmFinish(htimer, "yyy", s, 10);
 
 		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
-		vi_tmClear(htimer, "xxx");
 		puts("");
+
+		vi_tmClear(htimer, "xxx");
+		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
+		puts("");
+
+		vi_tmClear(htimer, NULL);
 		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
 		vi_tmClose(htimer);
+		puts("");
 	}
 }
 
