@@ -28,151 +28,148 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	pragma once
 
 #	define VI_TM_VERSION_MAJOR 0	// 0 - 99
-#	define VI_TM_VERSION_MINOR 11	// 0 - 999
+#	define VI_TM_VERSION_MINOR 12	// 0 - 999
 #	define VI_TM_VERSION_PATCH 0	// 0 - 9999
 #	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
 
-#if defined(_WIN32)
-#	include <Windows.h>
-#elif defined(__linux__)
-#	include <time.h> // for clock_gettime
-#endif
+#	if defined(_WIN32)
+#		include <Windows.h>
+#	elif defined(__linux__)
+#		include <time.h> // for clock_gettime
+#	endif
 
-#if defined(_M_X64) || defined(_M_AMD64) // MSVC on x86-64
-#	include <intrin.h>
-#	pragma intrinsic(__rdtscp, _mm_lfence)
-#elif defined(__x86_64__) || defined(__amd64__) // GCC on x86_64
-#	include <x86intrin.h>
-#endif
+#	if defined(_M_X64) || defined(_M_AMD64) // MSVC on x86-64
+#		include <intrin.h>
+#		pragma intrinsic(__rdtscp, _mm_lfence)
+#	elif defined(__x86_64__) || defined(__amd64__) // GCC on x86_64
+#		include <x86intrin.h>
+#	endif
 
-#ifdef __cplusplus
-#	include <atomic>
-#	include <cassert>
-#	include <cstdint>
-#	include <cstdio>
-#	include <string>
-#else
-#	ifdef __STDC_NO_ATOMICS__
+#	ifdef __cplusplus
+#		include <atomic>
+#		include <cassert>
+#		include <cstdint>
+#		include <cstdio>
+#		include <string>
+#	else
+#		ifdef __STDC_NO_ATOMICS__
 //		At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
 //		"we left out support for some C11 optional features such as atomics" [Microsoft
 //		https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
-#		error "Atomic objects and the atomic operation library are not supported."
+#			error "Atomic objects and the atomic operation library are not supported."
+#		endif
+#		include <stdatomic.h>
+#		include <stdint.h>
+#		include <stdio.h>
 #	endif
-#	include <stdatomic.h>
-#	include <stdint.h>
-#	include <stdio.h>
-#endif
 
-#include "common.h"
+#	include "common.h"
 
 // Define VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
-#if defined(_WIN32) // Windows x86 or x64
-#	define VI_SYS_CALL __cdecl
-#	ifdef _WIN64
+#	if defined(_WIN32) // Windows x86 or x64
+#		define VI_SYS_CALL __cdecl
+#		ifdef _WIN64
+#			define VI_TM_CALL
+#		else
+#			define VI_TM_CALL __fastcall
+#		endif
+
+#		ifdef VI_TM_EXPORTS
+#			define VI_TM_API __declspec(dllexport)
+#		elif defined(VI_TM_SHARED)
+#			define VI_TM_API __declspec(dllimport)
+
+#			ifdef NDEBUG
+#				pragma comment(lib, "vi_timing_s.lib")
+#			else
+#				pragma comment(lib, "vi_timing_sd.lib")
+#			endif
+#		else
+#			define VI_TM_API
+
+#			ifdef NDEBUG
+#				pragma comment(lib, "vi_timing.lib")
+#			else
+#				pragma comment(lib, "vi_timing_d.lib")
+#			endif
+#		endif
+
+#	elif defined(__ANDROID__)
+#		define VI_TM_DISABLE "Android not supported yet."
+#	elif defined (__linux__)
+#		define VI_SYS_CALL
 #		define VI_TM_CALL
-#	else
-#		define VI_TM_CALL __fastcall
-#	endif
-
-#	ifdef VI_TM_EXPORTS
-#		define VI_TM_API __declspec(dllexport)
-#	elif defined(VI_TM_SHARED)
-#		define VI_TM_API __declspec(dllimport)
-
-#		ifdef NDEBUG
-#			pragma comment(lib, "vi_timing_s.lib")
+#		ifdef VI_TM_EXPORTS
+#			define VI_TM_API __attribute__((visibility("default")))
 #		else
-#			pragma comment(lib, "vi_timing_sd.lib")
+#			define VI_TM_API
 #		endif
 #	else
-#		define VI_TM_API
-
-#		ifdef NDEBUG
-#			pragma comment(lib, "vi_timing.lib")
-#		else
-#			pragma comment(lib, "vi_timing_d.lib")
-#		endif
+#		define VI_TM_DISABLE "Unknown platform!"
 #	endif
-
-#elif defined(__ANDROID__)
-#	define VI_TM_DISABLE "Android not supported yet."
-#elif defined (__linux__)
-#	define VI_SYS_CALL
-#	define VI_TM_CALL
-#	ifdef VI_TM_EXPORTS
-#		define VI_TM_API __attribute__((visibility("default")))
-#	else
-#		define VI_TM_API
-#	endif
-#else
-#	define VI_TM_DISABLE "Unknown platform!"
-#endif
 // Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-#ifdef __cplusplus
-	using vi_tmTicks_t = std::uint64_t;
-	using vi_tmAtomicTicks_t = std::atomic<vi_tmTicks_t>;
-#else
-	typedef uint64_t vi_tmTicks_t;
-	typedef _Atomic(vi_tmTicks_t) vi_tmAtomicTicks_t;
-#endif
+#	ifdef __cplusplus
+		using vi_tmTicks_t = std::uint64_t;
+#	else
+		typedef uint64_t vi_tmTicks_t;
+#	endif
 
-#ifdef __cplusplus
+#	ifdef __cplusplus
 extern "C" {
-#endif
+#	endif
 
 // Definition of vi_tmGetTicks() function for different platforms. vvvvvvvvvvvv
-#ifndef vi_tmGetTicks
-#	if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-		{	VI_STD(uint32_t) _; // Will be removed by the optimizer.
-			const VI_STD(uint64_t) result = __rdtscp(&_);
-			//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
-			//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
-			//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
-			//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
-			_mm_lfence();
-			return result;
-		}
-#	elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-		{	VI_STD(uint64_t) result;
-			__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
-			return result;
-		}
-#	elif defined(_WIN32) // Windows
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-		{	LARGE_INTEGER cnt;
-			QueryPerformanceCounter(&cnt);
-			return cnt.QuadPart;
-		}
-#	elif defined(__linux__)
-		static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-		{	struct timespec ts;
-			clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-			return 1000000000ULL * ts.tv_sec + ts.tv_nsec;
-		}
-#	else
-#		error "You need to define function(s) for your OS and CPU"
+#	ifndef vi_tmGetTicks
+#		if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
+			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
+			{	VI_STD(uint32_t) _; // Will be removed by the optimizer.
+				const VI_STD(uint64_t) result = __rdtscp(&_);
+				//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
+				//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
+				//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
+				//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
+				_mm_lfence();
+				return result;
+			}
+#		elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
+			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
+			{	VI_STD(uint64_t) result;
+				__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
+				return result;
+			}
+#		elif defined(_WIN32) // Windows
+			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
+			{	LARGE_INTEGER cnt;
+				QueryPerformanceCounter(&cnt);
+				return cnt.QuadPart;
+			}
+#		elif defined(__linux__)
+			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
+			{	struct timespec ts;
+				clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+				return 1000000000ULL * ts.tv_sec + ts.tv_nsec;
+			}
+#		else
+#			error "You need to define function(s) for your OS and CPU"
+#		endif
+		
+#		define vi_tmGetTicks vi_tmGetTicks_impl
 #	endif
-	
-#	define vi_tmGetTicks vi_tmGetTicks_impl
-#endif
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef struct vi_tmInstance_t* VI_TM_HANDLE;
+	typedef struct vi_tmTotal_t* VI_TM_HITEM;
 	typedef int (VI_SYS_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 
 	VI_TM_API void VI_TM_CALL vi_tmInit(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmFinit();
 	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
-	VI_NODISCARD VI_TM_API vi_tmAtomicTicks_t* VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt) VI_NOEXCEPT;
-	static inline void vi_tmAdd(vi_tmAtomicTicks_t *total, vi_tmTicks_t ticks) VI_NOEXCEPT
-	{	VI_STD(atomic_fetch_add_explicit)(total, ticks, VI_MEMORY_ORDER(memory_order_relaxed));
-	}
+	VI_NODISCARD VI_TM_API VI_TM_HITEM VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmAdd(VI_TM_HITEM total, vi_tmTicks_t ticks) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
 	enum vi_tmInfo_e
@@ -190,18 +187,18 @@ extern "C" {
 
 	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
 	{	const vi_tmTicks_t finish = vi_tmGetTicks(); // First of all!!!
-		vi_tmAtomicTicks_t *total = vi_tmTotalTicks(h, name, amount);
+		VI_TM_HITEM total = vi_tmTotalTicks(h, name, amount);
 		vi_tmAdd(total, finish - start);
 	}
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
 
-#ifdef __cplusplus
-	using vi_tmLogSTR_t = decltype(&vi_tmReportCallback); // Must be compatible with std::fputs!
-#else
-	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char*, void*); // Must be compatible with std::fputs!
-#endif
+#	ifdef __cplusplus
+		using vi_tmLogSTR_t = decltype(&vi_tmReportCallback); // Must be compatible with std::fputs!
+#	else
+		typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char*, void*); // Must be compatible with std::fputs!
+#	endif
 
 	enum vi_tmReportFlags_e {
 		vi_tmSortByTime = 0x00,
@@ -226,25 +223,25 @@ extern "C" {
 
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#ifdef __cplusplus
+#	ifdef __cplusplus
 } // extern "C" {
 
 namespace vi_tm
 {
 	class timer_t
-	{	vi_tmAtomicTicks_t& total_;
+	{	VI_TM_HITEM total_;// Order matters!!!
 		const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
 
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
 		timer_t(VI_TM_HANDLE h, const char *name, std::size_t cnt = 1) noexcept
-			: total_{ *vi_tmTotalTicks(h, name, cnt) }
+			: total_{ vi_tmTotalTicks(h, name, cnt) }
 		{
 		}
 		~timer_t() noexcept
 		{	const vi_tmTicks_t finish = vi_tmGetTicks();
-			vi_tmAdd(&total_, finish - start_);
+			vi_tmAdd(total_, finish - start_);
 		}
 	};
 
@@ -322,21 +319,21 @@ namespace vi_tm
 	};
 } // namespace vi_tm {
 
-#	if defined(VI_TM_DISABLE)
-#		define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#		define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#		define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
-#		define VI_TM_CLEAR ((void)0)
-#		define VI_TM_INFO(f) NULL
-#	else
-#		define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
-#		define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
-#		define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
-#		define VI_TM_CLEAR vi_tmClear(NULL, NULL)
-#		define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)
-#	endif
-#	define VI_TM_FUNC VI_TM( VI_FUNCNAME )
+#		if defined(VI_TM_DISABLE)
+#			define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#			define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#			define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
+#			define VI_TM_CLEAR ((void)0)
+#			define VI_TM_INFO(f) NULL
+#		else
+#			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
+#			define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
+#			define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
+#			define VI_TM_CLEAR vi_tmClear(NULL, NULL)
+#			define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)
+#		endif
+#		define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 
-#endif // #ifdef __cplusplus
+#	endif // #ifdef __cplusplus
 
 #endif // #ifndef VI_TIMING_VI_TIMING_H
