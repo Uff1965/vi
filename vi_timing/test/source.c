@@ -9,27 +9,45 @@
 #include <stdint.h>
 #include <threads.h>
 
-//VI_OPTIMIZE_OFF
 void bar_c(void)
 {
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 	thrd_yield();
 
-	{	const vi_tmTicks_t start = vi_tmGetTicks();
+	{	VI_TM_HITEM h = vi_tmTotalTicks(NULL, "bar", 1);
+		const vi_tmTicks_t start = vi_tmGetTicks();
 
 		{
 			thrd_sleep(&(struct timespec) { .tv_nsec = 30000000 }, NULL);
 		}
 
 		const vi_tmTicks_t finish = vi_tmGetTicks();
-		vi_tmAdd(vi_tmTotalTicks(NULL, "bar", 1), finish - start);
+		vi_tmAdd(h, finish - start);
+	}
+
+	{
+		VI_TM_HANDLE htimer = vi_tmCreate(8);
+
+		VI_TM_HITEM hitem = vi_tmTotalTicks(htimer, "xxx", 1);
+		vi_tmTicks_t s = vi_tmGetTicks();
+		Sleep(250);
+		vi_tmTicks_t f = vi_tmGetTicks();
+		vi_tmAdd(hitem, f - s);
+		vi_tmFinish(htimer, "yyy", s, 10);
+
+		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
+		vi_tmClear(htimer, "xxx");
+		puts("");
+		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
+		vi_tmClose(htimer);
 	}
 }
-//VI_OPTIMIZE_ON
 
-//VI_OPTIMIZE_OFF
 void foo_c(void)
 {
+	printf("\n%s...\n", __func__); //-V2600
+	const vi_tmTicks_t foo_tm = vi_tmGetTicks();
+
 	vi_tmWarming(2, 100);
 	vi_tmWarming(16, 100);
 	
@@ -39,10 +57,6 @@ void foo_c(void)
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 
 	bar_c();
-
-	const vi_tmTicks_t foo_tm = vi_tmGetTicks();
-
-	printf("\n%s... ", __func__); //-V2600
 
 	{
 		thrd_yield();
@@ -103,4 +117,3 @@ void foo_c(void)
 	vi_tmFinish(NULL, "foo_c", foo_tm, 1);
 	printf("done\n"); //-V2600
 }
-//VI_OPTIMIZE_ON

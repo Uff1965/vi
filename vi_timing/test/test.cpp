@@ -67,8 +67,26 @@ namespace {
 		std::cout << "v: " << v << "\ndone" << std::endl;
 		return true;
 	}
-}
-VI_OPTIMIZE_ON
+	VI_OPTIMIZE_ON
+
+	void test_instances()
+	{	VI_TM_FUNC;
+		std::cout << "\nAdditional timers...\n";
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> h{ vi_tmCreate(), &vi_tmClose };
+		{	vi_tm::timer_t tm1{ h.get(), "tm1" };
+			{	vi_tm::timer_t tm2{ h.get(), "long, long, long, very long name", 10 };
+				for (int n = 0; n < 10; ++n)
+				{	std::this_thread::sleep_for(100ms);
+					vi_tm::timer_t tm3{ h.get(), "tm3" };
+					vi_tm::timer_t tm4{ h.get(), "tm4" };
+				}
+			}
+			vi_tm::timer_t tm5{ h.get(), "tm2" };
+		}
+		vi_tmReport(h.get());
+		std::cout << "done" << std::endl;
+	}
+} // namespace
 
 int main()
 {
@@ -105,6 +123,7 @@ int main()
 	std::cout << "done" << std::endl;
 
 	foo_c();
+	test_instances();
 	test_multithreaded();
 
 	std::cout << "\nHello, World!\n" << std::endl;

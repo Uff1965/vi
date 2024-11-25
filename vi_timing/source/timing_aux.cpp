@@ -684,7 +684,7 @@ VI_OPTIMIZE_ON
 		const traits_t& traits_;
 		const vi_tmLogSTR_t fn_;
 		void* const data_;
-		std::size_t number_len_{0};
+		std::size_t number_len_{1}; // '#'
 		mutable std::size_t n_{ 0 };
 
 		meterage_formatter_t(const traits_t& traits, vi_tmLogSTR_t fn, void* data)
