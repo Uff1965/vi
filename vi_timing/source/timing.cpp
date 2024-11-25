@@ -29,6 +29,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <timing.h>
 
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <cstring>
 #include <mutex>

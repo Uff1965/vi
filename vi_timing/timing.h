@@ -47,7 +47,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 
 #	ifdef __cplusplus
-#		include <atomic>
 #		include <cassert>
 #		include <cstdint>
 #		include <cstdio>
@@ -59,7 +58,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 //		https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
 #			error "Atomic objects and the atomic operation library are not supported."
 #		endif
-#		include <stdatomic.h>
 #		include <stdint.h>
 #		include <stdio.h>
 #	endif
