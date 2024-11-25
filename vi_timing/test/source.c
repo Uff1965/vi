@@ -30,7 +30,7 @@ void bar_c(void)
 
 		VI_TM_HITEM hitem = vi_tmTotalTicks(htimer, "xxx", 1);
 		vi_tmTicks_t s = vi_tmGetTicks();
-		Sleep(250);
+		thrd_sleep(&(struct timespec) { .tv_nsec = 250000000 }, NULL);
 		vi_tmTicks_t f = vi_tmGetTicks();
 		vi_tmAdd(hitem, f - s);
 		vi_tmFinish(htimer, "yyy", s, 10);
