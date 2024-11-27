@@ -164,9 +164,9 @@ extern "C" {
 
 	VI_TM_API void VI_TM_CALL vi_tmInit(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
-	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
+	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
-	VI_NODISCARD VI_TM_API VI_TM_HITEM VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt) VI_NOEXCEPT;
+	VI_TM_API VI_NODISCARD VI_TM_HITEM VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmAdd(VI_TM_HITEM total, vi_tmTicks_t ticks) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
@@ -177,7 +177,7 @@ extern "C" {
 		VI_TM_INFO_BUILDNUMBER,
 		VI_TM_INFO_BUILDTIME,
 	};
-	VI_NODISCARD VI_TM_API const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
+	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
