@@ -163,7 +163,7 @@ extern "C" {
 	typedef int (VI_SYS_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 
 	VI_TM_API void VI_TM_CALL vi_tmInit(int reserve VI_DEFAULT(-1));
-	VI_TM_API void VI_TM_CALL vi_tmFinit();
+	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
 	VI_NODISCARD VI_TM_API VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
 	VI_NODISCARD VI_TM_API VI_TM_HITEM VI_TM_CALL vi_tmTotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt) VI_NOEXCEPT;
