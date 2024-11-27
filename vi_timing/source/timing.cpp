@@ -202,13 +202,13 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 	switch (info)
 	{
 		case VI_TM_INFO_VER:
-		{	static constexpr std::intptr_t ver = VI_TM_VERSION;
+		{	static constexpr std::uintptr_t ver = VI_TM_VERSION;
 			static_assert(sizeof(result) == sizeof(ver));
 			std::memcpy(&result, &ver, sizeof(result));
 		} break;
 
 		case VI_TM_INFO_BUILDNUMBER:
-		{	static constexpr std::intptr_t ver = TIME_STAMP();
+		{	static constexpr std::uintptr_t ver = TIME_STAMP();
 			static_assert(sizeof(result) == sizeof(ver));
 			std::memcpy(&result, &ver, sizeof(result));
 		} break;
