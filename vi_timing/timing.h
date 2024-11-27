@@ -281,7 +281,7 @@ namespace vi_tm
 		template<typename T, typename... Args>
 		void init(T &&v, Args&&... args)
 		{
-			if constexpr (std::is_same_v<vi_tmReportFlags_e, std::remove_cv_t<std::remove_reference_t<T>>>)
+			if constexpr (std::is_same_v<vi_tmReportFlags_e, std::decay_t<T>>)
 			{	flags_ |= v;
 			}
 			else if constexpr (std::is_integral_v<T>)
