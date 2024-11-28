@@ -181,16 +181,8 @@ void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
 {	delete h;
 }
 
-VI_TM_HITEM VI_TM_CALL vi_tm_TotalTicks(VI_TM_HANDLE h, const char* name, std::size_t amount) noexcept
-{	return to_handle(from_handle(h)->total(name, amount));
-}
-
-void VI_TM_CALL vi_tm_Add(VI_TM_HITEM h, vi_tmTicks_t ticks) noexcept
-{	from_handle(h)->fetch_add(ticks, std::memory_order::memory_order_relaxed);
-}
-
 void VI_TM_CALL vi_tmAdd(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
-{	vi_tm_Add(to_handle(from_handle(h)->total(name, amount)), ticks);
+{	from_handle(to_handle(from_handle(h)->total(name, amount)))->fetch_add(ticks, std::memory_order::memory_order_relaxed);
 }
 
 void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept

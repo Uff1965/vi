@@ -528,7 +528,7 @@ VI_OPTIMIZE_ON
 	constexpr char TitleAmount[] = { "Amount" };
 	constexpr char Ascending [] = { " (^)" };
 	constexpr char Descending[] = { " (v)" };
-	constexpr char TooFew[] = { "<too few>" };
+	constexpr char TooFew[] = { "<insig>" };
 	constexpr char NotAvailable[] = { "<n/a>" };
 
 	struct traits_t

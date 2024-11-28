@@ -180,15 +180,7 @@ extern "C" {
 	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API VI_NODISCARD VI_TM_HITEM VI_TM_CALL vi_tm_TotalTicks(VI_TM_HANDLE h, const char* name, VI_STD(size_t) amt) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tm_Add(VI_TM_HITEM total, vi_tmTicks_t ticks) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tm_Warming(unsigned threads VI_DEFAULT(0), unsigned ms VI_DEFAULT(500));
-
-	static inline void vi_tm_Finish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT
-	{	const vi_tmTicks_t finish = vi_tmGetTicks(); // First of all!!!
-		VI_TM_HITEM total = vi_tm_TotalTicks(h, name, amount);
-		vi_tm_Add(total, finish - start);
-	}
 	static inline int VI_SYS_CALL vi_tm_ReportCallback(const char* str, void* data)
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
@@ -228,37 +220,19 @@ extern "C" {
 namespace vi_tm
 {
 	class timer_t
-	{	VI_TM_HITEM total_;// Order matters!!!
+	{	const VI_TM_HANDLE h_ = nullptr;
+		const char *name_;
+		const std::size_t cnt_;
 		const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
 
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
 	public:
 		timer_t(VI_TM_HANDLE h, const char *name, std::size_t cnt = 1) noexcept
-			: total_{ vi_tm_TotalTicks(h, name, cnt) }
-		{
-		}
-		~timer_t() noexcept
-		{	const vi_tmTicks_t finish = vi_tmGetTicks();
-			vi_tm_Add(total_, finish - start_);
-		}
-	};
-
-	template<std::size_t N>
-	class timer_l_t
-	{	const VI_TM_HANDLE h_ = nullptr;
-		const char (&name_)[N];
-		const std::size_t cnt_;
-		const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
-
-		timer_l_t(const timer_l_t&) = delete;
-		timer_l_t& operator=(const timer_l_t&) = delete;
-	public:
-		timer_l_t(VI_TM_HANDLE h, const char (&name)[N], std::size_t cnt = 1) noexcept
 			: h_{ h }, name_{ name }, cnt_{ cnt }
 		{
 		}
-		~timer_l_t() noexcept
+		~timer_t() noexcept
 		{	const auto finish = vi_tmGetTicks();
 			vi_tmAdd(h_, name_, finish - start_, cnt_);
 		}
@@ -322,14 +296,12 @@ namespace vi_tm
 #		if defined(VI_TM_DISABLE)
 #			define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #			define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#			define VI_TM_EX(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #			define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
 #			define VI_TM_CLEAR ((void)0)
 #			define VI_TM_INFO(f) NULL
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
 #			define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
-#			define VI_TM_EX(...) vi_tm::timer_l_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
 #			define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
 #			define VI_TM_CLEAR vi_tmClear(NULL, NULL)
 #			define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)

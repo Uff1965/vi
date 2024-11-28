@@ -48,7 +48,8 @@ namespace {
 		{	VI_TM("load");
 
 			for (auto n = CNT; n; --n)
-			{	VI_TM(("check_" + std::to_string(n % 4)).c_str()); //-V112
+			{	auto name = "check_" + std::to_string(n % 4);
+				VI_TM(name.c_str()); //-V112
 				v++;
 			}
 		};
