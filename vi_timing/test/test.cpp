@@ -119,7 +119,7 @@ int main()
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
 	std::cout << "Warming... ";
-	vi_tmWarming();
+	vi_tm_Warming();
 	std::cout << "done" << std::endl;
 
 	foo_c();

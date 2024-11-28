@@ -428,7 +428,8 @@ namespace
 
 		static auto gauge_zero = []
 			{	const auto start = vi_tmGetTicks();
-				vi_tmFinish(nullptr, "", start, 1);
+				const auto finish = vi_tmGetTicks();
+				vi_tmAdd(nullptr, "", finish - start, 1);
 			};
 		auto start = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
@@ -511,7 +512,7 @@ VI_OPTIMIZE_ON
 			duration_t duration_;
 
 			properties_t()
-			{	vi_tmWarming(0, 500);
+			{	vi_tm_Warming(0, 500);
 				tick_duration_ = seconds_per_tick();
 				measurement_cost_ = measurement_cost();
 				duration_ = duration();
@@ -788,7 +789,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, vi_tmLogSTR_t fn, void* dat
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }
 
-void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
+void VI_TM_CALL vi_tm_Warming(unsigned int threads_qty, unsigned int ms)
 {
 	if (0 == ms)
 	{	return;
