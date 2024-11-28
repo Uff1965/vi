@@ -528,7 +528,7 @@ VI_OPTIMIZE_ON
 	constexpr char TitleAmount[] = { "Amount" };
 	constexpr char Ascending [] = { " (^)" };
 	constexpr char Descending[] = { " (v)" };
-	constexpr char TooFew[] = { "<insig>" };
+	constexpr char Insignificant[] = { "<insig>" };
 	constexpr char NotAvailable[] = { "<n/a>" };
 
 	struct traits_t
@@ -603,8 +603,8 @@ VI_OPTIMIZE_ON
 			assert(itm.average_txt_ == NotAvailable);
 		}
 		else if (const auto burden = std::llround(props().measurement_cost_ * dirty) * itm.orig_calls_cnt_; itm.orig_total_ <= burden)
-		{	itm.total_txt_ = TooFew;
-			itm.average_txt_ = TooFew;
+		{	itm.total_txt_ = Insignificant;
+			itm.average_txt_ = Insignificant;
 		}
 		else
 		{	itm.total_time_ = props().tick_duration_ * (itm.orig_total_ - burden);

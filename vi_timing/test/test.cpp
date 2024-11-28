@@ -84,7 +84,7 @@ namespace {
 			}
 			vi_tm::timer_t tm5{ h.get(), "tm2" };
 		}
-		vi_tmReport(h.get());
+		vi_tmReport(h.get(), vi_tm_ReportCallback, stdout, vi_tmShowMask);
 		std::cout << "done" << std::endl;
 	}
 } // namespace
