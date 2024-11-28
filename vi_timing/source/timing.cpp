@@ -169,7 +169,7 @@ void VI_TM_CALL vi_tmInit(int reserve)
 	vi_tmInstance_t::global().init(-1);
 }
 
-void VI_TM_CALL vi_tmFinit()
+void VI_TM_CALL vi_tmFinit(void)
 {	vi_tmInstance_t::global().clear(nullptr);
 }
 
