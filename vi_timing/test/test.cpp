@@ -14,7 +14,6 @@
 #ifdef _WIN32
 #	include <winbase.h> // SetThreadAffinityMask
 #	include <processthreadsapi.h> // GetCurrentProcessorNumber
-//#include <Windows.h>
 #elif defined (__linux__)
 #	include <pthread.h> // For pthread_setaffinity_np.
 #	include <sched.h> // For sched_getcpu.
@@ -29,14 +28,13 @@
 #include <thread>
 #include <vector>
 
+using namespace std::literals;
+namespace ch = std::chrono;
+
 namespace
 {
-	using namespace std::literals;
-	namespace ch = std::chrono;
-
 	bool cpu_affinity(int core_id = -1)
-	{	VI_TM_FUNC;
-		bool result = false;
+	{
 		if (core_id < 0)
 		{
 #ifdef _WIN32
@@ -48,6 +46,7 @@ namespace
 #endif
 		}
 
+		bool result = false;
 		if (core_id >= 0)
 		{
 #ifdef _WIN32
@@ -69,14 +68,18 @@ namespace
 	VI_TM("GLOBAL");
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-	const auto _dummy0 = []
-		{	VI_TM("Global initialize");
+	const auto init_win_debug = []
+		{	VI_TM("Initialize WinDebug");
 			_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); // To automatically call the _CrtDumpMemoryLeaks function when the program ends
 			_set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
 			return 0;
 		}();
 #endif
-	const auto _dummy1 = cpu_affinity();
+	const auto init_common = []
+		{	VI_TM("Initialize Common");
+			cpu_affinity();
+			return 0;
+		}();
 }
 
 namespace {
@@ -129,15 +132,15 @@ namespace {
 	VI_OPTIMIZE_ON
 
 	void test_instances()
-	{	VI_TM_FUNC;
+	{	VI_TM("Additional timers");
 		std::cout << "\nAdditional timers...\n";
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> h{ vi_tmCreate(), &vi_tmClose };
-		{	vi_tm::timer_t tm1{ h.get(), "tm1" };
-			{	vi_tm::timer_t tm2{ h.get(), "long, long, long, very long name", 10 };
+		{	vi_tm::timer_t tm1{ h.get(), "long, long, long, very long name" };
+			{	vi_tm::timer_t tm2{ h.get(), "100ms * 10", 10 };
 				for (int n = 0; n < 10; ++n)
 				{	std::this_thread::sleep_for(100ms);
-					vi_tm::timer_t tm3{ h.get(), "tm3" };
-					vi_tm::timer_t tm4{ h.get(), "tm4" };
+					vi_tm::timer_t tm3{ h.get(), "tm" };
+					vi_tm::timer_t tm4{ h.get(), "tm_empty" };
 				}
 			}
 		}
