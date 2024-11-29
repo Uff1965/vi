@@ -11,6 +11,15 @@
 
 #include "../timing.h"
 
+#ifdef _WIN32
+#	include <winbase.h> // SetThreadAffinityMask
+#	include <processthreadsapi.h> // GetCurrentProcessorNumber
+//#include <Windows.h>
+#elif defined (__linux__)
+#	include <pthread.h> // For pthread_setaffinity_np.
+#	include <sched.h> // For sched_getcpu.
+#endif
+
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -20,18 +29,54 @@
 #include <thread>
 #include <vector>
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); // To automatically call the _CrtDumpMemoryLeaks function when the program ends
-const auto _dummy1 = _set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
-#endif
-
-VI_TM_INIT(vi_tmShowMask, vi_tmSortBySpeed);
-VI_TM("GLOBAL");
-
-namespace {
+namespace
+{
 	using namespace std::literals;
 	namespace ch = std::chrono;
 
+	bool cpu_affinity(int core_id = 0)
+	{	bool result = false;
+		if (core_id <= 0)
+		{
+#ifdef _WIN32
+			core_id = GetCurrentProcessorNumber();
+#elif defined __linux__
+			core_id = sched_getcpu();
+#else
+#	error "Unknown OS."
+#endif
+		}
+
+		if (core_id > 0)
+		{
+#ifdef _WIN32
+			const auto mask = 1 << core_id; // Set the bit corresponding to the kernel
+			const auto thread = GetCurrentThread();
+			result = (0 != SetThreadAffinityMask(thread, mask));
+#elif defined __linux__
+			cpu_set_t cpuset;
+			CPU_ZERO(&cpuset); // Clearing the bit mask
+			CPU_SET(core_id, &cpuset); // Installing the target kernel
+			pthread_t thread = pthread_self(); // Getting the current thread ID
+			result = (0 == pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset));
+#endif
+		}
+
+		assert(result);
+		return result;
+	}
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+	const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); // To automatically call the _CrtDumpMemoryLeaks function when the program ends
+	const auto _dummy1 = _set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
+#endif
+	const auto _dummy2 = cpu_affinity();
+
+	VI_TM_INIT(vi_tmShowMask, vi_tmSortBySpeed);
+	VI_TM("GLOBAL");
+}
+
+namespace {
 	VI_OPTIMIZE_OFF
 	bool test_multithreaded()
 	{	VI_TM_FUNC;

@@ -512,7 +512,7 @@ VI_OPTIMIZE_ON
 			duration_t duration_;
 
 			properties_t()
-			{	vi_tm_Warming(0, 500);
+			{	vi_tm_Warming(1, 500);
 				tick_duration_ = seconds_per_tick();
 				measurement_cost_ = measurement_cost();
 				duration_ = duration();
