@@ -34,9 +34,9 @@ namespace
 	using namespace std::literals;
 	namespace ch = std::chrono;
 
-	bool cpu_affinity(int core_id = 0)
+	bool cpu_affinity(int core_id = -1)
 	{	bool result = false;
-		if (core_id <= 0)
+		if (core_id < 0)
 		{
 #ifdef _WIN32
 			core_id = GetCurrentProcessorNumber();
@@ -47,18 +47,16 @@ namespace
 #endif
 		}
 
-		if (core_id > 0)
+		if (core_id >= 0)
 		{
 #ifdef _WIN32
-			const auto mask = 1 << core_id; // Set the bit corresponding to the kernel
-			const auto thread = GetCurrentThread();
-			result = (0 != SetThreadAffinityMask(thread, mask));
+			DWORD_PTR mask = 1 << core_id; // Set the bit corresponding to the kernel
+			result = (0 != SetThreadAffinityMask(GetCurrentThread(), mask));
 #elif defined __linux__
 			cpu_set_t cpuset;
 			CPU_ZERO(&cpuset); // Clearing the bit mask
 			CPU_SET(core_id, &cpuset); // Installing the target kernel
-			pthread_t thread = pthread_self(); // Getting the current thread ID
-			result = (0 == pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset));
+			result = (0 == pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset));
 #endif
 		}
 
