@@ -10,48 +10,40 @@
 #include <threads.h>
 
 void bar_c(void)
-{
+{	const vi_tmTicks_t bar_c_start = vi_tmGetTicks();
+
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 	thrd_yield();
 
-	{	const vi_tmTicks_t start = vi_tmGetTicks();
-
-		{
-			thrd_sleep(&(struct timespec) { .tv_nsec = 30000000 }, NULL);
-		}
-
-		const vi_tmTicks_t finish = vi_tmGetTicks();
-		vi_tmAdd(NULL, "bar", finish - start, 1);
-	}
-
-	{
-		VI_TM_HANDLE htimer = vi_tmCreate(8);
+	{	VI_TM_HANDLE htimer = vi_tmCreate(8);
 
 		vi_tmTicks_t s = vi_tmGetTicks();
-		thrd_sleep(&(struct timespec) { .tv_nsec = 250000000 }, NULL);
+		thrd_sleep(&(struct timespec) { .tv_nsec = 250000 }, NULL);
 		vi_tmTicks_t f = vi_tmGetTicks();
 		vi_tmAdd(htimer, "xxx", f - s, 1);
 		vi_tmAdd(htimer, "yyy", f - s, 10);
 
+		puts("Original:");
 		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
-		puts("");
 
 		vi_tmClear(htimer, "xxx");
+		puts("After vi_tmClear(htimer, \"xxx\"):");
 		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
-		puts("");
 
 		vi_tmClear(htimer, NULL);
+		puts("After vi_tmClear(htimer, NULL):");
 		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
 		vi_tmClose(htimer);
-		puts("");
 	}
+
+	const vi_tmTicks_t bar_c_finish = vi_tmGetTicks();
+	vi_tmAdd(NULL, "bar_c", bar_c_finish - bar_c_start, 1);
 }
 
 void foo_c(void)
-{
+{	const vi_tmTicks_t foo_c_start = vi_tmGetTicks();
 	printf("\n%s...\n", __func__); //-V2600
-	const vi_tmTicks_t foo_tm = vi_tmGetTicks();
-
+	
 	vi_tm_Warming(2, 2);
 	vi_tm_Warming(16, 2);
 	
@@ -126,7 +118,7 @@ void foo_c(void)
 		vi_tmAdd(NULL, "thrd_sleep 1s", finish - start, 1);
 	}
 
-	const vi_tmTicks_t finish = vi_tmGetTicks();
-	vi_tmAdd(NULL, "foo_c", finish - foo_tm, 1);
 	printf("done\n"); //-V2600
+	const vi_tmTicks_t foo_c_finish = vi_tmGetTicks();
+	vi_tmAdd(NULL, "foo_c", foo_c_finish - foo_c_start, 1);
 }

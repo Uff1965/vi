@@ -35,7 +35,8 @@ namespace
 	namespace ch = std::chrono;
 
 	bool cpu_affinity(int core_id = -1)
-	{	bool result = false;
+	{	VI_TM_FUNC;
+		bool result = false;
 		if (core_id < 0)
 		{
 #ifdef _WIN32
@@ -50,7 +51,7 @@ namespace
 		if (core_id >= 0)
 		{
 #ifdef _WIN32
-			DWORD_PTR mask = 1 << core_id; // Set the bit corresponding to the kernel
+			const auto mask = static_cast<DWORD_PTR>(1U) << core_id; // Set the bit corresponding to the kernel
 			result = (0 != SetThreadAffinityMask(GetCurrentThread(), mask));
 #elif defined __linux__
 			cpu_set_t cpuset;
@@ -64,20 +65,26 @@ namespace
 		return result;
 	}
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-	const auto _dummy0 = _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); // To automatically call the _CrtDumpMemoryLeaks function when the program ends
-	const auto _dummy1 = _set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
-#endif
-	const auto _dummy2 = cpu_affinity();
-
 	VI_TM_INIT(vi_tmShowMask, vi_tmSortBySpeed);
 	VI_TM("GLOBAL");
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+	const auto _dummy0 = []
+		{	VI_TM("Global initialize");
+			_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); // To automatically call the _CrtDumpMemoryLeaks function when the program ends
+			_set_error_mode(_OUT_TO_MSGBOX); // Error sink is a message box. To be able to ignore errors.
+			return 0;
+		}();
+#endif
+	const auto _dummy1 = cpu_affinity();
 }
 
 namespace {
 	VI_OPTIMIZE_OFF
 	bool test_multithreaded()
 	{	VI_TM_FUNC;
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> h{ vi_tmCreate(), &vi_tmClose };
+
 #ifdef NDEBUG
 		static constexpr auto CNT = 2'000'000;
 #else
@@ -87,12 +94,14 @@ namespace {
 
 		std::cout << "\ntest_multithreaded()... " << std::endl;
 
-		auto load = []
-		{	VI_TM("load");
+		auto load = [h = h.get()]
+		{	vi_tm::timer_t tm{h, "load"};
 
 			for (auto n = CNT; n; --n)
-			{	auto name = "check_" + std::to_string(n % 4);
-				VI_TM(name.c_str()); //-V112
+			{	const auto name = "check_" + std::to_string(n % 4);
+				const auto s = vi_tmGetTicks();
+				const auto f = vi_tmGetTicks();
+				vi_tmAdd(h, name.c_str(), f - s);
 				v++;
 			}
 		};
@@ -106,9 +115,15 @@ namespace {
 		{	t.join();
 		}
 
-		assert(v.load() == CNT * threads.size());
+		if (v.load() != CNT * threads.size())
+		{	std::cerr << "******* ERROR !!! *************\n";
+			assert(false);
+		}
 
-		std::cout << "v: " << v << "\ndone" << std::endl;
+		std::cout << "v: " << v << " [" << CNT << "*" << threads.size() << "]" << "\n";
+		std::cout << "Timing:\n";
+		vi_tmReport(h.get(), vi_tm_ReportCallback, stdout, vi_tmShowMask);
+		std::cout << "done" << std::endl;
 		return true;
 	}
 	VI_OPTIMIZE_ON
@@ -125,7 +140,6 @@ namespace {
 					vi_tm::timer_t tm4{ h.get(), "tm4" };
 				}
 			}
-			vi_tm::timer_t tm5{ h.get(), "tm2" };
 		}
 		vi_tmReport(h.get(), vi_tm_ReportCallback, stdout, vi_tmShowMask);
 		std::cout << "done" << std::endl;
@@ -133,7 +147,7 @@ namespace {
 } // namespace
 
 int main()
-{
+{	VI_TM_FUNC;
 #ifdef NDEBUG
 	static constexpr char build_type[] = "Release";
 #else
@@ -163,7 +177,9 @@ int main()
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
 	std::cout << "Warming... ";
-	vi_tm_Warming(1);
+	{	VI_TM("Warming in main()");
+		vi_tm_Warming(1);
+	}
 	std::cout << "done" << std::endl;
 
 	foo_c();
