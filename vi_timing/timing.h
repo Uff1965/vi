@@ -203,6 +203,7 @@ extern "C" {
 		vi_tmShowOverhead = 0x10,
 		vi_tmShowUnit = 0x20,
 		vi_tmShowDuration = 0x40,
+		vi_tmShowNoHeader = 0x80,
 		vi_tmShowMask = 0xF0,
 	};
 	VI_TM_API int VI_TM_CALL vi_tmReport

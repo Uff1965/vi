@@ -24,15 +24,15 @@ void bar_c(void)
 		vi_tmAdd(htimer, "yyy", f - s, 10);
 
 		puts("Original:");
-		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
+		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, vi_tmShowNoHeader);
 
 		vi_tmClear(htimer, "xxx");
 		puts("After vi_tmClear(htimer, \"xxx\"):");
-		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
+		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, vi_tmShowNoHeader);
 
 		vi_tmClear(htimer, NULL);
 		puts("After vi_tmClear(htimer, NULL):");
-		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, 0);
+		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, vi_tmShowNoHeader);
 		vi_tmClose(htimer);
 	}
 

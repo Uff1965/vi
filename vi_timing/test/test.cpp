@@ -64,7 +64,7 @@ namespace
 		return result;
 	}
 
-	VI_TM_INIT(vi_tmShowMask, vi_tmSortBySpeed);
+	VI_TM_INIT(vi_tmSortBySpeed, "Global timing report:\n", vi_tmShowDuration, vi_tmShowOverhead, vi_tmShowUnit);
 	VI_TM("GLOBAL");
 
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -83,7 +83,7 @@ namespace
 }
 
 namespace {
-	VI_OPTIMIZE_OFF
+//	VI_OPTIMIZE_OFF
 	bool test_multithreaded()
 	{	VI_TM_FUNC;
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> h{ vi_tmCreate(), &vi_tmClose };
@@ -125,26 +125,30 @@ namespace {
 
 		std::cout << "v: " << v << " [" << CNT << "*" << threads.size() << "]" << "\n";
 		std::cout << "Timing:\n";
-		vi_tmReport(h.get(), vi_tm_ReportCallback, stdout, vi_tmShowMask);
+		vi_tmReport(h.get(), vi_tm_ReportCallback, stdout, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		std::cout << "done" << std::endl;
 		return true;
 	}
-	VI_OPTIMIZE_ON
+//	VI_OPTIMIZE_ON
 
 	void test_instances()
 	{	VI_TM("Additional timers");
 		std::cout << "\nAdditional timers...\n";
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> h{ vi_tmCreate(), &vi_tmClose };
-		{	vi_tm::timer_t tm1{ h.get(), "long, long, long, very long name" };
-			{	vi_tm::timer_t tm2{ h.get(), "100ms * 10", 10 };
-				for (int n = 0; n < 10; ++n)
-				{	std::this_thread::sleep_for(100ms);
-					vi_tm::timer_t tm3{ h.get(), "tm" };
-					vi_tm::timer_t tm4{ h.get(), "tm_empty" };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> handler{ vi_tmCreate(), &vi_tmClose };
+		{	auto h = handler.get();
+			{	vi_tm::timer_t tm1{ h, "long, long, long, very long name" };
+				{	vi_tm::timer_t tm2{ h, "100ms * 10", 10 };
+					for (int n = 0; n < 10; ++n)
+					{
+						std::this_thread::sleep_for(100ms);
+
+						vi_tm::timer_t tm3{ h, "tm" };
+						vi_tm::timer_t tm4{ h, "tm_empty" };
+					}
 				}
 			}
+			vi_tmReport(h, vi_tm_ReportCallback, stdout, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		}
-		vi_tmReport(h.get(), vi_tm_ReportCallback, stdout, vi_tmShowMask);
 		std::cout << "done" << std::endl;
 	}
 } // namespace

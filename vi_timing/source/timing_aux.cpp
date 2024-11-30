@@ -767,7 +767,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, vi_tmLogSTR_t fn, void* dat
 	traits.sort();
 
 	int ret = 0;
-	if (flags & to_underlying(vi_tmShowMask))
+	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit))
 	{	std::ostringstream str;
 
 		if (flags & to_underlying(vi_tmShowOverhead))
@@ -785,7 +785,9 @@ VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, vi_tmLogSTR_t fn, void* dat
 	}
 
 	meterage_formatter_t mf{ traits, fn, data };
-	ret += mf.header();
+	if (0 == (flags & to_underlying(vi_tmShowNoHeader)))
+	{	ret += mf.header();
+	}
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }
 
