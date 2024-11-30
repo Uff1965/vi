@@ -53,9 +53,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		include <string>
 #	else
 #		ifdef __STDC_NO_ATOMICS__
-//		At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
-//		"we left out support for some C11 optional features such as atomics" [Microsoft
-//		https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
+//			At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
+//			"we left out support for some C11 optional features such as atomics" [Microsoft
+//			https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
 #			error "Atomic objects and the atomic operation library are not supported."
 #		endif
 #		include <stdint.h>
@@ -108,11 +108,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-#	ifdef __cplusplus
-		using vi_tmTicks_t = std::uint64_t;
-#	else
-		typedef uint64_t vi_tmTicks_t;
-#	endif
+	typedef struct vi_tmInstance_t* VI_TM_HANDLE;
+	typedef struct vi_tmTotal_t* VI_TM_HITEM;
+	typedef VI_STD(uint64_t) vi_tmTicks_t;
+	typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
+	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 
 #	ifdef __cplusplus
 extern "C" {
@@ -158,9 +158,6 @@ extern "C" {
 // Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	typedef struct vi_tmInstance_t* VI_TM_HANDLE;
-	typedef struct vi_tmTotal_t* VI_TM_HITEM;
-	typedef int (VI_SYS_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 	enum vi_tmInfo_e
 	{	VI_TM_INFO_VER,
 		VI_TM_INFO_VERSION,
@@ -184,12 +181,6 @@ extern "C" {
 	static inline int VI_SYS_CALL vi_tm_ReportCallback(const char* str, void* data)
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
-
-#	ifdef __cplusplus
-		using vi_tmLogSTR_t = decltype(&vi_tm_ReportCallback); // Must be compatible with std::fputs!
-#	else
-		typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char*, void*); // Must be compatible with std::fputs!
-#	endif
 
 	enum vi_tmReportFlags_e {
 		vi_tmSortByTime = 0x00,

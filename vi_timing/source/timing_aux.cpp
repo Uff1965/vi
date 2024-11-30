@@ -545,7 +545,7 @@ VI_OPTIMIZE_ON
 		explicit traits_t(report_flags_t flags);
 		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
 		void sort();
-		static int VI_SYS_CALL callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
+		static int callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 	};
 
 	struct traits_t::itm_t
@@ -582,7 +582,7 @@ VI_OPTIMIZE_ON
 		*max_len += ((flags & to_underlying(vi_tmSortAscending)) ? std::size(Ascending): std::size(Descending)) - 1;
 	}
 
-	int VI_SYS_CALL traits_t::callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
+	int traits_t::callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
 		return static_cast<traits_t*>(data)->append(name, total, amount, calls_cnt);
 	}
