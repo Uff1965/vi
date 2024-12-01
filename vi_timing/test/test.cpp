@@ -170,11 +170,11 @@ int main()
 
 	std::cout <<
 		"Information about the \'vi_timing\' library:" << "\n"
-		"\tBuild type: " << static_cast<const char*>(vi_tmInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
-		"\tVer: " << reinterpret_cast<std::intptr_t>(VI_TM_INFO()) << "\n"
-		"\tBuild number: " << static_cast<unsigned>(reinterpret_cast<std::intptr_t>(VI_TM_INFO(VI_TM_INFO_BUILDNUMBER))) << "\n"
-		"\tVersion: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
-		"\tCompile time: " << static_cast<const char*>(VI_TM_INFO(VI_TM_INFO_BUILDTIME)) << "\n" <<
+		"\tBuild type: " << reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
+		"\tVer: " << VI_TM_INFO() << "\n"
+		"\tBuild number: " << VI_TM_INFO(VI_TM_INFO_BUILDNUMBER) << "\n"
+		"\tVersion: " << reinterpret_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
+		"\tCompile time: " << reinterpret_cast<const char*>(VI_TM_INFO(VI_TM_INFO_BUILDTIME)) << "\n" <<
 		std::endl;
 
 	struct space_out final: std::numpunct<char>

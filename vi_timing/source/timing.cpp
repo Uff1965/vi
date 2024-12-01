@@ -193,48 +193,44 @@ int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
 {	return from_handle(h)->results(fn, data);
 }
 
-const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
-{	const void *result = nullptr;
+std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
+{	std::uintptr_t result = 0U;
 	switch (info)
 	{
 		case VI_TM_INFO_VER:
-		{	static constexpr std::uintptr_t ver = VI_TM_VERSION;
-			static_assert(sizeof(result) == sizeof(ver));
-			std::memcpy(&result, &ver, sizeof(result));
+		{	result = VI_TM_VERSION;
 		} break;
 
 		case VI_TM_INFO_BUILDNUMBER:
-		{	static constexpr auto ver = static_cast<std::uintptr_t>(TIME_STAMP()); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
-			static_assert(sizeof(result) == sizeof(ver));
-			std::memcpy(&result, &ver, sizeof(result));
+		{	result = static_cast<std::uintptr_t>(TIME_STAMP()); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
 		} break;
 
 		case VI_TM_INFO_VERSION:
-		{	static const char *const version = []
+		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 1'000); //-V590 "Possible excessive expression or typo."
 #	ifdef VI_TM_SHARED
 					static constexpr char type[] = "shared";
 #	else
 					static constexpr char type[] = "static";
 #	endif
-					static std::array<char, std::size("99.999.9999 b.YYMMDDHHmm") - 1 + std::size(type)> buff;
-					const auto sz = snprintf(buff.data(), buff.size(), VI_TM_VERSION_STR " b.%u %s", TIME_STAMP(), type);
-					assert(sz > 0 && sz < buff.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
-					return buff.data();
+					std::array<char, std::size("99.999.9999 b.YYMMDDHHmm") - 1 + std::size(type)> result;
+					const auto sz = snprintf(result.data(), result.size(), VI_TM_VERSION_STR " b.%u %s", TIME_STAMP(), type);
+					assert(sz > 0 && sz < result.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
+					return result;
 				}();
-			result = version;
+			result = reinterpret_cast<std::uintptr_t>(version.data());
 		} break;
 
 		case VI_TM_INFO_BUILDTIME:
-		{	result = VI_STR(__DATE__) " " VI_STR(__TIME__);
+		{	result = reinterpret_cast<std::uintptr_t>(VI_STR(__DATE__) " " VI_STR(__TIME__));
 		} break;
 
 		case VI_TM_INFO_BUILDTYPE:
 		{	
 #ifdef NDEBUG
-			result = "Release";
+			result = reinterpret_cast<std::uintptr_t>("Release");
 #else
-			result = "Debug";
+			result = reinterpret_cast<std::uintptr_t>("Debug");
 #endif
 		} break;
 

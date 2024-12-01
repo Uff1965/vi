@@ -28,7 +28,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	pragma once
 
 #	define VI_TM_VERSION_MAJOR 0	// 0 - 99
-#	define VI_TM_VERSION_MINOR 12	// 0 - 999
+#	define VI_TM_VERSION_MINOR 13	// 0 - 999
 #	define VI_TM_VERSION_PATCH 0	// 0 - 9999
 #	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
@@ -165,7 +165,7 @@ extern "C" {
 		VI_TM_INFO_BUILDTIME,
 	};
 
-	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
+	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	VI_TM_API void VI_TM_CALL vi_tmInit(int reserve VI_DEFAULT(-1));
 	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
 	VI_TM_API void VI_TM_CALL vi_tmAdd(VI_TM_HANDLE h,const char *name,  vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT;
