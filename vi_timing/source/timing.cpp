@@ -26,7 +26,7 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
-#include <timing.h>
+#include <vi_timing.h>
 
 #include <array>
 #include <atomic>
@@ -54,7 +54,7 @@ namespace
 
 		result *= 100;
 		for (unsigned n = 0; n < mon_name.size(); ++n)
-		{	if (mon_name[n].compare(0, 3, __DATE__))
+		{	if (mon_name[n].compare(0, 3, __DATE__) != 0)
 			{	result += n + 1;
 				break;
 			}
@@ -103,7 +103,7 @@ struct vi_tmInstance_t
 
 	explicit vi_tmInstance_t(int reserve)
 	{	storage_.max_load_factor(MAX_LOAD_FACTOR);
-		storage_.reserve(reserve >= 0 ? reserve : storage_capacity);
+		storage_.reserve(static_cast<std::size_t>(reserve >= 0 ? reserve : storage_capacity)); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
 	}
 
 	static vi_tmInstance_t& global()
@@ -114,7 +114,7 @@ struct vi_tmInstance_t
 	void init(int reserve)
 	{	if (reserve >= 0)
 		{	std::lock_guard lock{ storage_guard_ };
-			storage_.reserve(reserve);
+			storage_.reserve(static_cast<std::size_t>(reserve)); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
 		}
 	}
 
@@ -204,14 +204,14 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_BUILDNUMBER:
-		{	static constexpr std::uintptr_t ver = TIME_STAMP();
+		{	static constexpr auto ver = static_cast<std::uintptr_t>(TIME_STAMP()); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
 			static_assert(sizeof(result) == sizeof(ver));
 			std::memcpy(&result, &ver, sizeof(result));
 		} break;
 
 		case VI_TM_INFO_VERSION:
 		{	static const char *const version = []
-				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 1'000); //-V590
+				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 1'000); //-V590 "Possible excessive expression or typo."
 #	ifdef VI_TM_SHARED
 					static constexpr char type[] = "shared";
 #	else
@@ -219,7 +219,7 @@ const void* VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 #	endif
 					static std::array<char, std::size("99.999.9999 b.YYMMDDHHmm") - 1 + std::size(type)> buff;
 					const auto sz = snprintf(buff.data(), buff.size(), VI_TM_VERSION_STR " b.%u %s", TIME_STAMP(), type);
-					assert(sz < buff.size());
+					assert(sz > 0 && sz < buff.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
 					return buff.data();
 				}();
 			result = version;

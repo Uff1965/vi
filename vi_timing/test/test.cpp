@@ -9,7 +9,7 @@
 
 #include "header.h"
 
-#include "../timing.h"
+#include "../vi_timing.h"
 
 #ifdef _WIN32
 #	include <winbase.h> // SetThreadAffinityMask
@@ -125,7 +125,7 @@ namespace {
 
 		std::cout << "v: " << v << " [" << CNT << "*" << threads.size() << "]" << "\n";
 		std::cout << "Timing:\n";
-		vi_tmReport(h.get(), vi_tm_ReportCallback, stdout, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
+		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		std::cout << "done" << std::endl;
 		return true;
 	}
@@ -147,7 +147,7 @@ namespace {
 					}
 				}
 			}
-			vi_tmReport(h, vi_tm_ReportCallback, stdout, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
+			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		}
 		std::cout << "done" << std::endl;
 	}

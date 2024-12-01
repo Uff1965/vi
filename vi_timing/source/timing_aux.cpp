@@ -26,9 +26,7 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
-//-V:assert:2570
-
-#include <timing.h>
+#include <vi_timing.h>
 
 #include <algorithm>
 #include <atomic>
@@ -160,12 +158,12 @@ namespace
 #ifndef NDEBUG
 	const auto unit_test_round = []
 	{	static const struct
-		{	int line_; //-V802
+		{	int line_; //-V802 "On 32-bit/64-bit platform, structure size can be reduced..."
 			double original_;
 			double expected_;
 			unsigned char precision_;
 			unsigned char dec_;
-		} //-V802 //-V730
+		}
 	samples[] = {
 			{__LINE__, 9.999'9, 10.0, 1, 0},
 			{__LINE__, 9.999'9, 10.0, 2, 0},
@@ -309,12 +307,12 @@ namespace
 	const auto unit_test_to_string = []
 	{
 		static const struct
-		{	int line_{}; //-V802
+		{	int line_{}; //-V802 "On 32-bit/64-bit platform, structure size can be reduced..."
 			duration_t original_;
 			std::string_view expected_;
 			unsigned char precision_ = 2;
 			unsigned char dec_ = 1;
-		} //-V802 //-V730
+		}
 		samples[] = {
 #	define ITM5(E, precition, dec, expected) {__LINE__, 5.555'555'555'555 * std::pow(10, E), expected, precition, dec}
 			ITM5(-2, 5, 0, "55556 us"),
@@ -323,7 +321,7 @@ namespace
 			ITM5(-12, 2, 1, "0.0 ps"),
 			ITM5(-9, 3, 1, "5.6 ns"),
 			ITM5(-2, 5, 2, "55.56 ms"),
-			ITM5(-4, 5, 2, "555.56 us"),
+			ITM5(-4, 5, 2, "555.56 us"), //-V112 "Dangerous magic number N used."
 #	undef ITM5
 #	define ITM(v, ...) {__LINE__, (v), __VA_ARGS__}
 			{__LINE__, 0.0_ps, "0.0 ps"},
@@ -478,7 +476,7 @@ VI_OPTIMIZE_OFF
 		auto s = vi_tmGetTicks();
 		for (auto cnt = CNT; cnt; --cnt)
 		{	e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); //-V519
+			e = vi_tmGetTicks(); //-V519 "The 'x' variable is assigned values twice successively."
 		}
 		const auto pure = e - s;
 
@@ -618,7 +616,7 @@ VI_OPTIMIZE_ON
 		max_len_name_ = std::max(max_len_name_, itm.orig_name_.length());
 		if (itm.orig_amount_ > max_amount_)
 		{	max_amount_ = itm.orig_amount_;
-			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount_))); //-V203
+			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount_))); //-V203 "Explicit type conversion from memsize to double type or vice versa."
 			len += len / 3; // for thousand separators
 			len += 1U;
 			max_len_amount_ = std::max(max_len_amount_, len);
@@ -691,7 +689,7 @@ VI_OPTIMIZE_ON
 		meterage_formatter_t(const traits_t& traits, vi_tmLogSTR_t fn, void* data)
 		:	traits_{ traits }, fn_{ fn }, data_{ data }
 		{	if (auto size = traits_.meterages_.size(); 0 != size)
-			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size))); //-V203
+			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size))); //-V203 "Explicit type conversion from memsize to double type or vice versa."
 			}
 		}
 
@@ -733,7 +731,7 @@ VI_OPTIMIZE_ON
 
 		int operator ()(int init, const traits_t::itm_t& i) const
 		{	std::ostringstream str;
-			str.imbue(std::locale(str.getloc(), new space_out)); //-V2511
+			str.imbue(std::locale(str.getloc(), new space_out));
 
 			constexpr auto step_guides = 3;
 			n_++;
@@ -754,7 +752,7 @@ VI_OPTIMIZE_ON
 	};
 } // namespace {
 
-VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, vi_tmLogSTR_t fn, void* data, int flagsa)
+VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* data)
 {	report_flags_t flags = 0;
 	static_assert(sizeof(flags) == sizeof(flagsa));
 	std::memcpy(&flags, &flagsa, sizeof(flags));
@@ -805,7 +803,7 @@ void VI_TM_CALL vi_tm_Warming(unsigned int threads_qty, unsigned int ms)
 
 	std::atomic_bool done = false;
 	auto thread_func = [&done]
-		{	while (!done) //-V776
+		{	while (!done) //-V776 "Potentially infinite loop."
 			{	for (volatile int n = 100'000; n; n = n - 1)
 				{/**/}
 			}

@@ -3,7 +3,7 @@
 
 #include "header.h"
 
-#include "../timing.h"
+#include "../vi_timing.h"
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -24,15 +24,15 @@ void bar_c(void)
 		vi_tmAdd(htimer, "yyy", f - s, 10);
 
 		puts("Original:");
-		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, vi_tmShowNoHeader);
+		vi_tmReport(htimer, vi_tmShowNoHeader, (vi_tmLogSTR_t)fputs, stdout);
 
 		vi_tmClear(htimer, "xxx");
 		puts("After vi_tmClear(htimer, \"xxx\"):");
-		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, vi_tmShowNoHeader);
+		vi_tmReport(htimer, vi_tmShowNoHeader, (vi_tmLogSTR_t)fputs, stdout);
 
 		vi_tmClear(htimer, NULL);
 		puts("After vi_tmClear(htimer, NULL):");
-		vi_tmReport(htimer, (vi_tmLogSTR_t)fputs, stdout, vi_tmShowNoHeader);
+		vi_tmReport(htimer, vi_tmShowNoHeader, (vi_tmLogSTR_t)fputs, stdout);
 		vi_tmClose(htimer);
 	}
 

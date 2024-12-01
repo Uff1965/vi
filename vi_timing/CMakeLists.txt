@@ -19,7 +19,7 @@ set(SOURCE_FILES)
 
 set(FILE_GROUP
   "${PROJECT_SOURCE_DIR}/common.h"
-  "${PROJECT_SOURCE_DIR}/timing.h"
+  "${PROJECT_SOURCE_DIR}/vi_timing.h"
   "${PROJECT_SOURCE_DIR}/vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})

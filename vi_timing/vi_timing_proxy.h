@@ -2,11 +2,13 @@
 #	define VI_TIMING_PROXY_H_ "3.0.0.1"
 #	pragma once
 
-#	if __has_include(<vi_timing/timing.h>)
-#		include <vi_timing/timing.h>
+#	if !defined(VI_TM_DISABLE) && __has_include(<vi_timing/vi_timing.h>)
+#		include <vi_timing/vi_timing.h>
+#	elif !defined(VI_TM_DISABLE) && __has_include("vi_timing.h")
+#		include "vi_timing.h"
 #	else
 #		ifndef VI_TM_DISABLE
-#			define VI_TM_DISABLE 1
+#			define VI_TM_DISABLE "Header file not found."
 #		endif
 
 #		define VI_STR_GUM_AUX( a, b ) a##b

@@ -112,7 +112,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 	typedef struct vi_tmTotal_t* VI_TM_HITEM;
 	typedef VI_STD(uint64_t) vi_tmTicks_t;
 	typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
-	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 
 #	ifdef __cplusplus
 extern "C" {
@@ -182,6 +181,7 @@ extern "C" {
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
 
+	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 	enum vi_tmReportFlags_e {
 		vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
@@ -199,9 +199,9 @@ extern "C" {
 	};
 	VI_TM_API int VI_TM_CALL vi_tmReport
 	(	VI_TM_HANDLE h,
+		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending),
 		vi_tmLogSTR_t callback VI_DEFAULT(vi_tm_ReportCallback),
-		void* data VI_DEFAULT(stdout),
-		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending)
+		void* data VI_DEFAULT(stdout)
 	);
 
 	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -243,46 +243,51 @@ namespace vi_tm
 		init_t(Args&&... args)
 		{	init(std::forward<Args>(args)...);
 		}
+		~init_t();
+		template<typename T, typename... Args>
+		void init(T &&v, Args&&... args);
 		void init()
 		{	vi_tmInit(reserve_);
 		}
-		template<typename T, typename... Args>
-		void init(T &&v, Args&&... args)
-		{
-			if constexpr (std::is_same_v<vi_tmReportFlags_e, std::decay_t<T>>)
-			{	flags_ |= v;
-			}
-			else if constexpr (std::is_integral_v<T>)
-			{	assert(reserve_ == -1);
-				reserve_ = v;
-			}
-			else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::decay_t<T>>)
-			{	assert(default_cb == cb_ && nullptr != v);
-				cb_ = v;
-			}
-			else if constexpr (std::is_pointer_v<T>)
-			{	assert(default_data == data_);
-				data_ = v;
-			}
-			else if constexpr (std::is_convertible_v<T, decltype(title_)>)
-			{	title_ = v;
-			}
-			else
-			{	assert(false);
-			}
-
-			init(std::forward<Args>(args)...);
-		}
-
-		~init_t()
-		{	if (!title_.empty())
-			{	cb_(title_.c_str(), data_);
-			}
-
-			vi_tmReport(nullptr, cb_, data_, flags_);
-			vi_tmFinit();
-		}
 	};
+
+	template<typename T, typename... Args>
+	inline void init_t::init(T &&v, Args&&... args)
+	{
+		if constexpr (std::is_same_v<vi_tmReportFlags_e, std::decay_t<T>>)
+		{	flags_ |= v;
+		}
+		else if constexpr (std::is_integral_v<T>)
+		{	assert(reserve_ == -1);
+			reserve_ = v;
+		}
+		else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::decay_t<T>>)
+		{	assert(default_cb == cb_ && nullptr != v);
+			cb_ = v;
+		}
+		else if constexpr (std::is_pointer_v<T>)
+		{	assert(default_data == data_);
+			data_ = v;
+		}
+		else if constexpr (std::is_convertible_v<T, decltype(title_)>)
+		{	title_ = v;
+		}
+		else
+		{	assert(false);
+		}
+
+		init(std::forward<Args>(args)...);
+	}
+
+	inline init_t::~init_t()
+	{	if (!title_.empty())
+		{	cb_(title_.c_str(), data_);
+		}
+
+		vi_tmReport(nullptr, flags_, cb_, data_);
+		vi_tmFinit();
+	}
+
 } // namespace vi_tm {
 
 #		if defined(VI_TM_DISABLE)
