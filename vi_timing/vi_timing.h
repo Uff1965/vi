@@ -249,7 +249,7 @@ namespace vi_tm
 	};
 
 	inline void init_t::init()
-	{	auto result = vi_tmInit();
+	{	[[maybe_unused]] const auto result = vi_tmInit();
 		assert(0 == result);
 	}
 	template<typename T, typename... Args>
