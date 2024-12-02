@@ -101,7 +101,7 @@ namespace {
 		{	vi_tm::timer_t tm{h, "load"};
 
 			for (auto n = CNT; n; --n)
-			{	const auto name = "check_" + std::to_string(n % 4);
+			{	const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
 				const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
 				vi_tmAdd(h, name.c_str(), f - s);

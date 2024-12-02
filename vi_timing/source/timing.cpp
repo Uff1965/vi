@@ -92,7 +92,7 @@ namespace
 	};
 
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
-	int storage_capacity = 64;
+	std::size_t storage_capacity = 64U;
 	using storage_t = std::unordered_map<std::string, item_t>;
 } // namespace
 
@@ -101,21 +101,18 @@ struct vi_tmInstance_t
 	storage_t storage_;
 	vi_tmAtomicTicks_t total_dummy_ = 0U;
 
-	explicit vi_tmInstance_t(int reserve)
+	explicit vi_tmInstance_t()
 	{	storage_.max_load_factor(MAX_LOAD_FACTOR);
-		storage_.reserve(static_cast<std::size_t>(reserve >= 0 ? reserve : storage_capacity)); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
+		storage_.reserve(storage_capacity);
 	}
 
 	static vi_tmInstance_t& global()
-	{	static vi_tmInstance_t inst{ storage_capacity };
+	{	static vi_tmInstance_t inst;
 		return inst;
 	}
 
-	void init(int reserve)
-	{	if (reserve >= 0)
-		{	std::lock_guard lock{ storage_guard_ };
-			storage_.reserve(static_cast<std::size_t>(reserve)); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
-		}
+	void init()
+	{	
 	}
 
 	vi_tmAtomicTicks_t* total(const char *name, std::size_t cnt)
@@ -162,19 +159,16 @@ struct vi_tmInstance_t
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
-void VI_TM_CALL vi_tmInit(int reserve)
-{	if (reserve >= 0)
-	{	storage_capacity = reserve;
-	}
-	vi_tmInstance_t::global().init(-1);
+void VI_TM_CALL vi_tmInit()
+{	vi_tmInstance_t::global().init();
 }
 
 void VI_TM_CALL vi_tmFinit(void)
 {	vi_tmInstance_t::global().clear(nullptr);
 }
 
-VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve)
-{	return new vi_tmInstance_t{ reserve };
+VI_TM_HANDLE VI_TM_CALL vi_tmCreate()
+{	return new vi_tmInstance_t;
 }
 
 void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)

@@ -166,8 +166,8 @@ extern "C" {
 	};
 
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
-	VI_TM_API void VI_TM_CALL vi_tmInit(int reserve VI_DEFAULT(-1));
-	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(int reserve VI_DEFAULT(-1));
+	VI_TM_API void VI_TM_CALL vi_tmInit();
+	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate();
 	VI_TM_API void VI_TM_CALL vi_tmAdd(VI_TM_HANDLE h,const char *name,  vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
@@ -231,35 +231,29 @@ namespace vi_tm
 	};
 
 	class init_t
-	{	static inline constexpr auto default_cb = &vi_tm_ReportCallback;
+	{	static constexpr auto default_cb = &vi_tm_ReportCallback;
 		static inline const auto default_data = reinterpret_cast<void*>(stdout);
 		std::string title_ = "Timing report:\n";
 		vi_tmLogSTR_t cb_ = default_cb;
 		void* data_ = default_data;
 		int flags_ = 0;
-		int reserve_ = -1;
+		init_t(const init_t &) = delete;
+		init_t &operator=(const init_t &) = delete;
 	public:
-		template<typename... Args>
-		init_t(Args&&... args)
-		{	init(std::forward<Args>(args)...);
-		}
+		template<typename... Args> init_t(Args&&... args);
 		~init_t();
-		template<typename T, typename... Args>
-		void init(T &&v, Args&&... args);
-		void init()
-		{	vi_tmInit(reserve_);
-		}
+		template<typename T, typename... Args> void init(T &&v, Args&&... args);
+		void init();
 	};
 
+	inline void init_t::init()
+	{	vi_tmInit();
+	}
 	template<typename T, typename... Args>
 	inline void init_t::init(T &&v, Args&&... args)
 	{
 		if constexpr (std::is_same_v<vi_tmReportFlags_e, std::decay_t<T>>)
 		{	flags_ |= v;
-		}
-		else if constexpr (std::is_integral_v<T>)
-		{	assert(reserve_ == -1);
-			reserve_ = v;
 		}
 		else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::decay_t<T>>)
 		{	assert(default_cb == cb_ && nullptr != v);
@@ -279,6 +273,11 @@ namespace vi_tm
 		init(std::forward<Args>(args)...);
 	}
 
+	template<typename... Args>
+	inline init_t::init_t(Args&&... args)
+	{	init(std::forward<Args>(args)...);
+	}
+
 	inline init_t::~init_t()
 	{	if (!title_.empty())
 		{	cb_(title_.c_str(), data_);
@@ -291,14 +290,14 @@ namespace vi_tm
 } // namespace vi_tm {
 
 #		if defined(VI_TM_DISABLE)
-#			define VI_TM_INIT(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#			define VI_TM(...) int VI_MAKE_UNIC_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#			define VI_TM_INIT(...) int VI_MAKE_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
+#			define VI_TM(...) int VI_MAKE_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
 #			define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
 #			define VI_TM_CLEAR ((void)0)
 #			define VI_TM_INFO(f) NULL
 #		else
-#			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_UNIC_ID(_vi_tm_init_) {__VA_ARGS__}
-#			define VI_TM(...) vi_tm::timer_t VI_MAKE_UNIC_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
+#			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_init_) {__VA_ARGS__}
+#			define VI_TM(...) vi_tm::timer_t VI_MAKE_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
 #			define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
 #			define VI_TM_CLEAR vi_tmClear(NULL, NULL)
 #			define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)
