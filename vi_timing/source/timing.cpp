@@ -204,7 +204,7 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_BUILDTIME:
-		{	result = reinterpret_cast<std::uintptr_t>(VI_STR(__DATE__) " " VI_STR(__TIME__));
+		{	result = reinterpret_cast<std::uintptr_t>(__DATE__ " " __TIME__);
 		} break;
 
 		case VI_TM_INFO_BUILDTYPE:
