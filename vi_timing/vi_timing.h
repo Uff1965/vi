@@ -293,14 +293,14 @@ namespace vi_tm
 } // namespace vi_tm {
 
 #		if defined(VI_TM_DISABLE)
-#			define VI_TM_INIT(...) int VI_MAKE_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#			define VI_TM(...) int VI_MAKE_ID(_vi_tm_dummy_){(__VA_ARGS__, 0)}
-#			define VI_TM_REPORT(...) ((void)(__VA_ARGS__, 0))
+#			define VI_TM_INIT(...) static const int VI_MAKE_ID(_vi_tm_) = 0
+#			define VI_TM(...) static const int VI_MAKE_ID(_vi_tm_) = 0
+#			define VI_TM_REPORT(...) ((void)(0))
 #			define VI_TM_CLEAR ((void)0)
 #			define VI_TM_INFO(f) NULL
 #		else
-#			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_init_) {__VA_ARGS__}
-#			define VI_TM(...) vi_tm::timer_t VI_MAKE_ID(_vi_tm_variable_) {NULL, __VA_ARGS__}
+#			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
+#			define VI_TM(...) vi_tm::timer_t VI_MAKE_ID(_vi_tm_) {NULL, __VA_ARGS__}
 #			define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
 #			define VI_TM_CLEAR vi_tmClear(NULL, NULL)
 #			define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)
