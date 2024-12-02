@@ -185,7 +185,7 @@ int main()
 
 	std::cout << "Warming... ";
 	{	VI_TM("Warming in main()");
-		vi_tm_Warming(1);
+		vi_tmWarming(1);
 	}
 	std::cout << "done" << std::endl;
 

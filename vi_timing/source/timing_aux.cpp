@@ -510,7 +510,7 @@ VI_OPTIMIZE_ON
 			duration_t duration_;
 
 			properties_t()
-			{	vi_tm_Warming(1, 500);
+			{	vi_tmWarming(1, 500);
 				tick_duration_ = seconds_per_tick();
 				measurement_cost_ = measurement_cost();
 				duration_ = duration();
@@ -789,7 +789,7 @@ VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t f
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
 }
 
-void VI_TM_CALL vi_tm_Warming(unsigned int threads_qty, unsigned int ms)
+void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 {
 	if (0 == ms)
 	{	return;

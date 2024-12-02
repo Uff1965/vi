@@ -53,8 +53,9 @@ namespace
 		result += date_c2d(Y3) * 10 + date_c2d(Y4);
 
 		result *= 100;
+		const std::string_view mon{ __DATE__, 3 };
 		for (unsigned n = 0; n < mon_name.size(); ++n)
-		{	if (mon_name[n].compare(0, 3, __DATE__) != 0)
+		{	if (mon == mon_name[n])
 			{	result += n + 1;
 				break;
 			}
@@ -72,38 +73,32 @@ namespace
 		return result;
 	}
 
-	using vi_tmAtomicTicks_t = std::atomic<vi_tmTicks_t>;
-
-	vi_tmAtomicTicks_t *from_handle(VI_TM_HITEM h)
-	{	return reinterpret_cast<vi_tmAtomicTicks_t*>(h);
-	}
-
-	VI_TM_HITEM to_handle(vi_tmAtomicTicks_t *p)
-	{	return reinterpret_cast<VI_TM_HITEM>(p);
-	}
-
 	struct item_t
-	{	vi_tmAtomicTicks_t total_ = 0U;
+	{	vi_tmTicks_t total_ = 0U;
 		std::size_t counter_ = 0U;
 		std::size_t calls_cnt_ = 0U;
+		void add(vi_tmTicks_t ticks, std::size_t amount) noexcept
+		{	total_ += ticks;
+			counter_ += amount;
+			++calls_cnt_;
+		}
 		void clear() noexcept
 		{	total_ = counter_ = calls_cnt_ = 0U;
 		};
 	};
 
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
-	std::size_t storage_capacity = 64U;
+	constexpr std::size_t STORAGE_CAPACITY = 64U;
 	using storage_t = std::unordered_map<std::string, item_t>;
 } // namespace
 
 struct vi_tmInstance_t
 {	std::mutex storage_guard_;
 	storage_t storage_;
-	vi_tmAtomicTicks_t total_dummy_ = 0U;
 
 	explicit vi_tmInstance_t()
 	{	storage_.max_load_factor(MAX_LOAD_FACTOR);
-		storage_.reserve(storage_capacity);
+		storage_.reserve(STORAGE_CAPACITY);
 	}
 
 	static vi_tmInstance_t& global()
@@ -111,20 +106,13 @@ struct vi_tmInstance_t
 		return inst;
 	}
 
-	void init()
-	{	
+	int init()
+	{	return 0;
 	}
 
-	vi_tmAtomicTicks_t* total(const char *name, std::size_t cnt)
-	{	if (name)
-		{	std::lock_guard lock{ storage_guard_ };
-			auto &item = storage_[name];
-			item.calls_cnt_ += 1;
-			item.counter_ += cnt;
-			return &item.total_;
-		}
-
-		return &total_dummy_;
+	void add(const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
+	{	std::lock_guard lock{ storage_guard_ };
+		storage_[name].add(ticks, amount);
 	}
 
 	int results(vi_tmLogRAW_t fn, void *data)
@@ -139,11 +127,11 @@ struct vi_tmInstance_t
 		return -1;
 	}
 	
-	void clear(const char *name)
+	void clear(const char *name = nullptr)
 	{	std::lock_guard lock{ storage_guard_ };
+
 		if (!name)
-		{	total_dummy_ = 0U;
-			for (auto &[_, item] : storage_)
+		{	for (auto &[_, item] : storage_)
 			{	item.clear();
 			}
 		}
@@ -152,23 +140,23 @@ struct vi_tmInstance_t
 		}
 	}
 
-	friend vi_tmInstance_t* from_handle(VI_TM_HANDLE h)
-	{	return h? h: &global();
+	friend vi_tmInstance_t& from_handle(VI_TM_HANDLE h)
+	{	return h? *h: global();
 	}
 }; // struct vi_tmInstance_t
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
-void VI_TM_CALL vi_tmInit()
-{	vi_tmInstance_t::global().init();
+int VI_TM_CALL vi_tmInit()
+{	return vi_tmInstance_t::global().init();
 }
 
 void VI_TM_CALL vi_tmFinit(void)
-{	vi_tmInstance_t::global().clear(nullptr);
+{	vi_tmInstance_t::global().clear();
 }
 
 VI_TM_HANDLE VI_TM_CALL vi_tmCreate()
-{	return new vi_tmInstance_t;
+{	return new vi_tmInstance_t{};
 }
 
 void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
@@ -176,15 +164,15 @@ void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
 }
 
 void VI_TM_CALL vi_tmAdd(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
-{	from_handle(to_handle(from_handle(h)->total(name, amount)))->fetch_add(ticks, std::memory_order::memory_order_relaxed);
+{	from_handle(h).add(name, ticks, amount);
 }
 
 void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
-{	from_handle(h)->clear(name);
+{	from_handle(h).clear(name);
 }
 
 int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
-{	return from_handle(h)->results(fn, data);
+{	return from_handle(h).results(fn, data);
 }
 
 std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
@@ -196,18 +184,18 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_BUILDNUMBER:
-		{	result = static_cast<std::uintptr_t>(TIME_STAMP()); //-V201 "Explicit conversion from 32-bit integer type to memsize type."
+		{	result = TIME_STAMP(); //-V101 "Implicit assignment type conversion to memsize type."
 		} break;
 
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
-				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 1'000); //-V590 "Possible excessive expression or typo."
+				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 10'000); //-V590 "Possible excessive expression or typo."
 #	ifdef VI_TM_SHARED
 					static constexpr char type[] = "shared";
 #	else
 					static constexpr char type[] = "static";
 #	endif
-					std::array<char, std::size("99.999.9999 b.YYMMDDHHmm") - 1 + std::size(type)> result;
+					std::array<char, std::size("99.999.9999 b.YYMMDDHHmm ") - 1 + std::size(type) - 1 + 1> result;
 					const auto sz = snprintf(result.data(), result.size(), VI_TM_VERSION_STR " b.%u %s", TIME_STAMP(), type);
 					assert(sz > 0 && sz < result.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
 					return result;
