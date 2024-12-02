@@ -249,7 +249,8 @@ namespace vi_tm
 	};
 
 	inline void init_t::init()
-	{	vi_tmInit();
+	{	auto result = vi_tmInit();
+		assert(0 == result);
 	}
 	template<typename T, typename... Args>
 	inline void init_t::init(T &&v, Args&&... args)
