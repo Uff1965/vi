@@ -38,6 +38,17 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
+#ifdef NDEBUG
+	constexpr char CONFIG[] = "Release";
+#else
+	constexpr char CONFIG[] = "Debug";
+#endif
+#ifdef VI_TM_SHARED
+	constexpr char TYPE[] = "shared";
+#else
+	constexpr char TYPE[] = "static";
+#endif
+
 	constexpr unsigned TIME_STAMP()
 	{	// 7.27.3.1 The asctime function. [C17 ballot ISO/IEC 9899:2017]
 		constexpr std::array<std::string_view, 12> mon_name{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -189,31 +200,17 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
-				{	static_assert(VI_TM_VERSION_MAJOR < 100 && VI_TM_VERSION_MINOR < 1'000 && VI_TM_VERSION_PATCH < 10'000); //-V590 "Possible excessive expression or typo."
-#	ifdef VI_TM_SHARED
-					static constexpr char type[] = "shared";
-#	else
-					static constexpr char type[] = "static";
-#	endif
-					std::array<char, std::size("99.999.9999 b.YYMMDDHHmm ") - 1 + std::size(type) - 1 + 1> result;
-					const auto sz = snprintf(result.data(), result.size(), VI_TM_VERSION_STR " b.%u %s", TIME_STAMP(), type);
-					assert(sz > 0 && sz < result.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
-					return result;
+				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999); //-V590 "Possible excessive expression or typo."
+					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res;
+					const auto sz = snprintf(res.data(), res.size(), VI_TM_VERSION_STR ".%u%c %s", TIME_STAMP(), CONFIG[0], TYPE);
+					assert(0 < sz && sz < res.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
+					return res;
 				}();
 			result = reinterpret_cast<std::uintptr_t>(version.data());
 		} break;
 
-		case VI_TM_INFO_BUILDTIME:
-		{	result = reinterpret_cast<std::uintptr_t>(__DATE__ " " __TIME__);
-		} break;
-
 		case VI_TM_INFO_BUILDTYPE:
-		{	
-#ifdef NDEBUG
-			result = reinterpret_cast<std::uintptr_t>("Release");
-#else
-			result = reinterpret_cast<std::uintptr_t>("Debug");
-#endif
+		{	result = reinterpret_cast<std::uintptr_t>(CONFIG);
 		} break;
 
 		default:

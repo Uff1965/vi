@@ -173,8 +173,7 @@ int main()
 		"\tBuild type: " << reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
 		"\tVer: " << VI_TM_INFO() << "\n"
 		"\tBuild number: " << VI_TM_INFO(VI_TM_INFO_BUILDNUMBER) << "\n"
-		"\tVersion: " << reinterpret_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n"
-		"\tCompile time: " << reinterpret_cast<const char*>(VI_TM_INFO(VI_TM_INFO_BUILDTIME)) << "\n" <<
+		"\tVersion: " << reinterpret_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n" <<
 		std::endl;
 
 	struct space_out final: std::numpunct<char>
