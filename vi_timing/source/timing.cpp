@@ -28,6 +28,19 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <vi_timing.h>
 
+#if defined(_WIN32)
+#	include <Windows.h>
+#elif defined(__linux__)
+#	include <time.h> // for clock_gettime
+#endif
+
+#if defined(_M_X64) || defined(_M_AMD64) // MSVC on x86-64
+#	include <intrin.h>
+#	pragma intrinsic(__rdtscp, _mm_lfence)
+#elif defined(__x86_64__) || defined(__amd64__) // GCC on x86_64
+#	include <x86intrin.h>
+#endif
+
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -35,6 +48,13 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <mutex>
 #include <string>
 #include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
+
+#ifdef __STDC_NO_ATOMICS__
+//	At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
+//	"we left out support for some C11 optional features such as atomics" [Microsoft
+//	https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
+#	error "Atomic objects and the atomic operation library are not supported."
+#endif
 
 namespace
 {
@@ -48,6 +68,41 @@ namespace
 #else
 	constexpr char TYPE[] = "static";
 #endif
+
+// Definition of vi_tmGetTicks() function for different platforms. vvvvvvvvvvvv
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
+	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	{	std::uint32_t _; // Will be removed by the optimizer.
+		const std::uint64_t result = __rdtscp(&_);
+		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
+		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
+		//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
+		//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
+		_mm_lfence();
+		return result;
+	}
+#elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
+	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	{	std::uint64_t result;
+		__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
+		return result;
+	}
+#elif defined(_WIN32) // Windows
+	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	{	LARGE_INTEGER cnt;
+		QueryPerformanceCounter(&cnt);
+		return cnt.QuadPart;
+	}
+#elif defined(__linux__)
+	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	{	struct timespec ts;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+		return 1'000'000'000U * ts.tv_sec + ts.tv_nsec;
+	}
+#else
+#	error "You need to define function(s) for your OS and CPU"
+#endif
+// Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	constexpr unsigned TIME_STAMP()
 	{	// 7.27.3.1 The asctime function. [C17 ballot ISO/IEC 9899:2017]
@@ -126,6 +181,25 @@ struct vi_tmInstance_t
 		storage_[name].add(ticks, amount);
 	}
 
+	int result(const char *name, vi_tmTicks_t *time, std::size_t *amount, std::size_t *calls_cnt)
+	{	std::lock_guard lock{ storage_guard_ };
+
+		if (auto it = storage_.find(name); it != storage_.end())
+		{	assert(it->first == name);
+			if (time) { *time = it->second.total_; }
+			if (amount) { *amount = it->second.counter_; }
+			if (calls_cnt) { *calls_cnt = it->second.calls_cnt_; }
+
+			return 1;
+		}
+
+		if (time) { *time = 0; }
+		if (amount) { *amount = 0; }
+		if (calls_cnt) { *calls_cnt = 0; }
+
+		return 0;
+	}
+
 	int results(vi_tmLogRAW_t fn, void *data)
 	{	std::lock_guard lock{ storage_guard_ };
 
@@ -190,6 +264,16 @@ int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
 {	return from_handle(h).results(fn, data);
 }
 
+int VI_TM_CALL vi_tmResult
+(	VI_TM_HANDLE h,
+	const char *name,
+	vi_tmTicks_t *time,
+	std::size_t *amount,
+	std::size_t *calls_cnt
+)
+{	return from_handle(h).result(name, time, amount, calls_cnt);
+}
+
 std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 {	std::uintptr_t result = 0U;
 	switch (info)
@@ -205,7 +289,7 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999); //-V590 "Possible excessive expression or typo."
-					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res;
+					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res; //-V1065
 					const auto sz = snprintf(res.data(), res.size(), VI_TM_VERSION_STR ".%u%c %s", TIME_STAMP(), CONFIG[0], TYPE);
 					assert(0 < sz && sz < res.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
 					return res;

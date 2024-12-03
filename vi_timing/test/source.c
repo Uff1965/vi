@@ -15,7 +15,7 @@ void bar_c(void)
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 	thrd_yield();
 
-	{	VI_TM_HANDLE htimer = vi_tmCreate(8);
+	{	VI_TM_HANDLE htimer = vi_tmCreate();
 
 		vi_tmTicks_t s = vi_tmStart();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 250000 }, NULL);

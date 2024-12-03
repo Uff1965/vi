@@ -426,7 +426,7 @@ namespace
 
 		static auto gauge_zero = []
 			{	const auto start = vi_tmStart();
-				const auto finish = vi_tmStart();
+				const auto finish = vi_tmStart(); //-V656
 				vi_tmFinish(nullptr, "", finish - start, 1);
 			};
 		auto start = []

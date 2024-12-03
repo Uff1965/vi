@@ -27,42 +27,20 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TIMING_VI_TIMING_H
 #	pragma once
 
-//#	define VI_TM_VERSION_MAJOR 0	// 0 - 99
-//#	define VI_TM_VERSION_MINOR 14	// 0 - 999
-//#	define VI_TM_VERSION_PATCH 1	// 0 - 9999
-#	define VI_TM_VERSION_MAJOR 0
-#	define VI_TM_VERSION_MINOR 14
-#	define VI_TM_VERSION_PATCH 1
+#	define VI_TM_VERSION_MAJOR 0	// 0 - 99
+#	define VI_TM_VERSION_MINOR 14	// 0 - 999
+#	define VI_TM_VERSION_PATCH 1	// 0 - 9999
 #	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
 #	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
-
-#	if defined(_WIN32)
-#		include <Windows.h>
-#	elif defined(__linux__)
-#		include <time.h> // for clock_gettime
-#	endif
-
-#	if defined(_M_X64) || defined(_M_AMD64) // MSVC on x86-64
-#		include <intrin.h>
-#		pragma intrinsic(__rdtscp, _mm_lfence)
-#	elif defined(__x86_64__) || defined(__amd64__) // GCC on x86_64
-#		include <x86intrin.h>
-#	endif
 
 #	ifdef __cplusplus
 #		include <cassert>
 #		include <cstdint>
-#		include <cstdio>
+#		include <cstdio> // For fputs and stdout
 #		include <string>
 #	else
-#		ifdef __STDC_NO_ATOMICS__
-//			At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
-//			"we left out support for some C11 optional features such as atomics" [Microsoft
-//			https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
-#			error "Atomic objects and the atomic operation library are not supported."
-#		endif
 #		include <stdint.h>
-#		include <stdio.h>
+#		include <stdio.h> // For fputs and stdout
 #	endif
 
 #	include "common.h"
@@ -95,7 +73,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #				pragma comment(lib, "vi_timing_d.lib")
 #			endif
 #		endif
-
 #	elif defined(__ANDROID__)
 #		define VI_TM_DISABLE "Android not supported yet."
 #	elif defined (__linux__)
@@ -111,78 +88,36 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-	typedef struct vi_tmInstance_t* VI_TM_HANDLE;
-	typedef VI_STD(uint64_t) vi_tmTicks_t;
-	typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
+typedef struct vi_tmInstance_t* VI_TM_HANDLE;
+typedef VI_STD(uint64_t) vi_tmTicks_t;
+typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
+
+enum vi_tmInfo_e
+{	VI_TM_INFO_VER,
+	VI_TM_INFO_VERSION,
+	VI_TM_INFO_BUILDTYPE,
+	VI_TM_INFO_BUILDNUMBER,
+};
 
 #	ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #	endif
 
-// Definition of vi_tmGetTicks() function for different platforms. vvvvvvvvvvvv
-#	ifndef vi_tmGetTicks
-#		if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
-			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-			{	VI_STD(uint32_t) _; // Will be removed by the optimizer.
-				const VI_STD(uint64_t) result = __rdtscp(&_);
-				//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
-				//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
-				//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
-				//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
-				_mm_lfence();
-				return result;
-			}
-#		elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
-			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-			{	VI_STD(uint64_t) result;
-				__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
-				return result;
-			}
-#		elif defined(_WIN32) // Windows
-			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-			{	LARGE_INTEGER cnt;
-				QueryPerformanceCounter(&cnt);
-				return cnt.QuadPart;
-			}
-#		elif defined(__linux__)
-			static inline vi_tmTicks_t vi_tmGetTicks_impl(void) VI_NOEXCEPT
-			{	struct timespec ts;
-				clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-				return 1000000000ULL * ts.tv_sec + ts.tv_nsec;
-			}
-#		else
-#			error "You need to define function(s) for your OS and CPU"
-#		endif
-		
-#		define vi_tmGetTicks vi_tmGetTicks_impl
-#	endif
-// Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
-
-	// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	enum vi_tmInfo_e
-	{	VI_TM_INFO_VER,
-		VI_TM_INFO_VERSION,
-		VI_TM_INFO_BUILDTYPE,
-		VI_TM_INFO_BUILDNUMBER,
-	};
-
-	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
-	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(); // If successful, returns 0.
-	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate();
-	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmStart() VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmFinish(VI_TM_HANDLE h,const char *name, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT;
+// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEF(VI_TM_INFO_VER));
+	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
+	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(void);
+	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmStart(void) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmFinish(VI_TM_HANDLE h,const char *name, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HANDLE h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
-	// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEFAULT(0), unsigned ms VI_DEFAULT(500));
-	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
-	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
-	}
-
+// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 	enum vi_tmReportFlags_e {
 		vi_tmSortByTime = 0x00,
@@ -199,18 +134,20 @@ extern "C" {
 		vi_tmShowNoHeader = 0x80,
 		vi_tmShowMask = 0xF0,
 	};
-	VI_TM_API int VI_TM_CALL vi_tmReport
-	(	VI_TM_HANDLE h,
-		int flags VI_DEFAULT(vi_tmSortByTime | vi_tmSortDescending),
-		vi_tmLogSTR_t callback VI_DEFAULT(vi_tmReportCallback),
-		void* data VI_DEFAULT(stdout)
-	);
 
-	// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
+	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
+	}
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
+	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
+// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
-} // extern "C" {
+}
+#	endif
 
+// Auxiliary macros. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#	ifdef __cplusplus
 namespace vi_tm
 {
 	class timer_t
@@ -289,8 +226,7 @@ namespace vi_tm
 		vi_tmReport(nullptr, flags_, cb_, data_);
 		vi_tmFinit();
 	}
-
-} // namespace vi_tm {
+}
 
 #		if defined(VI_TM_DISABLE)
 #			define VI_TM_INIT(...) static const int VI_MAKE_ID(_vi_tm_) = 0
@@ -309,5 +245,6 @@ namespace vi_tm
 #		endif
 
 #	endif // #ifdef __cplusplus
+// Auxiliary macros. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #endif // #ifndef VI_TIMING_VI_TIMING_H

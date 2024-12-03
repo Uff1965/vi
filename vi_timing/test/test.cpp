@@ -12,7 +12,7 @@
 #include "../vi_timing.h"
 
 #ifdef _WIN32
-#	include <winbase.h> // SetThreadAffinityMask
+#	include <Windows.h> // SetThreadAffinityMask
 #	include <processthreadsapi.h> // GetCurrentProcessorNumber
 #elif defined (__linux__)
 #	include <pthread.h> // For pthread_setaffinity_np.
@@ -103,7 +103,7 @@ namespace {
 			for (auto n = CNT; n; --n)
 			{	const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
 				const auto s = vi_tmStart();
-				const auto f = vi_tmStart();
+				const auto f = vi_tmStart(); //-V656
 				vi_tmFinish(h, name.c_str(), f - s);
 				v++;
 			}
