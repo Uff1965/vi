@@ -169,7 +169,8 @@ extern "C" {
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEFAULT(VI_TM_INFO_VER));
 	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(); // If successful, returns 0.
 	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate();
-	VI_TM_API void VI_TM_CALL vi_tmAdd(VI_TM_HANDLE h,const char *name,  vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT;
+	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmStart() VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmFinish(VI_TM_HANDLE h,const char *name, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEFAULT(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEFAULT(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
@@ -216,7 +217,7 @@ namespace vi_tm
 	{	const VI_TM_HANDLE h_ = nullptr;
 		const char *name_;
 		const std::size_t cnt_;
-		const vi_tmTicks_t start_{ vi_tmGetTicks() }; // Order matters!!! 'start_' must be initialized last!
+		const vi_tmTicks_t start_{ vi_tmStart() }; // Order matters!!! 'start_' must be initialized last!
 
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
@@ -226,8 +227,8 @@ namespace vi_tm
 		{
 		}
 		~timer_t() noexcept
-		{	const auto finish = vi_tmGetTicks();
-			vi_tmAdd(h_, name_, finish - start_, cnt_);
+		{	const auto finish = vi_tmStart();
+			vi_tmFinish(h_, name_, finish - start_, cnt_);
 		}
 	};
 

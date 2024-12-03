@@ -174,7 +174,11 @@ void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
 {	delete h;
 }
 
-void VI_TM_CALL vi_tmAdd(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
+vi_tmTicks_t VI_TM_CALL vi_tmStart() noexcept
+{	return vi_tmGetTicks();
+}
+
+void VI_TM_CALL vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
 {	from_handle(h).add(name, ticks, amount);
 }
 

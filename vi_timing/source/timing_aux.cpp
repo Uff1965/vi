@@ -399,7 +399,7 @@ namespace
 		auto start = []
 		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 			for(auto n = 0; n < 5; ++n)
-			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks(); // Preloading a function into cache
+			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmStart(); // Preloading a function into cache
 				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
 			}
 
@@ -408,7 +408,7 @@ namespace
 			for (const auto s = last; s == last; last = ch::steady_clock::now())
 			{/**/}
 
-			return std::tuple{ vi_tmGetTicks(), last };
+			return std::tuple{ vi_tmStart(), last };
 		};
 
 		const auto [tick1, time1] = start();
@@ -425,9 +425,9 @@ namespace
 		static constexpr auto CNT = 500U;
 
 		static auto gauge_zero = []
-			{	const auto start = vi_tmGetTicks();
-				const auto finish = vi_tmGetTicks();
-				vi_tmAdd(nullptr, "", finish - start, 1);
+			{	const auto start = vi_tmStart();
+				const auto finish = vi_tmStart();
+				vi_tmFinish(nullptr, "", finish - start, 1);
 			};
 		auto start = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
@@ -468,34 +468,34 @@ VI_OPTIMIZE_OFF
 	{	constexpr auto CNT = 500U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		auto e = vi_tmGetTicks(); // Preloading a function into cache
+		auto e = vi_tmStart(); // Preloading a function into cache
 		for (auto cnt = 5; cnt; --cnt)
-		{	e = vi_tmGetTicks();
+		{	e = vi_tmStart();
 		}
 
-		auto s = vi_tmGetTicks();
+		auto s = vi_tmStart();
 		for (auto cnt = CNT; cnt; --cnt)
-		{	e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); //-V519 "The 'x' variable is assigned values twice successively."
+		{	e = vi_tmStart();
+			e = vi_tmStart(); //-V519 "The 'x' variable is assigned values twice successively."
 		}
 		const auto pure = e - s;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		for (auto cnt = 5; cnt; --cnt)
-		{	e = vi_tmGetTicks();
+		{	e = vi_tmStart();
 		}
 
 		constexpr auto EXT = 20U;
-		s = vi_tmGetTicks();
+		s = vi_tmStart();
 		for (auto cnt = CNT; cnt; --cnt)
-		{	e = vi_tmGetTicks();
-			e = vi_tmGetTicks();
+		{	e = vi_tmStart();
+			e = vi_tmStart();
 
 			// EXT calls
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart();
+			e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart();
+			e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart();
+			e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart(); e = vi_tmStart();
 		}
 		const auto dirty = e - s;
 
