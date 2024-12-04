@@ -102,9 +102,8 @@ namespace {
 
 			for (auto n = CNT; n; --n)
 			{	const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				const auto s = vi_tmStart();
-				const auto f = vi_tmStart(); //-V656
-				vi_tmFinish(h, name.c_str(), f - s);
+				const auto s = vi_tmClock();
+				vi_tmFinish(h, name.c_str(), s);
 				v++;
 			}
 		};

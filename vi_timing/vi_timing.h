@@ -108,8 +108,8 @@ extern "C"
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEF(VI_TM_INFO_VER));
 	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(void);
-	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmStart(void) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmFinish(VI_TM_HANDLE h,const char *name, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h,const char *name, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HANDLE h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
@@ -140,6 +140,10 @@ extern "C"
 	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
+	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
+	{	const vi_tmTicks_t finish = vi_tmClock();
+		vi_tmAppend(h, name, finish - start, amount);
+	}
 // Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
@@ -154,7 +158,7 @@ namespace vi_tm
 	{	const VI_TM_HANDLE h_ = nullptr;
 		const char *name_;
 		const std::size_t cnt_;
-		const vi_tmTicks_t start_{ vi_tmStart() }; // Order matters!!! 'start_' must be initialized last!
+		const vi_tmTicks_t start_{ vi_tmClock() }; // Order matters!!! 'start_' must be initialized last!
 
 		timer_t(const timer_t&) = delete;
 		timer_t& operator=(const timer_t&) = delete;
@@ -164,8 +168,7 @@ namespace vi_tm
 		{
 		}
 		~timer_t() noexcept
-		{	const auto finish = vi_tmStart();
-			vi_tmFinish(h_, name_, finish - start_, cnt_);
+		{	vi_tmFinish(h_, name_, start_, cnt_);
 		}
 	};
 
@@ -175,11 +178,13 @@ namespace vi_tm
 		std::string title_ = "Timing report:\n";
 		vi_tmLogSTR_t cb_ = default_cb;
 		void* data_ = default_data;
-		int flags_ = 0;
+		unsigned flags_ = 0;
 		init_t(const init_t &) = delete;
 		init_t &operator=(const init_t &) = delete;
 	public:
-		template<typename... Args> init_t(Args&&... args);
+		init_t(const char *title, unsigned flags, vi_tmLogSTR_t cb, void *data);
+		template<typename... Args>
+		init_t(Args&&... args);
 		~init_t();
 		template<typename T, typename... Args> void init(T &&v, Args&&... args);
 		void init();
@@ -190,7 +195,7 @@ namespace vi_tm
 		assert(0 == result);
 	}
 	template<typename T, typename... Args>
-	inline void init_t::init(T &&v, Args&&... args)
+	void init_t::init(T &&v, Args&&... args)
 	{
 		if constexpr (std::is_same_v<vi_tmReportFlags_e, std::decay_t<T>>)
 		{	flags_ |= v;
@@ -214,8 +219,13 @@ namespace vi_tm
 	}
 
 	template<typename... Args>
-	inline init_t::init_t(Args&&... args)
+	init_t::init_t(Args&&... args)
 	{	init(std::forward<Args>(args)...);
+	}
+
+	inline init_t::init_t(const char *title, unsigned flags, vi_tmLogSTR_t cb, void *data)
+	:	flags_{ flags }
+	{	init(title, cb, data);
 	}
 
 	inline init_t::~init_t()
