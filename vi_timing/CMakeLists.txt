@@ -110,7 +110,6 @@ elseif (UNIX)
   PRIVATE
     -fvisibility=hidden
     -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
-    -Wl,--exclude-libs,ALL
     $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
     $<$<CONFIG:Release>: -O3 -s>
   )
