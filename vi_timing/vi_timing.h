@@ -91,12 +91,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 typedef struct vi_tmInstance_t* VI_TM_HANDLE;
 typedef VI_STD(uint64_t) vi_tmTicks_t;
 typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
-
 enum vi_tmInfo_e
 {	VI_TM_INFO_VER,
 	VI_TM_INFO_VERSION,
-	VI_TM_INFO_BUILDTYPE,
 	VI_TM_INFO_BUILDNUMBER,
+	VI_TM_INFO_BUILDTYPE,
 };
 
 #	ifdef __cplusplus
@@ -105,7 +104,7 @@ extern "C"
 #	endif
 
 // Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info VI_DEF(VI_TM_INFO_VER));
+	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(void);
 	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
@@ -135,15 +134,15 @@ extern "C"
 		vi_tmShowMask = 0xF0,
 	};
 
+	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
+	{	const vi_tmTicks_t finish = vi_tmClock();
+		vi_tmAppend(h, name, finish - start, amount);
+	}
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
-	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
-	{	const vi_tmTicks_t finish = vi_tmClock();
-		vi_tmAppend(h, name, finish - start, amount);
-	}
 // Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
