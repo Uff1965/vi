@@ -26,6 +26,7 @@ source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
+  "${VI_SOURCE_DIR}/clock.cpp"
   "${VI_SOURCE_DIR}/timing.cpp"
   "${VI_SOURCE_DIR}/timing_aux.cpp"
 )

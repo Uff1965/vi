@@ -28,19 +28,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <vi_timing.h>
 
-#if defined(_WIN32)
-#	include <Windows.h>
-#elif defined(__linux__)
-#	include <time.h> // for clock_gettime
-#endif
-
-#if defined(_M_X64) || defined(_M_AMD64) // MSVC on x86-64
-#	include <intrin.h>
-#	pragma intrinsic(__rdtscp, _mm_lfence)
-#elif defined(__x86_64__) || defined(__amd64__) // GCC on x86_64
-#	include <x86intrin.h>
-#endif
-
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -68,41 +55,6 @@ namespace
 #else
 	constexpr char TYPE[] = "static";
 #endif
-
-// Definition of vi_tmGetTicks() function for different platforms. vvvvvvvvvvvv
-#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__) // MSC or GCC on Intel
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
-	{	std::uint32_t _; // Will be removed by the optimizer.
-		const std::uint64_t result = __rdtscp(&_);
-		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
-		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
-		//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
-		//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
-		_mm_lfence();
-		return result;
-	}
-#elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
-	{	std::uint64_t result;
-		__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
-		return result;
-	}
-#elif defined(_WIN32) // Windows
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
-	{	LARGE_INTEGER cnt;
-		QueryPerformanceCounter(&cnt);
-		return cnt.QuadPart;
-	}
-#elif defined(__linux__)
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
-	{	struct timespec ts;
-		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-		return 1'000'000'000U * ts.tv_sec + ts.tv_nsec;
-	}
-#else
-#	error "You need to define function(s) for your OS and CPU"
-#endif
-// Definition of vi_tmGetTicks() function for different platforms. ^^^^^^^^^^^^
 
 	constexpr unsigned TIME_STAMP()
 	{	// 7.27.3.1 The asctime function. [C17 ballot ISO/IEC 9899:2017]
@@ -245,10 +197,6 @@ VI_TM_HANDLE VI_TM_CALL vi_tmCreate()
 
 void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
 {	delete h;
-}
-
-vi_tmTicks_t VI_TM_CALL vi_tmClock() noexcept
-{	return vi_tmGetTicks();
 }
 
 void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
