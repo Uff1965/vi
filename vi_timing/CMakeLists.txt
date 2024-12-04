@@ -110,6 +110,7 @@ elseif (UNIX)
   PRIVATE
     -fvisibility=hidden
     -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
+    -Wl,--exclude-libs,ALL
     $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
     $<$<CONFIG:Release>: -O3 -s>
   )
@@ -126,7 +127,7 @@ if (WIN32)
 elseif (UNIX)
   target_link_options(${PROJECT_NAME}
   PRIVATE
-    --exclude-libs ALL
+    -Wl,--exclude-libs,ALL
   )
 
   target_link_libraries(${PROJECT_NAME}
