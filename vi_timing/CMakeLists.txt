@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(vi_timing VERSION 3.1.1)
+project(vi_timing VERSION 0.14.1)
 
 if(NOT DEFINED VI_OUT_DIR)
 	get_filename_component(VI_OUT_DIR "${PROJECT_SOURCE_DIR}/lib/." DIRECTORY)
@@ -126,7 +126,7 @@ if (WIN32)
 elseif (UNIX)
   target_link_options(${PROJECT_NAME}
   PRIVATE
-    -Wl,--exclude-libs,ALL
+    --exclude-libs ALL
   )
 
   target_link_libraries(${PROJECT_NAME}
