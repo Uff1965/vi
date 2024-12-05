@@ -121,7 +121,6 @@ namespace
 		assert((0 == calls_cnt) == (0 == amount));
 		auto& itm = meterages_.emplace_back(name, total, amount, calls_cnt);
 
-		constexpr auto dirty = 1.0; // A fair odds would be 1.0
 		if (0 == itm.orig_amount_)
 		{	assert( 0 == itm.orig_total_);
 			assert( 0 == itm.orig_amount_);
@@ -131,7 +130,10 @@ namespace
 			assert(itm.total_txt_ == NotAvailable);
 			assert(itm.average_txt_ == NotAvailable);
 		}
-		else if (const auto burden = std::llround(props().measurement_cost_ * dirty) * itm.orig_calls_cnt_; itm.orig_total_ <= burden)
+		else if
+			(	const auto burden = props().clock_latency_ * itm.orig_calls_cnt_;
+				itm.orig_total_ <= burden + props().clock_resolution_ * std::sqrt(itm.orig_calls_cnt_)
+			)
 		{	itm.total_txt_ = Insignificant;
 			itm.average_txt_ = Insignificant;
 		}
@@ -300,13 +302,13 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 	{	std::ostringstream str;
 
 		if (flags & to_underlying(vi_tmShowOverhead))
-		{	str << "Measurement cost: " << misc::duration_t(props().tick_duration_ * props().measurement_cost_) << ". ";
+		{	str << "Measurement cost: " << misc::duration_t(props().tick_duration_ * props().clock_latency_) << ". ";
 		}
 		if (flags & to_underlying(vi_tmShowResolution))
-		{	str << "Resolution: " << misc::duration_t(props().tick_duration_ * props().resolution_) << ". ";
+		{	str << "Resolution: " << misc::duration_t(props().tick_duration_ * props().clock_resolution_) << ". ";
 		}
 		if (flags & to_underlying(vi_tmShowDuration))
-		{	str << "Duration: " << props().duration_ << ". ";
+		{	str << "Duration: " << props().all_latency_ << ". ";
 		}
 		if (flags & to_underlying(vi_tmShowUnit))
 		{	str << "One tick: " << props().tick_duration_ << ". ";

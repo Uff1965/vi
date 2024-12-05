@@ -41,9 +41,9 @@ namespace misc
 
 struct properties_t
 {	misc::duration_t tick_duration_;
-	double measurement_cost_;
-	misc::duration_t duration_;
-	double resolution_;
+	double clock_latency_;
+	misc::duration_t all_latency_;
+	double clock_resolution_;
 
 private:
 	properties_t();

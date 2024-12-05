@@ -185,7 +185,7 @@ properties_t::properties_t()
 {	vi_tmWarming(1, 500);
 
 	tick_duration_ = seconds_per_tick();
-	measurement_cost_ = measurement_cost();
-	duration_ = duration();
-	resolution_ = resolution();
+	clock_latency_ = measurement_cost();
+	all_latency_ = duration();
+	clock_resolution_ = resolution();
 }
