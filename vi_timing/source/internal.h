@@ -25,14 +25,14 @@ namespace misc
 		constexpr duration_t(T &&v): std::chrono::duration<double>{ std::forward<T>(v) } {}
 		duration_t() = default;
 
-		friend std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
+		friend std::string to_string(duration_t d, unsigned char precision, unsigned char dec);
 
 		[[nodiscard]] friend bool operator<(duration_t l, duration_t r)
-		{	return l.count() < r.count() && to_string(l) != to_string(r);
+		{	return l.count() < r.count() && to_string(l, PRECISION, DEC) != to_string(r, PRECISION, DEC);
 		}
 		template<typename T>
 		friend inline std::basic_ostream<T>& operator<<(std::basic_ostream<T>& os, const duration_t& d)
-		{	return os << to_string(d);
+		{	return os << to_string(d, PRECISION, DEC);
 		}
     };
 }

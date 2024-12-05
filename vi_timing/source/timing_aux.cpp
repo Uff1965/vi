@@ -30,7 +30,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "internal.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -306,8 +305,8 @@ VI_OPTIMIZE_ON
 		else
 		{	itm.total_time_ = props().tick_duration_ * (itm.orig_total_ - burden);
 			itm.average_ = itm.total_time_ / itm.orig_amount_;
-			itm.total_txt_ = to_string(itm.total_time_);
-			itm.average_txt_ = to_string(itm.average_);
+			itm.total_txt_ = to_string(itm.total_time_, misc::PRECISION, misc::DEC);
+			itm.average_txt_ = to_string(itm.average_, misc::PRECISION, misc::DEC);
 		}
 
 		max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
