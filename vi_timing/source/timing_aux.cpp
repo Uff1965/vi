@@ -31,18 +31,17 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
-#include <cstring>
+//#include <cmath>
+//#include <cstring>
 #include <iomanip>
-#include <iostream>
-#include <limits>
+//#include <iostream>
 #include <numeric>
 #include <sstream>
-#include <string_view>
+//#include <string_view>
 #include <string>
 #include <tuple>
-#include <type_traits>
-#include <utility>
+//#include <type_traits>
+//#include <utility>
 #include <vector>
 
 namespace

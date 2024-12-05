@@ -36,6 +36,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <iomanip>
 #include <iostream>
 #include <locale>
+#include <limits>
 #include <sstream>
 #include <vector>
 #include <thread>
