@@ -38,3 +38,16 @@ namespace misc
 
 	std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
 }
+
+struct properties_t
+{	misc::duration_t tick_duration_;
+	double measurement_cost_;
+	misc::duration_t duration_;
+	double resolution_;
+
+private:
+	properties_t();
+	friend const properties_t& props();
+};
+
+const properties_t& props();
