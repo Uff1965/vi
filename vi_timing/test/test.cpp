@@ -64,7 +64,7 @@ namespace
 		return result;
 	}
 
-	VI_TM_INIT(vi_tmSortBySpeed, "Global timing report:\n", vi_tmShowDuration, vi_tmShowOverhead, vi_tmShowUnit);
+	VI_TM_INIT(vi_tmSortBySpeed, "Global timing report:\n", vi_tmShowDuration, vi_tmShowOverhead, vi_tmShowUnit, vi_tmShowResolution);
 	VI_TM("GLOBAL");
 
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -189,7 +189,7 @@ int main()
 
 	foo_c();
 	test_instances();
-	test_multithreaded();
+//	test_multithreaded();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 }

@@ -40,8 +40,7 @@ namespace
 #		error "Undefined compiler"
 #	endif
 	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
-	{
-		std::uint32_t _; // Will be removed by the optimizer.
+	{	std::uint32_t _; // Will be removed by the optimizer.
 		const std::uint64_t result = __rdtscp(&_);
 		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
 		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 

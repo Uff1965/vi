@@ -500,6 +500,36 @@ VI_OPTIMIZE_OFF
 
 		return static_cast<double>(dirty - pure) / (EXT * CNT);
 	}
+
+	double resolution()
+	{	constexpr auto cache_warmup = 5U;
+		double diff = .0;
+		auto CNT = 1;
+		for (;; CNT *= 8) //-V1044 Loop break conditions do not depend on the number of iterations.
+		{	std::this_thread::yield(); // Reduce the likelihood of interrupting measurements by switching threads.
+			const auto limit = ch::steady_clock::now() + 256us;
+			vi_tmTicks_t first = 0;
+			vi_tmTicks_t last = 0;
+			for (auto n = 0U; n < cache_warmup; ++n)
+			{	first = last = vi_tmClock();
+			}
+
+			for (auto cnt = CNT; cnt; )
+			{	if (const auto current = vi_tmClock(); current != last)
+				{	last = current;
+					--cnt;
+				}
+			}
+
+			diff = static_cast<double>(last - first);
+
+			if (ch::steady_clock::now() > limit)
+			{	break;
+			}
+		}
+
+		return diff / CNT;
+	}
 VI_OPTIMIZE_ON
 
 	const auto& props()
@@ -507,12 +537,14 @@ VI_OPTIMIZE_ON
 		{	duration_t tick_duration_;
 			double measurement_cost_;
 			duration_t duration_;
+			double resolution_;
 
 			properties_t()
 			{	vi_tmWarming(1, 500);
 				tick_duration_ = seconds_per_tick();
 				measurement_cost_ = measurement_cost();
 				duration_ = duration();
+				resolution_ = resolution();
 			}
 		};
 		static const properties_t inst_;
@@ -768,13 +800,16 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 	{	std::ostringstream str;
 
 		if (flags & to_underlying(vi_tmShowOverhead))
-		{	str << "Measurement cost: " << duration_t(props().tick_duration_ * props().measurement_cost_) << " per measurement. ";
+		{	str << "Measurement cost: " << duration_t(props().tick_duration_ * props().measurement_cost_) << ". ";
+		}
+		if (flags & to_underlying(vi_tmShowResolution))
+		{	str << "Resolution: " << duration_t(props().tick_duration_ * props().resolution_) << ". ";
 		}
 		if (flags & to_underlying(vi_tmShowDuration))
 		{	str << "Duration: " << props().duration_ << ". ";
 		}
 		if (flags & to_underlying(vi_tmShowUnit))
-		{	str << "One tick corresponds: " << props().tick_duration_ << ". ";
+		{	str << "One tick: " << props().tick_duration_ << ". ";
 		}
 
 		str << '\n';

@@ -127,11 +127,12 @@ extern "C"
 		vi_tmSortAscending = 0x08,
 		vi_tmSortMask = 0x0F,
 
-		vi_tmShowOverhead = 0x10,
-		vi_tmShowUnit = 0x20,
-		vi_tmShowDuration = 0x40,
-		vi_tmShowNoHeader = 0x80,
-		vi_tmShowMask = 0xF0,
+		vi_tmShowOverhead = 0x010,
+		vi_tmShowUnit = 0x020,
+		vi_tmShowDuration = 0x040,
+		vi_tmShowResolution = 0x080,
+		vi_tmShowNoHeader = 0x100,
+		vi_tmShowMask = 0xFF0,
 	};
 
 	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
