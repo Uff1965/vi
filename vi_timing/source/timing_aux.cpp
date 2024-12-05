@@ -34,14 +34,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <cmath>
 #include <cstring>
 #include <iomanip>
-//#include <iostream>
 #include <numeric>
 #include <sstream>
-//#include <string_view>
 #include <string>
 #include <tuple>
-//#include <type_traits>
-//#include <utility>
 #include <vector>
 
 namespace
