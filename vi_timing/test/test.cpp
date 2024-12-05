@@ -189,7 +189,7 @@ int main()
 
 	foo_c();
 	test_instances();
-//	git statustest_multithreaded();
+	test_multithreaded();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 }
