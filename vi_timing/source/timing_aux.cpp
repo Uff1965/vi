@@ -305,8 +305,8 @@ VI_OPTIMIZE_ON
 		else
 		{	itm.total_time_ = props().tick_duration_ * (itm.orig_total_ - burden);
 			itm.average_ = itm.total_time_ / itm.orig_amount_;
-			itm.total_txt_ = to_string(itm.total_time_, misc::PRECISION, misc::DEC);
-			itm.average_txt_ = to_string(itm.average_, misc::PRECISION, misc::DEC);
+			itm.total_txt_ = to_string(itm.total_time_);
+			itm.average_txt_ = to_string(itm.average_);
 		}
 
 		max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());

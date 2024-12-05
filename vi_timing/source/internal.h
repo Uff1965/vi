@@ -35,4 +35,6 @@ namespace misc
 		{	return os << to_string(d, PRECISION, DEC);
 		}
     };
+
+	std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
 }

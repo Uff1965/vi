@@ -379,7 +379,7 @@ namespace
 
 			for (auto &i : samples)
 			{
-				const auto result = misc::to_string(i.original_, i.precision_, i.dec_);
+				const auto result = to_string(i.original_, i.precision_, i.dec_);
 				if (i.expected_ != result)
 				{
 					std::ostringstream buff;
