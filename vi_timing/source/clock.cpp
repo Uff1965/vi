@@ -63,20 +63,20 @@ namespace
 
 	volatile std::uint32_t *timer_base = []
 		{	volatile std::uint32_t *result = nullptr;
-			if (int mem_fd = open("/dev/mem", O_RDWR | O_SYNC); mem_fd < 0)
-			{	assert(false); // Enhanced privileges are required (sudo).
-			}
-			else
+			if (int mem_fd = open("/dev/mem", O_RDONLY | O_SYNC); mem_fd >= 0)
 			{	// Timer addresses in Raspberry Pi peripheral area
 				constexpr off_t TIMER_BASE = 0x20003000;
 				constexpr std::size_t BLOCK_SIZE = 4096;
-				if (void *mapped_base = mmap(nullptr, BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, mem_fd, TIMER_BASE); mapped_base == MAP_FAILED)
-				{	assert(false);
+				if (void *mapped_base = mmap(nullptr, BLOCK_SIZE, PROT_READ, MAP_SHARED, mem_fd, TIMER_BASE); mapped_base != MAP_FAILED)
+				{	result = reinterpret_cast<volatile std::uint32_t *>(mapped_base);
 				}
 				else
-				{	result = (volatile uint32_t *)mapped_base;
+				{	assert(false);
 				}
 				close(mem_fd);
+			}
+			else
+			{	assert(false); // Enhanced privileges are required (sudo).
 			}
 
 			return result;
