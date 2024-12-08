@@ -125,7 +125,7 @@ namespace
 		else
 		{	struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-			result = 1'000'000'000U * ts.tv_sec + ts.tv_nsec;
+			result = 1'000'000'000ULL * ts.tv_sec + ts.tv_nsec;
 		}
 
 		return result;
