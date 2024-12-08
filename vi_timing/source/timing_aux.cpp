@@ -301,9 +301,6 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit))
 	{	std::ostringstream str;
 
-		if (flags & to_underlying(vi_tmShowOverhead))
-		{	str << "Measurement cost: " << misc::duration_t(props().tick_duration_ * props().clock_latency_) << ". ";
-		}
 		if (flags & to_underlying(vi_tmShowResolution))
 		{	str << "Resolution: " << misc::duration_t(props().tick_duration_ * props().clock_resolution_) << ". ";
 		}
@@ -312,6 +309,9 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 		}
 		if (flags & to_underlying(vi_tmShowUnit))
 		{	str << "One tick: " << props().tick_duration_ << ". ";
+		}
+		if (flags & to_underlying(vi_tmShowOverhead))
+		{	str << "Measurement cost: " << misc::duration_t(props().tick_duration_ * props().clock_latency_) << ". ";
 		}
 
 		str << '\n';
