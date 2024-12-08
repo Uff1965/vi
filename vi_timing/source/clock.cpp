@@ -112,7 +112,7 @@ namespace
 
 		if(!result)
 		{	//perror("SystemTimer_by_DevMem initial filed"); // Enhanced privileges are required (sudo).
-			static constexpr msg[] =
+			static constexpr char msg[] =
 				"Attention! To ensure more accurate time measurements on this machine, "
 				"the vi_timing library may require elevated privileges. Please try running the program with sudo.";
 			perror(msg);
