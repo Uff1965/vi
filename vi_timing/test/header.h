@@ -1,3 +1,7 @@
+#ifndef VI_TIMING_TEST_HEADER_H
+#	define VI_TIMING_TEST_HEADER_H
+#	pragma once
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -9,3 +13,5 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+#endif // #ifndef VI_TIMING_TEST_HEADER_H

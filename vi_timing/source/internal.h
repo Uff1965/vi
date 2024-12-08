@@ -2,8 +2,6 @@
 #	define VI_TIMING_SOURCE_INTERNAL_H
 #	pragma once
 
-#endif
-
 #include <chrono>
 #include <locale>
 
@@ -51,3 +49,5 @@ private:
 };
 
 const properties_t& props();
+
+#endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H
