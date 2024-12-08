@@ -56,6 +56,7 @@ namespace
 		return result;
 	}
 #elif __ARM_ARCH >= 6 // ARMv6 (RaspberryPi1B+)
+#	include <cerrno>
 #	include <time.h> // for clock_gettime
 #	include <fcntl.h>
 #	include <sys/mman.h>
