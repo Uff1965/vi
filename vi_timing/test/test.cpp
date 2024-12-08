@@ -138,8 +138,7 @@ namespace {
 			{	vi_tm::timer_t tm1{ h, "long, long, long, very long name" };
 				{	vi_tm::timer_t tm2{ h, "100ms * 10", 10 };
 					for (int n = 0; n < 10; ++n)
-					{
-						std::this_thread::sleep_for(100ms);
+					{	std::this_thread::sleep_for(100ms);
 
 						vi_tm::timer_t tm3{ h, "tm" };
 						vi_tm::timer_t tm4{ h, "tm_empty" };
@@ -149,6 +148,37 @@ namespace {
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		}
 		std::cout << "done" << std::endl;
+	}
+
+	void test_empty()
+	{	VI_TM_FUNC;
+		std::cout << "\ntest_empty()...\n";
+
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> handler{ vi_tmCreate(), &vi_tmClose };
+		{	auto h = handler.get();
+			vi_tmClear(nullptr, "Empty vi_tm");
+			for(int n = 0; n < 100'000; ++n)
+			{	const auto start0 = vi_tmClock();
+				const auto start1 = vi_tmClock();
+				vi_tmFinish(nullptr, "Empty vi_tm", start1);
+				vi_tmFinish(nullptr, "vi_tm", start0);
+			}
+			vi_tmClear(nullptr, "Empty VI_TM");
+			for(int n = 0; n < 100'000; ++n)
+			{	VI_TM("VI_TM");
+				VI_TM("Empty VI_TM");
+			}
+			vi_tmClear(h, "Empty vi_tm");
+			for(int n = 0; n < 100'000; ++n)
+			{	const auto start0 = vi_tmClock();
+				const auto start1 = vi_tmClock();
+				vi_tmFinish(h, "Empty vi_tm", start1);
+				vi_tmFinish(h, "vi_tm", start0);
+			}
+			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+		}
+
+		std::cout << "\ntest_empty() Done\n";
 	}
 } // namespace
 
@@ -188,6 +218,7 @@ int main()
 	std::cout << "done" << std::endl;
 
 	foo_c();
+	test_empty();
 	test_instances();
 	test_multithreaded();
 

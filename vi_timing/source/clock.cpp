@@ -61,33 +61,66 @@ namespace
 #	include <sys/mman.h>
 #	include <unistd.h>
 
-	volatile std::uint32_t *timer_base = []
-		{	volatile std::uint32_t *result = nullptr;
-			if (int mem_fd = open("/dev/mem", O_RDONLY | O_SYNC); mem_fd >= 0)
-			{	// Timer addresses in Raspberry Pi peripheral area
-				constexpr off_t TIMER_BASE = 0x20003000;
-				constexpr std::size_t BLOCK_SIZE = 4096;
-				if (void *mapped_base = mmap(nullptr, BLOCK_SIZE, PROT_READ, MAP_SHARED, mem_fd, TIMER_BASE); mapped_base != MAP_FAILED)
-				{	result = reinterpret_cast<volatile std::uint32_t *>(mapped_base);
-				}
-				else
-				{	assert(false);
-				}
-				close(mem_fd);
+	auto get_peripheral_base()
+	{	std::uint32_t result = 0;
+
+		if (auto fp = open("/proc/device-tree/soc/ranges", O_RDONLY); fp >= 0)
+		{	std::uint8_t buf[32];
+			if (auto sz = read(fp, buf, sizeof(buf)); sz >= 32) // Raspberry Pi 4
+			{	result = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
+				assert(result == 0xFE000000);
+			}
+			else if (sz >= 12) // Raspberry Pi 1 - 3
+			{	result = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+				assert(result == 0x20000000 || result == 0x3F000000);
 			}
 			else
-			{	assert(false); // Enhanced privileges are required (sudo).
+			{	printf("SystemTimer_by_DevMem initial filed: Unknown format file \'/proc/device-tree/soc/ranges\'\n");
 			}
 
-			return result;
-		}();
+			close(fp);
+		}
+		else
+		{	perror("SystemTimer_by_DevMem initial filed");
+		}
+
+		return result;
+	}
+
+	volatile std::uint32_t* timer_base()
+	{	volatile std::uint32_t *result = nullptr;
+
+		if (auto mem_fd = open("/dev/mem", O_RDONLY); mem_fd >= 0)
+		{	// Timer addresses in Raspberry Pi peripheral area
+			const auto PAGE_SIZE = sysconf(_SC_PAGE_SIZE);
+			constexpr auto TIMER_OFFSET = 0x3000;
+			const off_t TIMER_BASE = get_peripheral_base() + TIMER_OFFSET;
+
+			if (void *mapped_base = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, mem_fd, TIMER_BASE); mapped_base != MAP_FAILED)
+			{	result = reinterpret_cast<volatile std::uint32_t *>(mapped_base);
+			}
+			else
+			{	assert(false);
+				perror("SystemTimer_by_DevMem initial filed");
+			}
+			close(mem_fd);
+		}
+		else
+		{	assert(false); // Enhanced privileges are required (sudo).
+			perror("SystemTimer_by_DevMem initial filed");
+		}
+
+		return result;
+	}
 
 	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
 	{	vi_tmTicks_t result = 0;
+
+		static volatile std::uint32_t *const timer_base = timer_base();
 		if (timer_base)
 		{	const std::uint32_t lo = timer_base[1]; // Timer low 32 bits
 			const std::uint32_t hi = timer_base[2]; // Timer high 32 bits
-			result = ((std::uint64_t)hi << 32) | lo;
+			result = (hi << 32) | lo;
 		}
 		else
 		{	struct timespec ts;
