@@ -75,13 +75,13 @@ namespace
 				assert(result == 0x20000000 || result == 0x3F000000);
 			}
 			else
-			{	printf("SystemTimer_by_DevMem initial filed: Unknown format file \'/proc/device-tree/soc/ranges\'\n");
+			{	//printf("SystemTimer_by_DevMem initial filed: Unknown format file \'/proc/device-tree/soc/ranges\'\n");
 			}
 
 			close(fp);
 		}
 		else
-		{	perror("SystemTimer_by_DevMem initial filed");
+		{	//perror("SystemTimer_by_DevMem initial filed");
 		}
 
 		return result;
@@ -90,24 +90,32 @@ namespace
 	volatile std::uint32_t* get_timer_base()
 	{	volatile std::uint32_t *result = nullptr;
 
-		if (auto mem_fd = open("/dev/mem", O_RDONLY); mem_fd >= 0)
-		{	// Timer addresses in Raspberry Pi peripheral area
-			const auto PAGE_SIZE = sysconf(_SC_PAGE_SIZE);
-			constexpr auto TIMER_OFFSET = 0x3000;
-			const off_t TIMER_BASE = get_peripheral_base() + TIMER_OFFSET;
+		std::errno = 0;
 
-			if (void *mapped_base = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, mem_fd, TIMER_BASE); mapped_base != MAP_FAILED)
-			{	result = reinterpret_cast<volatile std::uint32_t *>(mapped_base);
+		if (const off_t peripheral_base = get_peripheral_base())
+		{	constexpr auto TIMER_OFFSET = 0x3000;
+			const auto timer_base = peripheral_base + TIMER_OFFSET;
+
+			if (auto mem_fd = open("/dev/mem", O_RDONLY); mem_fd >= 0)
+			{	const auto PAGE_SIZE = sysconf(_SC_PAGE_SIZE);
+				assert(PAGE_SIZE == 0x1000 && 0 == timer_base % PAGE_SIZE);
+
+				if (void *mapped_base = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, mem_fd, timer_base); mapped_base != MAP_FAILED)
+				{	result = reinterpret_cast<volatile std::uint32_t *>(mapped_base);
+				}
+				else
+				{	//perror("SystemTimer_by_DevMem initial filed");
+				}
+				close(mem_fd);
 			}
-			else
-			{	assert(false);
-				perror("SystemTimer_by_DevMem initial filed");
-			}
-			close(mem_fd);
 		}
-		else
-		{	assert(false); // Enhanced privileges are required (sudo).
-			perror("SystemTimer_by_DevMem initial filed");
+
+		if(!result)
+		{	//perror("SystemTimer_by_DevMem initial filed"); // Enhanced privileges are required (sudo).
+			static constexpr msg[] =
+				"Attention! To ensure more accurate time measurements on this machine, "
+				"the vi_timing library may require elevated privileges. Please try running the program with sudo.";
+			perror(msg);
 		}
 
 		return result;
