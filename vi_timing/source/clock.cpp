@@ -118,8 +118,8 @@ namespace
 
 		static volatile std::uint32_t *const timer_base = get_timer_base();
 		if (timer_base)
-		{	const std::uint32_t lo = timer_base[1]; // Timer low 32 bits
-			const std::uint32_t hi = timer_base[2]; // Timer high 32 bits
+		{	const std::uint64_t lo = timer_base[1]; // Timer low 32 bits
+			const std::uint64_t hi = timer_base[2]; // Timer high 32 bits
 			result = (hi << 32) | lo;
 		}
 		else
