@@ -87,7 +87,7 @@ namespace
 		return result;
 	}
 
-	volatile std::uint32_t* timer_base()
+	volatile std::uint32_t* get_timer_base()
 	{	volatile std::uint32_t *result = nullptr;
 
 		if (auto mem_fd = open("/dev/mem", O_RDONLY); mem_fd >= 0)
@@ -116,7 +116,7 @@ namespace
 	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
 	{	vi_tmTicks_t result = 0;
 
-		static volatile std::uint32_t *const timer_base = timer_base();
+		static volatile std::uint32_t *const timer_base = get_timer_base();
 		if (timer_base)
 		{	const std::uint32_t lo = timer_base[1]; // Timer low 32 bits
 			const std::uint32_t hi = timer_base[2]; // Timer high 32 bits
