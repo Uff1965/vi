@@ -90,7 +90,7 @@ namespace
 	volatile std::uint32_t* get_timer_base()
 	{	volatile std::uint32_t *result = nullptr;
 
-		std::errno = 0;
+		errno = 0;
 
 		if (const off_t peripheral_base = get_peripheral_base())
 		{	constexpr auto TIMER_OFFSET = 0x3000;
