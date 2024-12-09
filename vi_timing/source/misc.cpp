@@ -34,6 +34,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <chrono>
 #include <cmath>
 #include <iomanip>
+#include <iostream>
 #include <limits>
 #include <sstream>
 #include <string_view>
