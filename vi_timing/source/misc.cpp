@@ -31,10 +31,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <vi_timing.h>
 
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <sstream>
 #include <string_view>
@@ -138,34 +138,32 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	}
 }
 
+#ifndef NDEBUG
 namespace
 {
-#ifndef NDEBUG
-	constexpr struct
-	{	misc::duration_t v_;
-		std::string_view expected_;
-		unsigned char prec_{3};
-		unsigned char dec_{1};
-		int line_;
-	} vals[] =
-	{
-		{ 0.0, "0.0 ps", 3, 1, __LINE__ },
-		{ 1.2345e12, "1230000.00 Ms", 3, 2, __LINE__ },
-		{ 0.555, "560.0 ms", 2, 1, __LINE__ },
-		{ 5.55, "5.6 s ", 2, 1, __LINE__ },
-		{ 55.5, "56.0 s ", 2, 1, __LINE__ },
-	};
-
-	const auto _ =
+	const auto nanotest =
 		(	[]
-			{	for (auto &v : vals)
-				{	auto s = misc::to_string(v.v_, v.prec_, v.dec_);
-					std::cout << std::setw(4) << v.line_ << ": " << v.v_ << "->" << s << " (" << v.expected_ << ")\n";
+			{	const struct
+				{	misc::duration_t v_;
+					std::string_view expected_;
+					unsigned char prec_{3};
+					unsigned char dec_{1};
+					int line_;
+				} vals[] =
+				{
+					{ 0.0, "0.0 ps", 3, 1, __LINE__ },
+					{ 1.2345e12, "1230000.00 Ms", 3, 2, __LINE__ },
+					{ 0.555, "560.0 ms", 2, 1, __LINE__ },
+					{ 5.55, "5.6 s ", 2, 1, __LINE__ },
+					{ 55.5, "56.0 s ", 2, 1, __LINE__ },
+				};
+
+				for (auto &v : vals)
+				{	const auto s = misc::to_string(v.v_, v.prec_, v.dec_);
 					assert(s == v.expected_);
 				}
 			}(),
 			0
 		);
-
-#endif // #ifndef NDEBUG
 }
+#endif // #ifndef NDEBUG
