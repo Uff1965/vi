@@ -217,10 +217,14 @@ int main()
 	}
 	std::cout << "done" << std::endl;
 
+	assert(0 == errno);
+
 	foo_c();
 	test_empty();
 	test_instances();
 	test_multithreaded();
 
 	std::cout << "\nHello, World!\n" << std::endl;
+
+	assert(0 == errno);
 }

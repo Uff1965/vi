@@ -94,18 +94,23 @@ namespace
 {
 	assert(d.count() >= 0.0 && dec >= 0 && precision > dec);
 	auto sec = round_ext(d.count(), precision, dec);
-	const auto triple = static_cast<int>(std::floor(std::log10(sec))) - 3 * ((precision - dec - 1) / 3);
-
 	struct { std::string_view suffix_; double factor_; } k{ "ps"sv, 1e12 };
-	if (-11 > triple) { sec = 0.0; }
-	else if (-9 > triple) { k = { "ps"sv, 1e12 }; }
-	else if (-6 > triple) { k = { "ns"sv, 1e9 }; }
-	else if (-3 > triple) { k = { "us"sv, 1e6 }; }
-	else if (0 > triple) { k = { "ms"sv, 1e3 }; }
-	else if (+3 > triple) { k = { "s "sv, 1e0 }; }
-	else if (+6 > triple) { k = { "ks"sv, 1e-3 }; }
-	else if (+9 > triple) { k = { "Ms"sv, 1e-6 }; }
-	else { k = { "Gs"sv, 1e-9 }; }
+
+	if(1e-11 > sec)
+	{	sec = 0.0;
+	}
+	else
+	{	const auto triple = static_cast<int>(std::floor(std::log10(sec))) - 3 * ((precision - dec - 1) / 3);
+		if (-11 > triple) { sec = 0.0; }
+		else if (-9 > triple) { k = { "ps"sv, 1e12 }; }
+		else if (-6 > triple) { k = { "ns"sv, 1e9 }; }
+		else if (-3 > triple) { k = { "us"sv, 1e6 }; }
+		else if (0 > triple) { k = { "ms"sv, 1e3 }; }
+		else if (+3 > triple) { k = { "s "sv, 1e0 }; }
+		else if (+6 > triple) { k = { "ks"sv, 1e-3 }; }
+		else if (+9 > triple) { k = { "Ms"sv, 1e-6 }; }
+		else { k = { "Gs"sv, 1e-9 }; }
+	}
 
 	std::ostringstream ss;
 	ss << std::fixed << std::setprecision(dec) << sec * k.factor_ << ' ' << k.suffix_;
