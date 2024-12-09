@@ -12,10 +12,8 @@ namespace misc
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
 
-	constexpr int PRECISION = 2;
-	constexpr int DEC = 1;
-
-	[[nodiscard]] double round_ext(double num, int prec = PRECISION, int dec = DEC, int group = 3);
+	constexpr unsigned char PRECISION = 2;
+	constexpr unsigned char DEC = 1;
 
 	struct duration_t: std::chrono::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
