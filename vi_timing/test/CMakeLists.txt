@@ -6,10 +6,7 @@ project(vi_timing_test)
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "${PROJECT_SOURCE_DIR}/header.h"
   "${PROJECT_SOURCE_DIR}/main.cpp"
-  "${PROJECT_SOURCE_DIR}/source.c"
-  "${PROJECT_SOURCE_DIR}/test.cpp"
 )
 source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
@@ -41,11 +38,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
-
-# Multi-configuration generators (Visual Studio, Xcode, Ninja Multi-Config) append a per-configuration subdirectory to the specified directory unless a generator expression is used.
-#  LIBRARY_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
-#  ARCHIVE_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
-#  RUNTIME_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
 )
 
 add_dependencies(${PROJECT_NAME}
