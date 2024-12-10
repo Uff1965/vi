@@ -3,7 +3,7 @@
 
 // Uncomment the following line to remove timings.
 //#define VI_TM_DISABLE
-#include "../vi_timing.h"
+#include <vi_timing/vi_timing.h>
 
 #include <cmath>
 

@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(vi_timing VERSION 0.14.1)
+project(vi_timing VERSION 0.15.1)
 
 if(NOT DEFINED VI_OUT_DIR)
 	get_filename_component(VI_OUT_DIR "${PROJECT_SOURCE_DIR}/lib/." DIRECTORY)
 endif()
 
 get_filename_component(VI_SOURCE_DIR "${PROJECT_SOURCE_DIR}/source/." DIRECTORY)
+
+if(NOT DEFINED VI_ROOT_DIR)
+	set(VI_ROOT_DIR ${VI_SOURCE_DIR})
+endif()
 
 if(NOT DEFINED VI_TM_BUILD_SHARED)
     if(BUILD_SHARED_LIBS)
@@ -17,10 +21,15 @@ endif()
 ### Files #####################################################################
 set(SOURCE_FILES)
 
+configure_file(
+    "${VI_SOURCE_DIR}/vi_timing.h.in"
+    "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
+)
+
 set(FILE_GROUP
   "${PROJECT_SOURCE_DIR}/common.h"
-  "${PROJECT_SOURCE_DIR}/vi_timing.h"
   "${PROJECT_SOURCE_DIR}/vi_timing_proxy.h"
+  "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
   "${VI_SOURCE_DIR}/internal.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
@@ -68,7 +77,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 ### Compiler ##################################################################
 target_include_directories(${PROJECT_NAME}
 PUBLIC
-  ${PROJECT_SOURCE_DIR}
+  ${VI_ROOT_DIR}
 )
 
 target_compile_definitions(${PROJECT_NAME}
