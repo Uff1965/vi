@@ -298,7 +298,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 	traits.sort();
 
 	int ret = 0;
-	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit))
+	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
 	{	std::ostringstream str;
 
 		if (flags & to_underlying(vi_tmShowResolution))

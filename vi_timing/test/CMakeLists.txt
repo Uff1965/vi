@@ -6,9 +6,10 @@ project(vi_timing_test)
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "${PROJECT_SOURCE_DIR}/test.cpp"
   "${PROJECT_SOURCE_DIR}/header.h"
+  "${PROJECT_SOURCE_DIR}/main.cpp"
   "${PROJECT_SOURCE_DIR}/source.c"
+  "${PROJECT_SOURCE_DIR}/test.cpp"
 )
 source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
