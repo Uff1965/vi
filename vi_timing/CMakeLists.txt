@@ -12,10 +12,8 @@ if(NOT DEFINED VI_ROOT_DIR)
 	set(VI_ROOT_DIR ${VI_SOURCE_DIR})
 endif()
 
-if(NOT DEFINED VI_TM_BUILD_SHARED)
-    if(BUILD_SHARED_LIBS)
-        set(VI_TM_BUILD_SHARED ON)
-    endif()
+if((NOT DEFINED VI_TM_BUILD_SHARED) AND (BUILD_SHARED_LIBS))
+    set(VI_TM_BUILD_SHARED ON)
 endif()
 
 ### Files #####################################################################
