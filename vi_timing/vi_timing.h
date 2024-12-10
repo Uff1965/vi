@@ -45,7 +45,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #	include "common.h"
 
-// Define VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
+// Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
 #	if defined(_WIN32) // Windows x86 or x64
 #		define VI_SYS_CALL __cdecl
 #		ifdef _WIN64
@@ -86,7 +86,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	else
 #		define VI_TM_DISABLE "Unknown platform!"
 #	endif
-// Define VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
+// Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
 typedef struct vi_tmInstance_t* VI_TM_HANDLE;
 typedef VI_STD(uint64_t) vi_tmTicks_t;
@@ -103,7 +103,7 @@ extern "C"
 {
 #	endif
 
-// Main functions vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(void);
@@ -116,10 +116,10 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-// Supporting functions. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Supporting functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
-	enum vi_tmReportFlags_e {
-		vi_tmSortByTime = 0x00,
+	enum vi_tmReportFlags_e
+	{	vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
 		vi_tmSortBySpeed = 0x02,
 		vi_tmSortByAmount = 0x03,
@@ -144,13 +144,13 @@ extern "C"
 	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
-// Supporting functions. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Supporting functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
 }
 #	endif
 
-// Auxiliary macros. vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #	ifdef __cplusplus
 namespace vi_tm
 {
@@ -255,6 +255,6 @@ namespace vi_tm
 #		endif
 
 #	endif // #ifdef __cplusplus
-// Auxiliary macros. ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #endif // #ifndef VI_TIMING_VI_TIMING_H

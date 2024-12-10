@@ -61,7 +61,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #else
 #	define VI_OPTIMIZE_OFF
 #	define VI_OPTIMIZE_ON
-#	error Unknown compyler!
 #endif
 
 #define VI_STR_AUX(s) #s

@@ -18,11 +18,9 @@ namespace
 		return result;
 	}
 
-//*
-	VI_TM_INIT("Report title:\n", vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration); // Initialize the library and request a report at the end of the program.
-/*/
-	VI_TM_INIT(); // That's also an option.
-//*/
+	VI_TM_INIT( vi_tmSortBySpeed, "Report title:\n",vi_tmShowResolution, vi_tmShowDuration); // Initialize the library and request a report at the end of the program.
+//	VI_TM_INIT(); // That's also an option.
+
 	VI_TM("Global time"); // That works too!
 }
 
@@ -32,15 +30,15 @@ int main()
 	constexpr auto CNT = 100'000;
 	volatile auto sum = .0;
 
-	{	VI_TM("series of sth.", CNT); // Measuring a series of something.
-		for (int n = 0; n < CNT; ++n)
-		{	sum = cpu_load(); // something )
+	{	for (int n = 0; n < CNT; ++n)
+		{	VI_TM("sth."); // Measuring a something.
+			sum = cpu_load(); // something )
 		}
 	}
 
-	{	for (int n = 0; n < CNT; ++n)
-		{	VI_TM("sth."); // Measuring a something.
-			sum = cpu_load();
+	{	VI_TM("series of sth.", CNT); // Measuring a series of something.
+		for (int n = 0; n < CNT; ++n)
+		{	sum = cpu_load();
 		}
 	}
 }
