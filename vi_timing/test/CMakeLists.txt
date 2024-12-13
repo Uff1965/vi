@@ -6,19 +6,19 @@ project(vi_timing_test)
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "${PROJECT_SOURCE_DIR}/main.cpp"
+  "main.cpp"
 )
 source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "../vi_timing_proxy.h"
+  "${VI_ROOT_DIR}/vi_timing/vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(OUTPUT_NAME_SUFFIX "")
-if(BUILD_SHARED_LIBS)
+if(VI_TM_BUILD_SHARED)
     string(APPEND OUTPUT_NAME_SUFFIX "s")
 endif()
 
