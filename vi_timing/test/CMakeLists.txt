@@ -40,10 +40,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
 )
 
-add_dependencies(${PROJECT_NAME}
-	vi_timing
-)
-
 ## Compiler ##################################################################
 target_compile_definitions(${PROJECT_NAME}
 PRIVATE
@@ -99,7 +95,6 @@ elseif (UNIX)
   PRIVATE
     rt
     pthread
-  PUBLIC
     atomic
   )
 endif()
