@@ -97,12 +97,24 @@ if (WIN32)
       $<$<CONFIG:Debug>: _DEBUG> # Microsoft debug RTL
     )
 
-  target_compile_options(${PROJECT_NAME}
-  PRIVATE
-    /MP /W3 /nologo /EHsc /Zi 
-    $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
-    $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
-  )
+    target_compile_options(${PROJECT_NAME}
+        PRIVATE
+        /MP /W3 /nologo /EHsc /Zi
+    )
+
+    if(VI_TM_BUILD_SHARED)
+        target_compile_options(${PROJECT_NAME}
+        PRIVATE
+        $<$<CONFIG:Release>: /MT  /O2 /Oi /GL /Gy>
+        $<$<CONFIG:Debug>:   /MTd /Od /RTC1>
+        )
+    else()
+        target_compile_options(${PROJECT_NAME}
+        PRIVATE
+        $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
+        $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
+        )
+    endif()
 elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
   PRIVATE
