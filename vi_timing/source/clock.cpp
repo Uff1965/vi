@@ -159,7 +159,7 @@ namespace
 }
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-vi_tmTicks_t VI_TM_CALL vi_tmClock() noexcept
+vi_tmTicks_t VI_TM_CALL vi_tmClock(void) noexcept
 {	return vi_tmGetTicks();
 }
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
