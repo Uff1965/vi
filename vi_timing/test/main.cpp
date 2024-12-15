@@ -33,4 +33,7 @@ int main()
 			result = std::sin(n) * std::cos(n);
 		}
 	}
+
+//	std::fputs("Incomplete report:\n", stdout);
+//	VI_TM_REPORT();
 }

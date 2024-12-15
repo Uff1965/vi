@@ -101,11 +101,10 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	{	return;
 	}
 
-	const auto cores_qty = std::thread::hardware_concurrency();
-	auto additional_threads_qty = threads_qty? std::min(threads_qty, cores_qty): cores_qty;
-	if (additional_threads_qty)
-	{	--additional_threads_qty; // take into account the current thread.
+	if(0 == threads_qty)
+	{	threads_qty = std::max(std::thread::hardware_concurrency(), 1U);
 	}
+	const auto additional_threads_qty = threads_qty - 1; // take into account the current thread.
 
 	static auto load_dummy = []
 		{	volatile auto _ = 0.0;

@@ -35,12 +35,15 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 namespace ch = std::chrono;
 using namespace std::chrono_literals;
 
-namespace {
+namespace
+{
+	constexpr auto cache_warmup = 5U;
+		
 	misc::duration_t seconds_per_tick()
 	{
-		auto start = []
+		auto time_point = []
 		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-			for(auto n = 0; n < 5; ++n)
+			for(auto n = 0; n < cache_warmup; ++n)
 			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmClock(); // Preloading a function into cache
 				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
 			}
@@ -53,26 +56,24 @@ namespace {
 			return std::tuple{ vi_tmClock(), last };
 		};
 
-		const auto [tick1, time1] = start();
+		const auto [tick1, time1] = time_point();
 		// Load the thread at 100% for 256ms.
 		for (auto stop = time1 + 256ms; ch::steady_clock::now() < stop;)
 		{/**/}
-		const auto [tick2, time2] = start();
+		const auto [tick2, time2] = time_point();
 
 		return misc::duration_t(time2 - time1) / (tick2 - tick1);
 	}
 
 	misc::duration_t duration()
 	{
-		static constexpr auto CNT = 500U;
-
 		static auto gauge_zero = []
 			{	const auto start = vi_tmClock();
 				vi_tmFinish(nullptr, "", start, 1);
 			};
-		auto start = []
+		auto time_point = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
-				for (auto cnt = 5; cnt; --cnt)
+				for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
 				{	gauge_zero(); // Create a service item with empty name "" and cache preload.
 				}
 				// Are waiting for the start of a new time interval.
@@ -82,15 +83,16 @@ namespace {
 				return result;
 			};
 
-		auto s = start();
-		for (auto cnt = CNT; cnt; --cnt)
+		constexpr auto CNT = 500U;
+		auto s = time_point();
+		for (auto cnt = 0U; cnt < CNT; ++cnt)
 		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 		}
 		const auto pure = ch::steady_clock::now() - s;
 
-		s = start();
-		static constexpr auto EXT = 20U;
-		for (auto cnt = CNT; cnt; --cnt)
+		constexpr auto EXT = 20U;
+		s = time_point();
+		for (auto cnt = 0U; cnt < CNT; ++cnt)
 		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 
 			// EXT calls
@@ -109,28 +111,25 @@ VI_OPTIMIZE_OFF
 	{	constexpr auto CNT = 500U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		auto e = vi_tmClock(); // Preloading a function into cache
-		for (auto cnt = 5; cnt; --cnt)
-		{	e = vi_tmClock();
+		volatile auto e = vi_tmClock(); // Preloading a function into cache
+		volatile auto s = e;
+		for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
+		{	s = vi_tmClock();
 		}
 
-		auto s = vi_tmClock();
-		for (auto cnt = CNT; cnt; --cnt)
-		{	e = vi_tmClock();
-			e = vi_tmClock(); //-V519 "The 'x' variable is assigned values twice successively."
+		for (auto cnt = 0; cnt < CNT; ++cnt)
+		{	e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock();
 		}
 		const auto pure = e - s;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		for (auto cnt = 5; cnt; --cnt)
-		{	e = vi_tmClock();
+		for (auto cnt = 0; cnt < cache_warmup; ++cnt)
+		{	s = vi_tmClock();
 		}
 
 		constexpr auto EXT = 20U;
-		s = vi_tmClock();
-		for (auto cnt = CNT; cnt; --cnt)
-		{	e = vi_tmClock();
-			e = vi_tmClock();
+		for (auto cnt = 0U; cnt < CNT; ++cnt)
+		{	e = vi_tmClock(); e = vi_tmClock();  e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock();
 
 			// EXT calls
 			e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock();
@@ -144,14 +143,12 @@ VI_OPTIMIZE_OFF
 	}
 
 	double resolution()
-	{	constexpr auto cache_warmup = 5U;
-		double diff = .0;
-		auto CNT = 1;
-		for (;; CNT *= 8) //-V1044 Loop break conditions do not depend on the number of iterations.
-		{	std::this_thread::yield(); // Reduce the likelihood of interrupting measurements by switching threads.
-			const auto limit = ch::steady_clock::now() + 256us;
-			vi_tmTicks_t first = 0;
+	{	for (auto CNT = 8;; CNT *= 8) //-V1044 Loop break conditions do not depend on the number of iterations.
+		{	vi_tmTicks_t first = 0;
 			vi_tmTicks_t last = 0;
+
+			std::this_thread::yield(); // Reduce the likelihood of interrupting measurements by switching threads.
+			const auto limit = ch::steady_clock::now() + 256us;
 			for (auto n = 0U; n < cache_warmup; ++n)
 			{	first = last = vi_tmClock();
 			}
@@ -163,14 +160,10 @@ VI_OPTIMIZE_OFF
 				}
 			}
 
-			diff = static_cast<double>(last - first);
-
 			if (ch::steady_clock::now() > limit)
-			{	break;
+			{	return static_cast<double>(last - first) / CNT;
 			}
 		}
-
-		return diff / CNT;
 	}
 VI_OPTIMIZE_ON
 }
