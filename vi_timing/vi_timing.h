@@ -142,7 +142,7 @@ extern "C"
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags VI_DEF(0U), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
 // Supporting functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
