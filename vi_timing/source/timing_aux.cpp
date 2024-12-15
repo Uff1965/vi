@@ -290,11 +290,11 @@ namespace
 	};
 } // namespace {
 
-int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flags, vi_tmLogSTR_t fn, void* data)
+int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags, vi_tmLogSTR_t fn, void* data)
 {
 	props(); // Preventing deadlock in traits_t::results_callback().
 
-	traits_t traits{ flags };
+	traits_t traits{ static_cast<report_flags_t>(flags) };
 	vi_tmResults(h, traits_t::results_callback, &traits);
 
 	traits.sort();
