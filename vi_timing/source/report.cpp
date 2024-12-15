@@ -40,15 +40,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
-	using report_flags_t = std::underlying_type_t<vi_tmReportFlags_e>;
-
-#if __cpp_lib_to_underlying
-	using std::to_underlying;
-#else
-	template< class Enum >
-	constexpr auto to_underlying(Enum e) noexcept { return static_cast<std::underlying_type_t<Enum>>(e); }
-#endif
-
 	constexpr char TitleName[] = "Name";
 	constexpr char TitleAverage[] = "Average";
 	constexpr char TitleTotal[] = "Total";
@@ -58,85 +49,77 @@ namespace
 	constexpr char Insignificant[] = "<insig>";
 	constexpr char NotAvailable[] = "<n/a>";
 
-	struct itm_t
-	{
-		std::string_view name_; // Name
-		misc::duration_t total_time_{ .0 }; // seconds
-		misc::duration_t average_{ .0 }; // seconds
-		std::size_t amount_{}; // Number of measured units
-		std::string average_txt_{ NotAvailable };
+	struct metering_t
+	{	std::string_view name_;
+		misc::duration_t total_{ .0 }; // seconds
 		std::string total_txt_{ NotAvailable };
+		misc::duration_t average_{ .0 }; // seconds
+		std::string average_txt_{ NotAvailable };
+		std::size_t amount_{}; // Number of measured units
 
-		itm_t(const char *n, vi_tmTicks_t total_time, std::size_t a, std::size_t c) noexcept;
+		metering_t(const char *name, vi_tmTicks_t total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
 	};
 
-	itm_t::itm_t(const char *name, vi_tmTicks_t total_time, std::size_t amount, std::size_t calls_cnt) noexcept
-		: name_{ name },
+	metering_t::metering_t(const char *name, vi_tmTicks_t total_time, std::size_t amount, std::size_t calls_cnt) noexcept
+	:	name_{ name },
 		amount_{ amount }
-	{
-		assert(amount >= calls_cnt);
+	{	assert(amount >= calls_cnt);
 		assert((0 == calls_cnt) == (0 == amount));
 
 		if (0 == amount)
-		{
-		}
+		{/**/}
 		else if
-			(const auto burden = props().clock_latency_ * calls_cnt;
+			(	const auto burden = props().clock_latency_ * calls_cnt;
 				total_time <= burden + props().clock_resolution_ * std::sqrt(calls_cnt)
-				)
-		{
-			total_txt_ = Insignificant;
+			)
+		{	total_txt_ = Insignificant;
 			average_txt_ = Insignificant;
 		}
 		else
-		{
-			total_time_ = props().tick_duration_ * (total_time - burden);
-			average_ = total_time_ / amount_;
+		{	total_ = props().tick_duration_ * (total_time - burden);
+			total_txt_ = to_string(total_);
+			average_ = total_ / amount_;
 			average_txt_ = to_string(average_);
-			total_txt_ = to_string(total_time_);
 		}
 	}
 
 	int results_callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
-	{
-		assert(data);
-		static_cast<std::vector<itm_t> *>(data)->emplace_back(name, total, amount, calls_cnt);
+	{	assert(data);
+		static_cast<std::vector<metering_t> *>(data)->emplace_back(name, total, amount, calls_cnt);
 		return 1; // Continue enumerate.
 	}
 
-	template<vi_tmReportFlags_e E> auto make_tuple(const itm_t &v);
-	template<> auto make_tuple<vi_tmSortByName>(const itm_t &v)
-	{
-		return std::tuple{ v.name_, v.average_, v.total_time_, v.amount_ };
+	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);
+
+	template<> auto make_tuple<vi_tmSortByName>(const metering_t &v)
+	{	return std::tuple{ v.name_, v.average_, v.total_, v.amount_ };
 	}
-	template<> auto make_tuple<vi_tmSortBySpeed>(const itm_t &v)
-	{
-		return std::tuple{ v.average_, v.total_time_, v.amount_, v.name_ };
+	template<> auto make_tuple<vi_tmSortBySpeed>(const metering_t &v)
+	{	return std::tuple{ v.average_, v.total_, v.amount_, v.name_ };
 	}
-	template<> auto make_tuple<vi_tmSortByTime>(const itm_t &v)
-	{
-		return std::tuple{ v.total_time_, v.average_, v.amount_, v.name_ };
+	template<> auto make_tuple<vi_tmSortByTime>(const metering_t &v)
+	{	return std::tuple{ v.total_, v.average_, v.amount_, v.name_ };
 	}
-	template<> auto make_tuple<vi_tmSortByAmount>(const itm_t &v)
-	{
-		return std::tuple{ v.amount_, v.average_, v.total_time_, v.name_ };
+	template<> auto make_tuple<vi_tmSortByAmount>(const metering_t &v)
+	{	return std::tuple{ v.amount_, v.average_, v.total_, v.name_ };
 	}
 
-	template<vi_tmReportFlags_e E> bool less(const itm_t &l, const itm_t &r)
-	{
-		return make_tuple<E>(r) < make_tuple<E>(l);
+	template<vi_tmReportFlags_e E> bool less(const metering_t &l, const metering_t &r)
+	{	return make_tuple<E>(l) < make_tuple<E>(r);
 	}
 
-	class meterage_comparator_t
-	{
-		bool (*pr_)(const itm_t &, const itm_t &) = &less<vi_tmSortByName>;
+	class comparator_t
+	{	bool (*pr_)(const metering_t &, const metering_t &);
 		const bool ascending_;
 	public:
-		explicit meterage_comparator_t(unsigned flags) noexcept
+		explicit comparator_t(unsigned flags) noexcept
 			: ascending_{ 0 != (flags & vi_tmSortAscending) }
 		{
 			switch (flags & vi_tmSortMask)
 			{
+			default:
+				assert(false);
+				[[fallthrough]];
 			case vi_tmSortByName:
 				pr_ = less<vi_tmSortByName>;
 				break;
@@ -149,20 +132,15 @@ namespace
 			case vi_tmSortBySpeed:
 				pr_ = less<vi_tmSortBySpeed>;
 				break;
-			default:
-				assert(false);
-				break;
 			}
 		}
-		bool operator ()(const itm_t &l, const itm_t &r) const
-		{
-			return ascending_ ? pr_(r, l) : pr_(l, r);
+		bool operator ()(const metering_t &l, const metering_t &r) const
+		{	return ascending_ ? pr_(l, r): pr_(r, l);
 		}
 	};
 
-	struct meterage_formatter_t
-	{
-		static constexpr auto fill_symbol = '.';
+	struct formatter_t
+	{	static constexpr auto fill_symbol = '.';
 		const std::size_t number_len_{ 1 }; // '#'
 		mutable std::size_t n_{ 0 };
 		const unsigned flags_;
@@ -173,19 +151,21 @@ namespace
 		std::size_t max_len_average_{ std::size(TitleAverage) - 1 };
 		std::size_t max_len_amount_{ std::size(TitleAmount) - 1 };
 
-		meterage_formatter_t(const std::vector<itm_t> itms, unsigned flags)
+		formatter_t(const std::vector<metering_t> itms, unsigned flags)
 		:	number_len_{ itms.empty() ? 1U : 1U + static_cast<std::size_t>(std::floor(std::log10(itms.size()))) },
 			flags_{ flags },
 			step_guides_{ itms.size() > 4U ? 3U : 0U }
-		{
-			std::size_t *ptr = &max_len_name_;
+		{	std::size_t *ptr = nullptr;
 			switch (flags_ & vi_tmSortMask)
 			{
-			case vi_tmSortByAmount:
-				ptr = &max_len_amount_;
-				break;
+			default:
+				assert(false);
+				[[fallthrough]];
 			case vi_tmSortByName:
 				ptr = &max_len_name_;
+				break;
+			case vi_tmSortByAmount:
+				ptr = &max_len_amount_;
 				break;
 			case vi_tmSortByTime:
 				ptr = &max_len_total_;
@@ -193,16 +173,12 @@ namespace
 			case vi_tmSortBySpeed:
 				ptr = &max_len_average_;
 				break;
-			default:
-				assert(false);
-				break;
 			}
 			*ptr += ((flags & vi_tmSortAscending) ? std::size(Ascending): std::size(Descending)) - 1;
 
 			std::size_t max_amount = 0U;
 			for (auto &itm : itms)
-			{
-				max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
+			{	max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
 				max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
 				max_len_name_ = std::max(max_len_name_, itm.name_.length());
 				if (itm.amount_ > max_amount)
@@ -216,8 +192,12 @@ namespace
 			}
 		}
 
-		int header(const vi_tmLogSTR_t fn, void *const data) const
-		{
+		int print_header(const vi_tmLogSTR_t fn, void *const data) const
+		{	
+			if (flags_ & vi_tmShowNoHeader)
+			{	return 0;
+			}
+
 			auto sort = vi_tmSortByName;
 			switch (auto s = flags_ & vi_tmSortMask)
 			{
@@ -234,8 +214,7 @@ namespace
 
 			auto title = [sort, order = (flags_ & vi_tmSortAscending) ? Ascending : Descending]
 			(const char *name, vi_tmReportFlags_e s)
-				{
-					return std::string{ name } + (sort == s ? order : "");
+				{	return std::string{ name } + (sort == s ? order : "");
 				};
 
 			std::ostringstream str;
@@ -244,7 +223,7 @@ namespace
 				std::setw(max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right <<
 				std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
 				std::setw(max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
-				std::setw(max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]" <<
+				std::setw(max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]"
 				"\n";
 
 			const auto result = str.str();
@@ -253,7 +232,7 @@ namespace
 			return fn(result.c_str(), data);
 		}
 
-		int line(const itm_t &i, const vi_tmLogSTR_t fn, void *const data) const
+		int print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *const data) const
 		{
 			std::ostringstream str;
 			str.imbue(std::locale(str.getloc(), new misc::space_out));
@@ -265,7 +244,7 @@ namespace
 				std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<
 				std::setw(max_len_average_) << i.average_txt_ << " [" <<
 				std::setw(max_len_total_) << i.total_txt_ << " / " <<
-				std::setw(max_len_amount_) << i.amount_ << "]" <<
+				std::setw(max_len_amount_) << i.amount_ << "]"
 				"\n";
 
 			const auto result = str.str();
@@ -276,11 +255,8 @@ namespace
 	};
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags, vi_tmLogSTR_t fn, void *data)
-{
-	props(); // Preventing deadlock in traits_t::results_callback().
-
-	int result = 0;
+int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
+{	int result = 0;
 	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
 	{	std::ostringstream str;
 
@@ -298,21 +274,27 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags, vi_tmLogSTR_t fn, voi
 		}
 
 		str << '\n';
-		result = fn(str.str().c_str(), data);
+		result += fn(str.str().c_str(), data);
 	}
 
-	std::vector<itm_t> itms;
-	vi_tmResults(h, &results_callback, &itms);
-	std::sort(itms.begin(), itms.end(), meterage_comparator_t{ flags });
+	return result;
+}
 
-	meterage_formatter_t mf{ itms, flags };
+int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags, vi_tmLogSTR_t fn, void *data)
+{
+	props(); // Preventing deadlock in traits_t::results_callback().
 
-	if (0 == (flags & vi_tmShowNoHeader))
-	{	result += mf.header(fn, data);
-	}
+	int result = 0;
+	result += print_props(fn, data, flags);
 
-	for (auto itm : itms)
-	{ result += mf.line(itm, fn, data);
+	std::vector<metering_t> meterings;
+	vi_tmResults(h, &results_callback, &meterings);
+	std::sort(meterings.begin(), meterings.end(), comparator_t{ flags });
+
+	const formatter_t formatter{ meterings, flags };
+	result += formatter.print_header(fn, data);
+	for (const auto &itm : meterings)
+	{	result += formatter.print_metering(itm, fn, data);
 	}
 
 	return result;
