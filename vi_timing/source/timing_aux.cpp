@@ -55,8 +55,8 @@ namespace
 	constexpr char TitleAverage[] = "Average";
 	constexpr char TitleTotal[] = "Total";
 	constexpr char TitleAmount[] = "Amount";
-	constexpr char Ascending [] = " (^)";
-	constexpr char Descending[] = " (v)";
+	constexpr char Ascending [] = " [^]";
+	constexpr char Descending[] = " [v]";
 	constexpr char Insignificant[] = "<insig>";
 	constexpr char NotAvailable[] = "<n/a>";
 
@@ -94,22 +94,26 @@ namespace
 
 	traits_t::traits_t(report_flags_t flags)
 		: flags_{ flags }
-	{	auto max_len = &max_len_average_;
-		switch (flags_ & to_underlying(vi_tmSortMask))
+	{	std::size_t *ptr = &max_len_name_;
+		switch (flags_ & vi_tmSortMask)
 		{
 		case vi_tmSortByAmount:
-			max_len = &max_len_amount_;
+			ptr = &max_len_amount_;
 			break;
 		case vi_tmSortByName:
-			max_len = &max_len_name_;
+			ptr = &max_len_name_;
 			break;
 		case vi_tmSortByTime:
-			max_len = &max_len_total_;
+			ptr = &max_len_total_;
+			break;
+		case vi_tmSortBySpeed:
+			ptr = &max_len_average_;
 			break;
 		default:
+			assert(false);
 			break;
 		}
-		*max_len += ((flags & to_underlying(vi_tmSortAscending)) ? std::size(Ascending): std::size(Descending)) - 1;
+		*ptr += ((flags & vi_tmSortAscending) ? std::size(Ascending): std::size(Descending)) - 1;
 	}
 
 	int traits_t::results_callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
@@ -161,7 +165,7 @@ namespace
 
 	template<vi_tmReportFlags_e E> auto make_tuple(const traits_t::itm_t& v);
 	template<> auto make_tuple<vi_tmSortByName>(const traits_t::itm_t& v)
-	{	return std::tuple{ v.orig_name_ };
+	{	return std::tuple{ v.orig_name_, v.average_, v.total_time_, v.orig_amount_ };
 	}
 	template<> auto make_tuple<vi_tmSortBySpeed>(const traits_t::itm_t& v)
 	{	return std::tuple{ v.average_, v.total_time_, v.orig_amount_, v.orig_name_ };
@@ -177,35 +181,37 @@ namespace
 	{	return make_tuple<E>(r) < make_tuple<E>(l);
 	}
 
-	struct meterage_comparator_t
-	{	const report_flags_t flags_{};
-		explicit meterage_comparator_t(report_flags_t flags) noexcept
-			: flags_{ flags }
-		{
-		}
-		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const
-		{	auto pr = less<vi_tmSortBySpeed>;
-			switch (flags_ & to_underlying(vi_tmSortMask))
-			{
-			case vi_tmSortByName:
-				pr = less<vi_tmSortByName>;
-				break;
-			case vi_tmSortByAmount:
-				pr = less<vi_tmSortByAmount>;
-				break;
-			case vi_tmSortByTime:
-				pr = less<vi_tmSortByTime>;
-				break;
-			case vi_tmSortBySpeed:
-				break;
-			default:
-				assert(false);
-				break;
-			}
+	void traits_t::sort()
+	{
+		struct meterage_comparator_t
+		{	bool (*pr_)(const itm_t &, const itm_t &) = &less<vi_tmSortByName>;
+			const bool ascending_;
 
-			return (flags_ & to_underlying(vi_tmSortAscending)) ? pr(r, l) : pr(l, r);
-		}
-	};
+			explicit meterage_comparator_t(report_flags_t flags) noexcept
+				: ascending_{ 0 != (flags & vi_tmSortAscending) }
+			{	switch (flags & vi_tmSortMask)
+				{
+				case vi_tmSortByName:
+					pr_ = less<vi_tmSortByName>;
+					break;
+				case vi_tmSortByAmount:
+					pr_ = less<vi_tmSortByAmount>;
+					break;
+				case vi_tmSortByTime:
+					pr_ = less<vi_tmSortByTime>;
+					break;
+				case vi_tmSortBySpeed:
+					pr_ = less<vi_tmSortBySpeed>;
+					break;
+				default:
+					assert(false);
+					break;
+				}
+			}
+			bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const
+			{	return ascending_ ? pr_(r, l) : pr_(l, r);
+			}
+		};
 
 		std::sort(meterages_.begin(), meterages_.end(), meterage_comparator_t{ flags_ });
 	}
@@ -222,18 +228,17 @@ namespace
 		meterage_formatter_t(const traits_t& traits, vi_tmLogSTR_t fn, void* data)
 		:	traits_{ traits }, fn_{ fn }, data_{ data }
 		{	if (auto size = traits_.meterages_.size(); 0 != size)
-			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size))); //-V203 "Explicit type conversion from memsize to double type or vice versa."
+			{	number_len_ = 1U + static_cast<std::size_t>(std::floor(std::log10(size)));
 			}
 		}
 
 		int header() const
-		{	auto sort = vi_tmSortBySpeed;
-			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask))
+		{	auto sort = vi_tmSortByName;
+			switch (auto s = traits_.flags_ & vi_tmSortMask)
 			{
-			case vi_tmSortBySpeed:
-				break;
-			case vi_tmSortByAmount:
 			case vi_tmSortByName:
+			case vi_tmSortBySpeed:
+			case vi_tmSortByAmount:
 			case vi_tmSortByTime:
 				sort = static_cast<vi_tmReportFlags_e>(s);
 				break;
@@ -242,16 +247,16 @@ namespace
 				break;
 			}
 
-			auto title = [sort, order = (traits_.flags_ & to_underlying(vi_tmSortAscending)) ? Ascending : Descending]
+			auto title = [sort, order = (traits_.flags_ & vi_tmSortAscending) ? Ascending : Descending]
 				(const char *name, vi_tmReportFlags_e s)
 				{	return std::string{ name } + (sort == s ? order : "");
 				};
 
 			std::ostringstream str;
 			str << 
-				std::setw(number_len_) << "#" << "  " <<
-				std::setw(traits_.max_len_name_) << std::setfill(fill_symbol) << std::left << title(TitleName, vi_tmSortByName) << ": " <<
-				std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
+				std::setw(number_len_) << "#" << "  " << std::setfill(fill_symbol) << std::left << 
+				std::setw(traits_.max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right << 
+				std::setw(traits_.max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
 				std::setw(traits_.max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
 				std::setw(traits_.max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]" <<
 				"\n";
@@ -270,9 +275,9 @@ namespace
 			n_++;
 			const char fill = (traits_.meterages_.size() > step_guides + 1 && (0 == n_ % step_guides)) ? fill_symbol : ' ';
 			str << 
-				std::setw(number_len_) << n_ << ". " <<
-				std::setw(traits_.max_len_name_) << std::setfill(fill) << std::left << i.orig_name_ << ": " <<
-				std::setw(traits_.max_len_average_) << std::setfill(' ') << std::right << i.average_txt_ << " [" <<
+				std::setw(number_len_) << n_ << ". " << std::setfill(fill) << std::left <<
+				std::setw(traits_.max_len_name_) << i.orig_name_ << ": " << std::setfill(' ') << std::right <<
+				std::setw(traits_.max_len_average_) << i.average_txt_ << " [" <<
 				std::setw(traits_.max_len_total_) << i.total_txt_ << " / " <<
 				std::setw(traits_.max_len_amount_) << i.orig_amount_ << "]" <<
 				"\n";
@@ -285,11 +290,8 @@ namespace
 	};
 } // namespace {
 
-int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* data)
-{	report_flags_t flags = 0;
-	static_assert(sizeof(flags) == sizeof(flagsa));
-	std::memcpy(&flags, &flagsa, sizeof(flags));
-
+int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flags, vi_tmLogSTR_t fn, void* data)
+{
 	props(); // Preventing deadlock in traits_t::results_callback().
 
 	traits_t traits{ flags };
@@ -301,16 +303,16 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
 	{	std::ostringstream str;
 
-		if (flags & to_underlying(vi_tmShowResolution))
+		if (flags & vi_tmShowResolution)
 		{	str << "Resolution: " << misc::duration_t(props().tick_duration_ * props().clock_resolution_) << ". ";
 		}
-		if (flags & to_underlying(vi_tmShowDuration))
+		if (flags & vi_tmShowDuration)
 		{	str << "Duration: " << props().all_latency_ << ". ";
 		}
-		if (flags & to_underlying(vi_tmShowUnit))
+		if (flags & vi_tmShowUnit)
 		{	str << "One tick: " << props().tick_duration_ << ". ";
 		}
-		if (flags & to_underlying(vi_tmShowOverhead))
+		if (flags & vi_tmShowOverhead)
 		{	str << "Additive: " << misc::duration_t(props().tick_duration_ * props().clock_latency_) << ". ";
 		}
 
@@ -319,7 +321,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 	}
 
 	meterage_formatter_t mf{ traits, fn, data };
-	if (0 == (flags & to_underlying(vi_tmShowNoHeader)))
+	if (0 == (flags & vi_tmShowNoHeader))
 	{	ret += mf.header();
 	}
 	return std::accumulate(traits.meterages_.begin(), traits.meterages_.end(), ret, mf);
