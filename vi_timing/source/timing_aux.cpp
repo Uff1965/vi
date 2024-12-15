@@ -51,14 +51,14 @@ namespace
 	constexpr auto to_underlying(Enum e) noexcept { return static_cast<std::underlying_type_t<Enum>>(e); }
 #endif
 
-	constexpr char TitleName[] = { "Name" };
-	constexpr char TitleAverage[] = { "Average" };
-	constexpr char TitleTotal[] = { "Total" };
-	constexpr char TitleAmount[] = { "Amount" };
-	constexpr char Ascending [] = { " (^)" };
-	constexpr char Descending[] = { " (v)" };
-	constexpr char Insignificant[] = { "<insig>" };
-	constexpr char NotAvailable[] = { "<n/a>" };
+	constexpr char TitleName[] = "Name";
+	constexpr char TitleAverage[] = "Average";
+	constexpr char TitleTotal[] = "Total";
+	constexpr char TitleAmount[] = "Amount";
+	constexpr char Ascending [] = " (^)";
+	constexpr char Descending[] = " (v)";
+	constexpr char Insignificant[] = "<insig>";
+	constexpr char NotAvailable[] = "<n/a>";
 
 	struct traits_t
 	{	struct itm_t;
