@@ -6,6 +6,7 @@
 #include <vi_timing/vi_timing.h> // vi_timing interface
 
 #include <cmath>
+#include <cstdio>
 
 namespace
 {
@@ -19,16 +20,16 @@ int main()
 {	VI_TM_FUNC; // Timing of function 'main' from this line and to end scope.
 
 	for (int k = 0; k < 1'000; ++k)
-	{	constexpr auto MATH_CNT = 1'000;
+	{	constexpr auto CNT = 1'000;
 		volatile auto result = .0;
 
-		{	VI_TM("math series", MATH_CNT);
-			for (int n = 0; n < MATH_CNT; ++n)
+		{	VI_TM("math series", CNT);
+			for (int n = 0; n < CNT; ++n)
 			{	result = std::sin(n) * std::cos(n);
 			}
 		}
 
-		for (auto n = 0; n < MATH_CNT; ++n)
+		for (auto n = 0; n < CNT; ++n)
 		{	VI_TM("math");
 			result = std::sin(n) * std::cos(n);
 		}

@@ -123,9 +123,9 @@ extern "C"
 		vi_tmSortByName = 0x01,
 		vi_tmSortBySpeed = 0x02,
 		vi_tmSortByAmount = 0x03,
+		vi_tmSortMask = 0x07,
 		vi_tmSortDescending = 0x00,
 		vi_tmSortAscending = 0x08,
-		vi_tmSortMask = 0x0F,
 
 		vi_tmShowOverhead = 0x010,
 		vi_tmShowUnit = 0x020,

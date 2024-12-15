@@ -61,10 +61,11 @@ namespace
 	constexpr char NotAvailable[] = "<n/a>";
 
 	struct traits_t
-	{	struct itm_t;
+	{	const report_flags_t flags_;
 
+		struct itm_t;
 		std::vector<itm_t> meterages_;
-		report_flags_t flags_{};
+		
 		std::size_t max_amount_{};
 		std::size_t max_len_name_{ std::size(TitleName) - 1};
 		std::size_t max_len_total_{ std::size(TitleTotal) - 1};
@@ -74,7 +75,7 @@ namespace
 		explicit traits_t(report_flags_t flags);
 		int append(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt);
 		void sort();
-		static int callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
+		static int results_callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data);
 	};
 
 	struct traits_t::itm_t
@@ -111,7 +112,7 @@ namespace
 		*max_len += ((flags & to_underlying(vi_tmSortAscending)) ? std::size(Ascending): std::size(Descending)) - 1;
 	}
 
-	int traits_t::callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
+	int traits_t::results_callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
 		return static_cast<traits_t*>(data)->append(name, total, amount, calls_cnt);
 	}
@@ -184,18 +185,18 @@ namespace
 		}
 		bool operator ()(const traits_t::itm_t& l, const traits_t::itm_t& r) const
 		{	auto pr = less<vi_tmSortBySpeed>;
-			switch (flags_ & to_underlying(vi_tmSortMask) & ~to_underlying(vi_tmSortAscending))
+			switch (flags_ & to_underlying(vi_tmSortMask))
 			{
-			case to_underlying(vi_tmSortByName):
+			case vi_tmSortByName:
 				pr = less<vi_tmSortByName>;
 				break;
-			case to_underlying(vi_tmSortByAmount):
+			case vi_tmSortByAmount:
 				pr = less<vi_tmSortByAmount>;
 				break;
-			case to_underlying(vi_tmSortByTime):
+			case vi_tmSortByTime:
 				pr = less<vi_tmSortByTime>;
 				break;
-			case to_underlying(vi_tmSortBySpeed):
+			case vi_tmSortBySpeed:
 				break;
 			default:
 				assert(false);
@@ -206,8 +207,7 @@ namespace
 		}
 	};
 
-	void traits_t::sort()
-	{	std::sort(meterages_.begin(), meterages_.end(), meterage_comparator_t{ flags_ });
+		std::sort(meterages_.begin(), meterages_.end(), meterage_comparator_t{ flags_ });
 	}
 
 	struct meterage_formatter_t
@@ -228,7 +228,7 @@ namespace
 
 		int header() const
 		{	auto sort = vi_tmSortBySpeed;
-			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask) & ~to_underlying(vi_tmSortAscending))
+			switch (auto s = traits_.flags_ & to_underlying(vi_tmSortMask))
 			{
 			case vi_tmSortBySpeed:
 				break;
@@ -290,10 +290,10 @@ int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, int flagsa, vi_tmLogSTR_t fn, void* d
 	static_assert(sizeof(flags) == sizeof(flagsa));
 	std::memcpy(&flags, &flagsa, sizeof(flags));
 
-	props(); // Preventing deadlock in traits_t::callback().
+	props(); // Preventing deadlock in traits_t::results_callback().
 
 	traits_t traits{ flags };
-	vi_tmResults(h, traits_t::callback, &traits);
+	vi_tmResults(h, traits_t::results_callback, &traits);
 
 	traits.sort();
 
