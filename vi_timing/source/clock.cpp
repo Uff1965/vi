@@ -28,8 +28,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include "../vi_timing.h"
 
-namespace
-{
 #if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__) // MSC or GCC on Intel
 #	if _MSC_VER >= 1800
 #		include <intrin.h>
@@ -39,7 +37,7 @@ namespace
 #	else
 #		error "Undefined compiler"
 #	endif
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
 	{	std::uint32_t _; // Will be removed by the optimizer.
 		const std::uint64_t result = __rdtscp(&_);
 		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
@@ -50,7 +48,7 @@ namespace
 		return result;
 	}
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
 	{	std::uint64_t result;
 		__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
 		return result;
@@ -62,7 +60,7 @@ namespace
 #	include <sys/mman.h>
 #	include <unistd.h>
 
-	auto get_peripheral_base()
+	static auto get_peripheral_base()
 	{	std::uint32_t result = 0;
 
 		if (auto fp = open("/proc/device-tree/soc/ranges", O_RDONLY); fp >= 0)
@@ -88,7 +86,7 @@ namespace
 		return result;
 	}
 
-	volatile std::uint32_t* get_timer_base()
+	static volatile std::uint32_t* get_timer_base()
 	{	volatile std::uint32_t *result = nullptr;
 
 		errno = 0;
@@ -122,7 +120,7 @@ namespace
 		return result;
 	}
 
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
 	{	vi_tmTicks_t result = 0;
 
 		static volatile std::uint32_t *const timer_base = get_timer_base();
@@ -141,14 +139,14 @@ namespace
 	}
 #elif defined(_WIN32) // Windows
 #	include <Windows.h>
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
 	{	LARGE_INTEGER cnt;
 		QueryPerformanceCounter(&cnt);
 		return cnt.QuadPart;
 	}
 #elif defined(__linux__)
 #	include <time.h>
-	inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
 	{	struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 		return 1'000'000'000U * ts.tv_sec + ts.tv_nsec;
@@ -156,7 +154,6 @@ namespace
 #else
 #	error "You need to define function(s) for your OS and CPU"
 #endif
-}
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 vi_tmTicks_t VI_TM_CALL vi_tmClock(void) noexcept
