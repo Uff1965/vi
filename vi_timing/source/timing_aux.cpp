@@ -282,7 +282,7 @@ namespace
 				std::setw(traits_.max_len_amount_) << i.orig_amount_ << "]" <<
 				"\n";
 
-			auto result = str.str();
+			const auto result = str.str();
 			assert(number_len_ + 2 + traits_.max_len_name_ + 2 + traits_.max_len_average_ + 2 + traits_.max_len_total_ + 3 + traits_.max_len_amount_ + 1 + 1 == result.size());
 
 			return init + fn_(result.c_str(), data_);
