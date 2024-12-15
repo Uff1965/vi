@@ -36,7 +36,7 @@ set(FILE_GROUP
   "source/misc.cpp"
   "source/props.cpp"
   "source/timing.cpp"
-  "source/timing_aux.cpp"
+  "source/report.cpp"
 )
 source_group("Source files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
