@@ -17,11 +17,6 @@ endif()
 ### Files #####################################################################
 set(SOURCE_FILES)
 
-configure_file(
-    "source/vi_timing.h.in"
-    "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
-)
-
 set(FILE_GROUP
   "${VI_ROOT_DIR}/vi_timing/common.h"
   "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
