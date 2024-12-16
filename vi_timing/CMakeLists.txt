@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(vi_timing VERSION 0.15.1)
+project(vi_timing)
 
 if(NOT DEFINED VI_OUT_DIR)
 	get_filename_component(VI_OUT_DIR "${VI_ROOT_DIR}/lib/." DIRECTORY)
