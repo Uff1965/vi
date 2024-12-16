@@ -10,8 +10,7 @@
 
 namespace
 {
-	VI_TM_INIT( vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration); // Initialize the library and request a report at the end of the program.
-//	VI_TM_INIT(); // That's also an option.
+	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration); // Initialize the library and request a report at the end of the program.
 
 	VI_TM("Global");
 }
@@ -34,7 +33,4 @@ int main()
 			result = std::sin(n) * std::cos(n);
 		}
 	}
-
-//	std::fputs("Incomplete report:\n", stdout);
-//	VI_TM_REPORT();
 }
