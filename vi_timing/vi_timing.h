@@ -90,6 +90,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
 typedef struct vi_tmInstance_t* VI_TM_HANDLE;
+typedef struct vi_tm_journal_t *VI_TM_JOURNAL;
 typedef VI_STD(uint64_t) vi_tmTicks_t;
 typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 enum vi_tmInfo_e
@@ -109,6 +110,8 @@ extern "C"
 	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(void);
 	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
+	VI_TM_API VI_TM_JOURNAL VI_TM_CALL vi_tmJournal(const char* name);
+	VI_TM_API void VI_TM_CALL vi_tmWrite(VI_TM_JOURNAL j, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h,const char *name, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HANDLE h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);

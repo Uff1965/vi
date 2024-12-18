@@ -90,24 +90,24 @@ namespace
 		return result;
 	}
 
-	struct item_t
-	{	vi_tmTicks_t total_ = 0U;
-		std::size_t counter_ = 0U;
-		std::size_t calls_cnt_ = 0U;
-		void add(vi_tmTicks_t ticks, std::size_t amount) noexcept
-		{	total_ += ticks;
-			counter_ += amount;
-			++calls_cnt_;
-		}
-		void clear() noexcept
-		{	total_ = counter_ = calls_cnt_ = 0U;
-		};
-	};
-
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	constexpr std::size_t STORAGE_CAPACITY = 64U;
-	using storage_t = std::unordered_map<std::string, item_t>;
+	using storage_t = std::unordered_map<std::string, vi_tm_journal_t>;
 } // namespace
+
+struct vi_tm_journal_t
+{	vi_tmTicks_t total_ = 0U;
+	std::size_t counter_ = 0U;
+	std::size_t calls_cnt_ = 0U;
+	void add(vi_tmTicks_t ticks, std::size_t amount) noexcept
+	{	total_ += ticks;
+		counter_ += amount;
+		++calls_cnt_;
+	}
+	void clear() noexcept
+	{	total_ = counter_ = calls_cnt_ = 0U;
+	};
+};
 
 struct vi_tmInstance_t
 {	std::mutex storage_guard_;
@@ -202,6 +202,16 @@ void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
 void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
 {	from_handle(h).add(name, ticks, amount);
 }
+
+//VI_TM_JOURNAL VI_TM_CALL vi_tmJournal(const char *name)
+//{
+//	from_handle(nullptr).;
+//}
+//
+//void VI_TM_CALL vi_tmWrite(VI_TM_JOURNAL j, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
+//{
+//
+//}
 
 void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
 {	from_handle(h).clear(name);
