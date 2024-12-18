@@ -6,19 +6,21 @@ project(vi_timing_test)
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "main.cpp"
+  "${PROJECT_SOURCE_DIR}/test.cpp"
+  "${PROJECT_SOURCE_DIR}/header.h"
+  "${PROJECT_SOURCE_DIR}/source.c"
 )
 source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "${VI_ROOT_DIR}/vi_timing/vi_timing_proxy.h"
+  "../vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(OUTPUT_NAME_SUFFIX "")
-if(VI_TM_BUILD_SHARED)
+if(BUILD_SHARED_LIBS)
     string(APPEND OUTPUT_NAME_SUFFIX "s")
 endif()
 
@@ -38,6 +40,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
+
+# Multi-configuration generators (Visual Studio, Xcode, Ninja Multi-Config) append a per-configuration subdirectory to the specified directory unless a generator expression is used.
+#  LIBRARY_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
+#  ARCHIVE_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
+#  RUNTIME_OUTPUT_DIRECTORY	"${VI_OUT_DIR}"
+)
+
+add_dependencies(${PROJECT_NAME}
+	vi_timing
 )
 
 ## Compiler ##################################################################
@@ -95,6 +106,7 @@ elseif (UNIX)
   PRIVATE
     rt
     pthread
+  PUBLIC
     atomic
   )
 endif()
