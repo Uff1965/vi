@@ -181,7 +181,7 @@ struct vi_tmInstance_t
 		}
 	}
 
-	friend vi_tmInstance_t& from_handle(VI_TM_HANDLE h)
+	friend vi_tmInstance_t& from_handle(VI_TM_HBOOK h)
 	{	return h? *h: global();
 	}
 }; // struct vi_tmInstance_t
@@ -196,40 +196,40 @@ void VI_TM_CALL vi_tmFinit(void)
 {	vi_tmInstance_t::global().clear();
 }
 
-VI_TM_HANDLE VI_TM_CALL vi_tmCreate()
+VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate()
 {	return new vi_tmInstance_t{};
 }
 
-void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
+void VI_TM_CALL vi_tmBookClose(VI_TM_HBOOK h)
 {	delete h;
 }
 
-void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
+void VI_TM_CALL vi_tmAppend(VI_TM_HBOOK h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
 {	from_handle(h).add(name, ticks, amount);
 }
 
-VI_TM_HJOURNAL VI_TM_CALL vi_tmJournal(const char *name)
-{	auto& itm = vi_tmInstance_t::global().get_item(name);
+VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char *name)
+{	auto& itm = from_handle(h).get_item(name);
 	return &itm;
 }
 
-void VI_TM_CALL vi_tmWrite(VI_TM_HJOURNAL j, vi_tmTicks_t ticks, std::size_t amount) noexcept
+void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t ticks, std::size_t amount) noexcept
 {	assert(j);
 	if (j)
 	{	j->add(ticks, amount);
 	}
 }
 
-void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
+void VI_TM_CALL vi_tmBookClear(VI_TM_HBOOK h, const char* name) noexcept
 {	from_handle(h).clear(name);
 }
 
-int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
+int VI_TM_CALL vi_tmResults(VI_TM_HBOOK h, vi_tmLogRAW_t fn, void *data)
 {	return from_handle(h).results(fn, data);
 }
 
 int VI_TM_CALL vi_tmResult
-(	VI_TM_HANDLE h,
+(	VI_TM_HBOOK h,
 	const char *name,
 	vi_tmTicks_t *time,
 	std::size_t *amount,

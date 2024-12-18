@@ -86,7 +86,7 @@ namespace {
 //	VI_OPTIMIZE_OFF
 	bool test_multithreaded()
 	{	VI_TM_FUNC;
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> h{ vi_tmCreate(), &vi_tmClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HBOOK>, decltype(&vi_tmBookClose)> h{ vi_tmBookCreate(), &vi_tmBookClose };
 
 #ifdef NDEBUG
 		static constexpr auto CNT = 2'000'000;
@@ -97,13 +97,17 @@ namespace {
 
 		std::cout << "\ntest_multithreaded()... " << std::endl;
 
+		static const auto j = vi_tmSheet(nullptr, "");
+
 		auto load = [h = h.get()]
-		{	vi_tm::timer_t tm{h, "load"};
+		{	static auto j = vi_tmSheet(h, "load");
+			vi_tm::meter_t tm{ j };
 
 			for (auto n = CNT; n; --n)
 			{	const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
 				const auto s = vi_tmClock();
-				vi_tmFinish(h, name.c_str(), s);
+				const auto f = vi_tmClock();
+				vi_tmRecord(j, f - s, 1);
 				v++;
 			}
 		};
@@ -133,15 +137,19 @@ namespace {
 	void test_instances()
 	{	VI_TM("Additional timers");
 		std::cout << "\nAdditional timers...\n";
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> handler{ vi_tmCreate(), &vi_tmClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HBOOK>, decltype(&vi_tmBookClose)> handler{ vi_tmBookCreate(), &vi_tmBookClose };
 		{	auto h = handler.get();
-			{	vi_tm::timer_t tm1{ h, "long, long, long, very long name" };
-				{	vi_tm::timer_t tm2{ h, "100ms * 10", 10 };
+			{	static auto j1 = vi_tmSheet(h, "long, long, long, very long name");
+				vi_tm::meter_t tm1{ j1 };
+				{	static auto j2 = vi_tmSheet(h, "100ms * 10");
+					vi_tm::meter_t tm2{ j2, 10 };
 					for (int n = 0; n < 10; ++n)
 					{	std::this_thread::sleep_for(100ms);
 
-						vi_tm::timer_t tm3{ h, "tm" };
-						vi_tm::timer_t tm4{ h, "tm_empty" };
+						static auto j3 = vi_tmSheet(h, "tm");
+						vi_tm::meter_t tm3{ j3 };
+						static auto j4 = vi_tmSheet(h, "tm_empty");
+						vi_tm::meter_t tm4{ j4 };
 					}
 				}
 			}
@@ -154,27 +162,36 @@ namespace {
 	{	VI_TM_FUNC;
 		std::cout << "\ntest_empty()...\n";
 
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HANDLE>, decltype(&vi_tmClose)> handler{ vi_tmCreate(), &vi_tmClose };
-		{	auto h = handler.get();
-			vi_tmClear(nullptr, "Empty vi_tm");
-			for(int n = 0; n < 100'000; ++n)
-			{	const auto start0 = vi_tmClock();
-				const auto start1 = vi_tmClock();
-				vi_tmFinish(nullptr, "Empty vi_tm", start1);
-				vi_tmFinish(nullptr, "vi_tm", start0);
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HBOOK>, decltype(&vi_tmBookClose)> handler{ vi_tmBookCreate(), &vi_tmBookClose };
+		{	auto const h = handler.get();
+
+			vi_tmBookClear(h, "vi_tm_ex");
+			vi_tmBookClear(h, "Empty vi_tm_ex");
+			vi_tmBookClear(h, "vi_tm");
+			vi_tmBookClear(h, "Empty vi_tm");
+			vi_tmBookClear(nullptr, "VI_TM");
+			vi_tmBookClear(nullptr, "Empty VI_TM");
+
+			static auto const j0 = vi_tmSheet(h, "vi_tm_ex");
+			static auto const j1 = vi_tmSheet(h, "Empty vi_tm_ex");
+
+			for (int n = 0; n < 100'000; ++n)
+			{
+				{
+					const auto start0 = vi_tmClock();
+					const auto start1 = vi_tmClock(); //-V656 Variables 'start0', 'start1' are initialized through the call to the same function.
+					/**/
+					const auto finish1 = vi_tmClock();
+					vi_tmRecord(j1, finish1 - start1, 1);
+					const auto finish0 = vi_tmClock();
+					vi_tmRecord(j0, finish0 - start0, 1);
+				}
+
+				{	VI_TM("VI_TM");
+					VI_TM("Empty VI_TM");
+				}
 			}
-			vi_tmClear(nullptr, "Empty VI_TM");
-			for(int n = 0; n < 100'000; ++n)
-			{	VI_TM("VI_TM");
-				VI_TM("Empty VI_TM");
-			}
-			vi_tmClear(h, "Empty vi_tm");
-			for(int n = 0; n < 100'000; ++n)
-			{	const auto start0 = vi_tmClock();
-				const auto start1 = vi_tmClock();
-				vi_tmFinish(h, "Empty vi_tm", start1);
-				vi_tmFinish(h, "vi_tm", start0);
-			}
+
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
 

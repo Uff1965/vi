@@ -39,7 +39,6 @@ struct properties_t
 {	misc::duration_t tick_duration_;
 	double clock_latency_;
 	misc::duration_t all_latency_;
-	misc::duration_t all_latency_ex_;
 	double clock_resolution_;
 
 private:
@@ -47,6 +46,6 @@ private:
 	friend const properties_t& props();
 };
 
-const properties_t& props();
+const properties_t& props(); //-V1071 Consider inspecting the 'props' function. The return value is not always used.
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H
