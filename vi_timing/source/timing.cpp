@@ -96,13 +96,13 @@ namespace
 } // namespace
 
 struct vi_tm_journal_t
-{	vi_tmTicks_t total_ = 0U;
-	std::size_t counter_ = 0U;
-	std::size_t calls_cnt_ = 0U;
+{	std::atomic<vi_tmTicks_t> total_ = 0U;
+	std::atomic<std::size_t> counter_ = 0U;
+	std::atomic<std::size_t> calls_cnt_ = 0U;
 	void add(vi_tmTicks_t ticks, std::size_t amount) noexcept
-	{	total_ += ticks;
-		counter_ += amount;
-		++calls_cnt_;
+	{	total_.fetch_add(ticks, std::memory_order_relaxed);
+		counter_.fetch_add(amount, std::memory_order_relaxed);
+		calls_cnt_.fetch_add(1, std::memory_order_relaxed);
 	}
 	void clear() noexcept
 	{	total_ = counter_ = calls_cnt_ = 0U;
@@ -125,6 +125,12 @@ struct vi_tmInstance_t
 
 	int init()
 	{	return 0;
+	}
+
+	vi_tm_journal_t *get(const char *name)
+	{	std::lock_guard lock{ storage_guard_ };
+		auto &result = storage_[name];
+		return &result;
 	}
 
 	void add(const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
@@ -203,12 +209,12 @@ void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks
 {	from_handle(h).add(name, ticks, amount);
 }
 
-//VI_TM_JOURNAL VI_TM_CALL vi_tmJournal(const char *name)
+//VI_TM_HJOURNAL VI_TM_CALL vi_tmJournal(const char *name)
 //{
 //	from_handle(nullptr).;
 //}
 //
-//void VI_TM_CALL vi_tmWrite(VI_TM_JOURNAL j, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
+//void VI_TM_CALL vi_tmWrite(VI_TM_HJOURNAL j, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
 //{
 //
 //}
