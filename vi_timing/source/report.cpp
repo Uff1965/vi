@@ -281,10 +281,9 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 }
 
 int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags, vi_tmLogSTR_t fn, void *data)
-{
-	props(); // Preventing deadlock in traits_t::results_callback().
+{	int result = 0;
 
-	int result = 0;
+	props(); // Preventing deadlock in traits_t::results_callback().
 	result += print_props(fn, data, flags);
 
 	std::vector<metering_t> meterings;

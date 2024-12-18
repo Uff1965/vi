@@ -38,19 +38,20 @@ using namespace std::chrono_literals;
 namespace
 {
 	constexpr auto cache_warmup = 5U;
-		
+	constexpr auto now = std::chrono::steady_clock::now;
+
 	misc::duration_t seconds_per_tick()
 	{
 		auto time_point = []
 		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-			for(auto n = 0; n < cache_warmup; ++n)
-			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmClock(); // Preloading a function into cache
-				[[maybe_unused]] volatile auto dummy_2 = ch::steady_clock::now(); // Preloading a function into cache
+			for(auto n = 0; n < cache_warmup; ++n) // Preloading a functions into cache
+			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmClock();
+				[[maybe_unused]] volatile auto dummy_2 = now();
 			}
 
 			// Are waiting for the start of a new time interval.
-			auto last = ch::steady_clock::now();
-			for (const auto s = last; s == last; last = ch::steady_clock::now())
+			auto last = now();
+			for (const auto s = last; s == last; last = now())
 			{/**/}
 
 			return std::tuple{ vi_tmClock(), last };
@@ -58,7 +59,7 @@ namespace
 
 		const auto [tick1, time1] = time_point();
 		// Load the thread at 100% for 256ms.
-		for (auto stop = time1 + 256ms; ch::steady_clock::now() < stop;)
+		for (auto stop = time1 + 256ms; now() < stop;)
 		{/**/}
 		const auto [tick2, time2] = time_point();
 
@@ -77,8 +78,8 @@ namespace
 				{	gauge_zero(); // Create a service item with empty name "" and cache preload.
 				}
 				// Are waiting for the start of a new time interval.
-				auto result = ch::steady_clock::now();
-				for (const auto s = result; s == result; result = ch::steady_clock::now())
+				auto result = now();
+				for (const auto s = result; s == result; result = now())
 				{/**/}
 				return result;
 			};
@@ -88,7 +89,7 @@ namespace
 		for (auto cnt = 0U; cnt < CNT; ++cnt)
 		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 		}
-		const auto pure = ch::steady_clock::now() - s;
+		const auto pure = now() - s;
 
 		constexpr auto EXT = 20U;
 		s = time_point();
@@ -101,7 +102,7 @@ namespace
 			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
 		}
-		const auto dirty = ch::steady_clock::now() - s;
+		const auto dirty = now() - s;
 
 		return misc::duration_t(dirty - pure) / (EXT * CNT);
 	}
@@ -148,7 +149,7 @@ VI_OPTIMIZE_OFF
 			vi_tmTicks_t last = 0;
 
 			std::this_thread::yield(); // Reduce the likelihood of interrupting measurements by switching threads.
-			const auto limit = ch::steady_clock::now() + 256us;
+			const auto limit = now() + 256us;
 			for (auto n = 0U; n < cache_warmup; ++n)
 			{	first = last = vi_tmClock();
 			}
@@ -160,7 +161,7 @@ VI_OPTIMIZE_OFF
 				}
 			}
 
-			if (ch::steady_clock::now() > limit)
+			if (now() > limit)
 			{	return static_cast<double>(last - first) / CNT;
 			}
 		}

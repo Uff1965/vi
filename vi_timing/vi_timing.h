@@ -38,6 +38,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		include <cstdint>
 #		include <cstdio> // For fputs and stdout
 #		include <string>
+#		include <utility>
 #	else
 #		include <stdint.h>
 #		include <stdio.h> // For fputs and stdout
@@ -127,12 +128,11 @@ extern "C"
 		vi_tmSortDescending = 0x00,
 		vi_tmSortAscending = 0x08,
 
-		vi_tmShowOverhead = 0x010,
-		vi_tmShowUnit = 0x020,
-		vi_tmShowDuration = 0x040,
-		vi_tmShowResolution = 0x080,
-		vi_tmShowNoHeader = 0x100,
-		vi_tmShowMask = 0xFF0,
+		vi_tmShowOverhead = 0x10,
+		vi_tmShowUnit = 0x20,
+		vi_tmShowDuration = 0x40,
+		vi_tmShowResolution = 0x80,
+		vi_tmShowNoHeader = 0x0100,
 	};
 
 	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
@@ -182,7 +182,7 @@ namespace vi_tm
 		init_t(const init_t &) = delete;
 		init_t &operator=(const init_t &) = delete;
 	public:
-		init_t(const char *title, unsigned flags, vi_tmLogSTR_t cb, void *data);
+		init_t(std::string title, unsigned flags, vi_tmLogSTR_t cb, void *data);
 		template<typename... Args>
 		init_t(Args&&... args);
 		~init_t();
@@ -204,12 +204,15 @@ namespace vi_tm
 		{	assert(default_cb == cb_ && nullptr != v);
 			cb_ = v;
 		}
-		else if constexpr (std::is_pointer_v<T>)
-		{	assert(default_data == data_);
-			data_ = v;
+		else if constexpr (std::is_same_v<T, decltype(title_)>)
+		{	title_ = std::forward<T>(v);
 		}
 		else if constexpr (std::is_convertible_v<T, decltype(title_)>)
 		{	title_ = v;
+		}
+		else if constexpr (std::is_pointer_v<T>)
+		{	assert(default_data == data_);
+			data_ = v;
 		}
 		else
 		{	assert(false);
@@ -223,9 +226,9 @@ namespace vi_tm
 	{	init(std::forward<Args>(args)...);
 	}
 
-	inline init_t::init_t(const char *title, unsigned flags, vi_tmLogSTR_t cb, void *data)
+	inline init_t::init_t(std::string title, unsigned flags, vi_tmLogSTR_t cb, void *data)
 	:	flags_{ flags }
-	{	init(title, cb, data);
+	{	init(std::forward<std::string>(title), cb, data);
 	}
 
 	inline init_t::~init_t()
