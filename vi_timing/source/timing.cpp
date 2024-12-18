@@ -127,10 +127,9 @@ struct vi_tmInstance_t
 	{	return 0;
 	}
 
-	vi_tm_journal_t *get(const char *name)
+	vi_tm_journal_t& get_item(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
-		auto &result = storage_[name];
-		return &result;
+		return storage_[name];
 	}
 
 	void add(const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
@@ -209,15 +208,17 @@ void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks
 {	from_handle(h).add(name, ticks, amount);
 }
 
-//VI_TM_HJOURNAL VI_TM_CALL vi_tmJournal(const char *name)
-//{
-//	from_handle(nullptr).;
-//}
-//
-//void VI_TM_CALL vi_tmWrite(VI_TM_HJOURNAL j, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
-//{
-//
-//}
+VI_TM_HJOURNAL VI_TM_CALL vi_tmJournal(const char *name)
+{	auto& itm = vi_tmInstance_t::global().get_item(name);
+	return &itm;
+}
+
+void VI_TM_CALL vi_tmWrite(VI_TM_HJOURNAL j, vi_tmTicks_t ticks, std::size_t amount) noexcept
+{	assert(j);
+	if (j)
+	{	j->add(ticks, amount);
+	}
+}
 
 void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
 {	from_handle(h).clear(name);
