@@ -31,7 +31,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <cstring>
 #include <mutex>
 #include <string>
 #include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
@@ -67,31 +66,23 @@ namespace
 		auto date_c = [c2d](std::size_t n) { return c2d(__DATE__[n]); };
 		auto time_c = [c2d](std::size_t n) { return c2d(__TIME__[n]); };
 		
-		unsigned result = 0U;
-		result += date_c(Y3) * 10 + date_c(Y4);
-
-		result *= 100;
+		const unsigned year = date_c(Y3) * 10 + date_c(Y4);
+		unsigned month = 0;
 		for (unsigned n = 0; n < mon_names.size(); ++n)
 		{	if (std::string_view{ __DATE__, 3 } == mon_names[n])
-			{	result += n + 1;
+			{	month = n + 1;
 				break;
 			}
 		}
+		const unsigned day = date_c(D1) * 10 + date_c(D2);
+		const unsigned hour = time_c(h1) * 10 + time_c(h2);
+		const unsigned minute = time_c(m1) * 10 + time_c(m2);
 
-		result *= 100;
-		result += date_c(D1) * 10 + date_c(D2);
-
-		result *= 100;
-		result += time_c(h1) * 10 + time_c(h2);
-
-		result *= 100;
-		result += time_c(m1) * 10 + time_c(m2);
-
-		return result;
+		return (((((year * 100 + month) * 100 + day) * 100 + hour) * 100) + minute);
 	}
 
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
-	constexpr std::size_t STORAGE_CAPACITY = 64U;
+	constexpr std::size_t DEFAULT_STORAGE_CAPACITY = 64U;
 	using storage_t = std::unordered_map<std::string, vi_tm_journal_t>;
 } // namespace
 
@@ -115,7 +106,7 @@ struct vi_tmInstance_t
 
 	explicit vi_tmInstance_t()
 	{	storage_.max_load_factor(MAX_LOAD_FACTOR);
-		storage_.reserve(STORAGE_CAPACITY);
+		storage_.reserve(DEFAULT_STORAGE_CAPACITY);
 	}
 
 	static vi_tmInstance_t& global()
@@ -130,11 +121,6 @@ struct vi_tmInstance_t
 	vi_tm_journal_t& get_item(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
 		return storage_[name];
-	}
-
-	void add(const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
-	{	std::lock_guard lock{ storage_guard_ };
-		storage_[name].add(ticks, amount);
 	}
 
 	int result(const char *name, vi_tmTicks_t *time, std::size_t *amount, std::size_t *calls_cnt)
@@ -197,15 +183,16 @@ void VI_TM_CALL vi_tmFinit(void)
 }
 
 VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate()
-{	return new vi_tmInstance_t{};
+{	try
+	{	return new vi_tmInstance_t{};
+	}
+	catch (const std::bad_alloc &)
+	{	return nullptr;
+	}
 }
 
 void VI_TM_CALL vi_tmBookClose(VI_TM_HBOOK h)
 {	delete h;
-}
-
-void VI_TM_CALL vi_tmAppend(VI_TM_HBOOK h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
-{	from_handle(h).add(name, ticks, amount);
 }
 
 VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char *name)
