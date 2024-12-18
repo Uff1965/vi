@@ -39,6 +39,7 @@ struct properties_t
 {	misc::duration_t tick_duration_;
 	double clock_latency_;
 	misc::duration_t all_latency_;
+	misc::duration_t all_latency_ex_;
 	double clock_resolution_;
 
 private:

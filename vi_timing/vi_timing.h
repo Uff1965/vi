@@ -157,6 +157,17 @@ extern "C"
 #	ifdef __cplusplus
 namespace vi_tm
 {
+	class meter_t
+	{	VI_TM_HJOURNAL h_;
+		unsigned amt_;
+		const std::size_t start_ = vi_tmClock();
+		meter_t(const meter_t &) = delete;
+		void operator=(const meter_t &) = delete;
+	public:
+		meter_t(VI_TM_HJOURNAL h, unsigned amt = 1): h_{h}, amt_{amt} {/**/}
+		~meter_t() { auto finish = vi_tmClock(); vi_tmWrite(h_, finish - start_, amt_); }
+	};
+
 	class timer_t
 	{	const VI_TM_HANDLE h_ = nullptr;
 		const char *name_;
@@ -253,7 +264,11 @@ namespace vi_tm
 #			define VI_TM_INFO(f) NULL
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
-#			define VI_TM(...) vi_tm::timer_t VI_MAKE_ID(_vi_tm_) {NULL, __VA_ARGS__}
+#			define VI_TM(...)\
+				const auto VI_MAKE_ID(_vi_tm_) = [](const char *n, unsigned a = 1)\
+					{	static VI_TM_HJOURNAL jl = vi_tmJournal(n);\
+						return vi_tm::meter_t{jl, a};\
+					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
 #			define VI_TM_CLEAR vi_tmClear(NULL, NULL)

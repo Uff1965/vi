@@ -107,6 +107,49 @@ namespace
 		return misc::duration_t(dirty - pure) / (EXT * CNT);
 	}
 
+	misc::duration_t duration_ex()
+	{	static vi_tm_journal_t* const journal = vi_tmJournal("");
+
+		static auto gauge_zero = []
+			{	const auto start = vi_tmClock();
+				const auto finish = vi_tmClock();
+				vi_tmWrite(journal, finish - start, 1);
+			};
+		auto time_point = []
+			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
+				for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
+				{	gauge_zero(); // Create a service item with empty name "" and cache preload.
+				}
+				// Are waiting for the start of a new time interval.
+				auto result = now();
+				for (const auto s = result; s == result; result = now())
+				{/**/}
+				return result;
+			};
+
+		constexpr auto CNT = 500U;
+		auto s = time_point();
+		for (auto cnt = 0U; cnt < CNT; ++cnt)
+		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+		}
+		const auto pure = now() - s;
+
+		constexpr auto EXT = 20U;
+		s = time_point();
+		for (auto cnt = 0U; cnt < CNT; ++cnt)
+		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+
+			// EXT calls
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+		}
+		const auto dirty = now() - s;
+
+		return misc::duration_t(dirty - pure) / (EXT * CNT);
+	}
+
 VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{	constexpr auto CNT = 500U;
@@ -180,5 +223,6 @@ properties_t::properties_t()
 	tick_duration_ = seconds_per_tick();
 	clock_latency_ = measurement_cost();
 	all_latency_ = duration();
+	all_latency_ex_ = duration_ex();
 	clock_resolution_ = resolution();
 }

@@ -264,7 +264,7 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 		{	str << "Resolution: " << misc::duration_t(props().tick_duration_ * props().clock_resolution_) << ". ";
 		}
 		if (flags & vi_tmShowDuration)
-		{	str << "Duration: " << props().all_latency_ << ". ";
+		{	str << "Duration: " << props().all_latency_ << " Duration Ex: " << props().all_latency_ex_ << ". ";
 		}
 		if (flags & vi_tmShowUnit)
 		{	str << "One tick: " << props().tick_duration_ << ". ";
