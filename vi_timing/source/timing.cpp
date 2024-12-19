@@ -31,7 +31,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <cstring>
 #include <mutex>
 #include <string>
 #include <unordered_map> // Unordered associative containers: "Rehashing invalidates iterators, <...> but does not invalidate pointers or references to elements".
@@ -67,47 +66,39 @@ namespace
 		auto date_c = [c2d](std::size_t n) { return c2d(__DATE__[n]); };
 		auto time_c = [c2d](std::size_t n) { return c2d(__TIME__[n]); };
 		
-		unsigned result = 0U;
-		result += date_c(Y3) * 10 + date_c(Y4);
-
-		result *= 100;
+		const unsigned year = date_c(Y3) * 10 + date_c(Y4);
+		unsigned month = 0;
 		for (unsigned n = 0; n < mon_names.size(); ++n)
 		{	if (std::string_view{ __DATE__, 3 } == mon_names[n])
-			{	result += n + 1;
+			{	month = n + 1;
 				break;
 			}
 		}
+		const unsigned day = date_c(D1) * 10 + date_c(D2);
+		const unsigned hour = time_c(h1) * 10 + time_c(h2);
+		const unsigned minute = time_c(m1) * 10 + time_c(m2);
 
-		result *= 100;
-		result += date_c(D1) * 10 + date_c(D2);
-
-		result *= 100;
-		result += time_c(h1) * 10 + time_c(h2);
-
-		result *= 100;
-		result += time_c(m1) * 10 + time_c(m2);
-
-		return result;
+		return (((((year * 100 + month) * 100 + day) * 100 + hour) * 100) + minute);
 	}
 
-	struct item_t
-	{	vi_tmTicks_t total_ = 0U;
-		std::size_t counter_ = 0U;
-		std::size_t calls_cnt_ = 0U;
-		void add(vi_tmTicks_t ticks, std::size_t amount) noexcept
-		{	total_ += ticks;
-			counter_ += amount;
-			++calls_cnt_;
-		}
-		void clear() noexcept
-		{	total_ = counter_ = calls_cnt_ = 0U;
-		};
-	};
-
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
-	constexpr std::size_t STORAGE_CAPACITY = 64U;
-	using storage_t = std::unordered_map<std::string, item_t>;
+	constexpr std::size_t DEFAULT_STORAGE_CAPACITY = 64U;
+	using storage_t = std::unordered_map<std::string, vi_tm_journal_t>;
 } // namespace
+
+struct vi_tm_journal_t
+{	std::atomic<vi_tmTicks_t> total_ = 0U;
+	std::atomic<std::size_t> counter_ = 0U;
+	std::atomic<std::size_t> calls_cnt_ = 0U;
+	void add(vi_tmTicks_t ticks, std::size_t amount) noexcept
+	{	total_.fetch_add(ticks, std::memory_order_relaxed);
+		counter_.fetch_add(amount, std::memory_order_relaxed);
+		calls_cnt_.fetch_add(1, std::memory_order_relaxed);
+	}
+	void clear() noexcept
+	{	total_ = counter_ = calls_cnt_ = 0U;
+	};
+};
 
 struct vi_tmInstance_t
 {	std::mutex storage_guard_;
@@ -115,7 +106,7 @@ struct vi_tmInstance_t
 
 	explicit vi_tmInstance_t()
 	{	storage_.max_load_factor(MAX_LOAD_FACTOR);
-		storage_.reserve(STORAGE_CAPACITY);
+		storage_.reserve(DEFAULT_STORAGE_CAPACITY);
 	}
 
 	static vi_tmInstance_t& global()
@@ -127,9 +118,9 @@ struct vi_tmInstance_t
 	{	return 0;
 	}
 
-	void add(const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
+	vi_tm_journal_t& get_item(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
-		storage_[name].add(ticks, amount);
+		return storage_[name];
 	}
 
 	int result(const char *name, vi_tmTicks_t *time, std::size_t *amount, std::size_t *calls_cnt)
@@ -176,7 +167,7 @@ struct vi_tmInstance_t
 		}
 	}
 
-	friend vi_tmInstance_t& from_handle(VI_TM_HANDLE h)
+	friend vi_tmInstance_t& from_handle(VI_TM_HBOOK h)
 	{	return h? *h: global();
 	}
 }; // struct vi_tmInstance_t
@@ -191,28 +182,41 @@ void VI_TM_CALL vi_tmFinit(void)
 {	vi_tmInstance_t::global().clear();
 }
 
-VI_TM_HANDLE VI_TM_CALL vi_tmCreate()
-{	return new vi_tmInstance_t{};
+VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate()
+{	try
+	{	return new vi_tmInstance_t{};
+	}
+	catch (const std::bad_alloc &)
+	{	return nullptr;
+	}
 }
 
-void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h)
+void VI_TM_CALL vi_tmBookClose(VI_TM_HBOOK h)
 {	delete h;
 }
 
-void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h, const char *name, vi_tmTicks_t ticks, std::size_t amount) noexcept
-{	from_handle(h).add(name, ticks, amount);
+VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char *name)
+{	auto& itm = from_handle(h).get_item(name);
+	return &itm;
 }
 
-void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name) noexcept
+void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t ticks, std::size_t amount) noexcept
+{	assert(j);
+	if (j)
+	{	j->add(ticks, amount);
+	}
+}
+
+void VI_TM_CALL vi_tmBookClear(VI_TM_HBOOK h, const char* name) noexcept
 {	from_handle(h).clear(name);
 }
 
-int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void *data)
+int VI_TM_CALL vi_tmResults(VI_TM_HBOOK h, vi_tmLogRAW_t fn, void *data)
 {	return from_handle(h).results(fn, data);
 }
 
 int VI_TM_CALL vi_tmResult
-(	VI_TM_HANDLE h,
+(	VI_TM_HBOOK h,
 	const char *name,
 	vi_tmTicks_t *time,
 	std::size_t *amount,

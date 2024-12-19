@@ -46,6 +46,6 @@ private:
 	friend const properties_t& props();
 };
 
-const properties_t& props();
+const properties_t& props(); //-V1071 Consider inspecting the 'props' function. The return value is not always used.
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H

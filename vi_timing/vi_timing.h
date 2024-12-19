@@ -89,7 +89,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef struct vi_tmInstance_t* VI_TM_HANDLE;
+typedef struct vi_tmInstance_t* VI_TM_HBOOK;
+typedef struct vi_tm_journal_t *VI_TM_HSHEET;
 typedef VI_STD(uint64_t) vi_tmTicks_t;
 typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 enum vi_tmInfo_e
@@ -107,13 +108,14 @@ extern "C"
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
-	VI_TM_API VI_NODISCARD VI_TM_HANDLE VI_TM_CALL vi_tmCreate(void);
+	VI_TM_API VI_NODISCARD VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate(void);
 	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmAppend(VI_TM_HANDLE h,const char *name, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
-	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HANDLE h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
-	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HANDLE h, vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmClear(VI_TM_HANDLE h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmClose(VI_TM_HANDLE h);
+	VI_TM_API VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char* name);
+	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HBOOK h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
+	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HBOOK h, vi_tmLogRAW_t fn, void* data);
+	VI_TM_API void VI_TM_CALL vi_tmBookClear(VI_TM_HBOOK h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmBookClose(VI_TM_HBOOK h);
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -135,14 +137,10 @@ extern "C"
 		vi_tmShowNoHeader = 0x0100,
 	};
 
-	static inline void vi_tmFinish(VI_TM_HANDLE h, const char *name, vi_tmTicks_t start, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT
-	{	const vi_tmTicks_t finish = vi_tmClock();
-		vi_tmAppend(h, name, finish - start, amount);
-	}
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
 // Supporting functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -154,24 +152,6 @@ extern "C"
 #	ifdef __cplusplus
 namespace vi_tm
 {
-	class timer_t
-	{	const VI_TM_HANDLE h_ = nullptr;
-		const char *name_;
-		const std::size_t cnt_;
-		const vi_tmTicks_t start_{ vi_tmClock() }; // Order matters!!! 'start_' must be initialized last!
-
-		timer_t(const timer_t&) = delete;
-		timer_t& operator=(const timer_t&) = delete;
-	public:
-		timer_t(VI_TM_HANDLE h, const char *name, std::size_t cnt = 1) noexcept
-			: h_{ h }, name_{ name }, cnt_{ cnt }
-		{
-		}
-		~timer_t() noexcept
-		{	vi_tmFinish(h_, name_, start_, cnt_);
-		}
-	};
-
 	class init_t
 	{	static constexpr auto default_cb = &vi_tmReportCallback;
 		static inline const auto default_data = reinterpret_cast<void*>(stdout);
@@ -182,9 +162,8 @@ namespace vi_tm
 		init_t(const init_t &) = delete;
 		init_t &operator=(const init_t &) = delete;
 	public:
-		init_t(std::string title, unsigned flags, vi_tmLogSTR_t cb, void *data);
 		template<typename... Args>
-		init_t(Args&&... args);
+		explicit init_t(Args&&... args);
 		~init_t();
 		template<typename T, typename... Args> void init(T &&v, Args&&... args);
 		void init();
@@ -226,11 +205,6 @@ namespace vi_tm
 	{	init(std::forward<Args>(args)...);
 	}
 
-	inline init_t::init_t(std::string title, unsigned flags, vi_tmLogSTR_t cb, void *data)
-	:	flags_{ flags }
-	{	init(std::forward<std::string>(title), cb, data);
-	}
-
 	inline init_t::~init_t()
 	{	if (!title_.empty())
 		{	cb_(title_.c_str(), data_);
@@ -239,7 +213,18 @@ namespace vi_tm
 		vi_tmReport(nullptr, flags_, cb_, data_);
 		vi_tmFinit();
 	}
-}
+
+	class meter_t
+	{	VI_TM_HSHEET h_;
+		unsigned amt_;
+		const vi_tmTicks_t start_ = vi_tmClock(); // Order matters!!! 'start_' must be initialized last!
+		meter_t(const meter_t &) = delete;
+		void operator=(const meter_t &) = delete;
+	public:
+		meter_t(VI_TM_HSHEET h, unsigned amt = 1): h_{h}, amt_{amt} {/**/}
+		~meter_t() { const auto finish = vi_tmClock(); vi_tmRecord(h_, finish - start_, amt_); }
+	};
+} // namespace vi_tm
 
 #		if defined(VI_TM_DISABLE)
 #			define VI_TM_INIT(...) static const int VI_MAKE_ID(_vi_tm_) = 0
@@ -250,11 +235,15 @@ namespace vi_tm
 #			define VI_TM_INFO(f) NULL
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
-#			define VI_TM(...) vi_tm::timer_t VI_MAKE_ID(_vi_tm_) {NULL, __VA_ARGS__}
+#			define VI_TM(...)\
+				const auto VI_MAKE_ID(_vi_tm_) = [](const char *n, unsigned a = 1)\
+					{	static VI_TM_HSHEET const h = vi_tmSheet(nullptr, n);\
+						return vi_tm::meter_t{h, a};\
+					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
-#			define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
-#			define VI_TM_CLEAR vi_tmClear(NULL, NULL)
-#			define VI_TM_INFO(...) vi_tmInfo(__VA_ARGS__)
+#			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
+#			define VI_TM_CLEAR(...) vi_tmBookClear(nullptr, __VA_ARGS__)
+#			define VI_TM_INFO(id) vi_tmInfo(id)
 #		endif
 
 #	endif // #ifdef __cplusplus

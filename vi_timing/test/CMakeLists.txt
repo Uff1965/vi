@@ -12,13 +12,13 @@ source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "${VI_ROOT_DIR}/vi_timing/vi_timing_proxy.h"
+  "../vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(OUTPUT_NAME_SUFFIX "")
-if(VI_TM_BUILD_SHARED)
+if(BUILD_SHARED_LIBS)
     string(APPEND OUTPUT_NAME_SUFFIX "s")
 endif()
 

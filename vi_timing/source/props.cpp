@@ -67,10 +67,12 @@ namespace
 	}
 
 	misc::duration_t duration()
-	{
+	{	
 		static auto gauge_zero = []
-			{	const auto start = vi_tmClock();
-				vi_tmFinish(nullptr, "", start, 1);
+			{	static vi_tm_journal_t* const journal = vi_tmSheet(nullptr, "");
+				const auto start = vi_tmClock();
+				const auto finish = vi_tmClock();
+				vi_tmRecord(journal, finish - start, 1);
 			};
 		auto time_point = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
@@ -176,7 +178,7 @@ const properties_t& props()
 
 properties_t::properties_t()
 {	vi_tmWarming(1, 500);
-
+	vi_tmBookClear(nullptr, "");
 	tick_duration_ = seconds_per_tick();
 	clock_latency_ = measurement_cost();
 	all_latency_ = duration();

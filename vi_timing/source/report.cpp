@@ -151,108 +151,112 @@ namespace
 		std::size_t max_len_average_{ std::size(TitleAverage) - 1 };
 		std::size_t max_len_amount_{ std::size(TitleAmount) - 1 };
 
-		formatter_t(const std::vector<metering_t> itms, unsigned flags)
-		:	number_len_{ itms.empty() ? 1U : 1U + static_cast<std::size_t>(std::floor(std::log10(itms.size()))) },
-			flags_{ flags },
-			step_guides_{ itms.size() > 4U ? 3U : 0U }
-		{	std::size_t *ptr = nullptr;
-			switch (flags_ & vi_tmSortMask)
-			{
-			default:
-				assert(false);
-				[[fallthrough]];
-			case vi_tmSortByName:
-				ptr = &max_len_name_;
-				break;
-			case vi_tmSortByAmount:
-				ptr = &max_len_amount_;
-				break;
-			case vi_tmSortByTime:
-				ptr = &max_len_total_;
-				break;
-			case vi_tmSortBySpeed:
-				ptr = &max_len_average_;
-				break;
-			}
-			*ptr += ((flags & vi_tmSortAscending) ? std::size(Ascending): std::size(Descending)) - 1;
-
-			std::size_t max_amount = 0U;
-			for (auto &itm : itms)
-			{	max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
-				max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
-				max_len_name_ = std::max(max_len_name_, itm.name_.length());
-				if (itm.amount_ > max_amount)
-				{
-					max_amount = itm.amount_;
-					auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount)));
-					len += len / 3; // for thousand separators
-					len += 1U;
-					max_len_amount_ = std::max(max_len_amount_, len);
-				}
-			}
-		}
-
-		int print_header(const vi_tmLogSTR_t fn, void *const data) const
-		{	
-			if (flags_ & vi_tmShowNoHeader)
-			{	return 0;
-			}
-
-			auto sort = vi_tmSortByName;
-			switch (auto s = flags_ & vi_tmSortMask)
-			{
-			case vi_tmSortByName:
-			case vi_tmSortBySpeed:
-			case vi_tmSortByAmount:
-			case vi_tmSortByTime:
-				sort = static_cast<vi_tmReportFlags_e>(s);
-				break;
-			default:
-				assert(false);
-				break;
-			}
-
-			auto title = [sort, order = (flags_ & vi_tmSortAscending) ? Ascending : Descending]
-			(const char *name, vi_tmReportFlags_e s)
-				{	return std::string{ name } + (sort == s ? order : "");
-				};
-
-			std::ostringstream str;
-			str <<
-				std::setw(number_len_) << "#" << "  " << std::setfill(fill_symbol) << std::left <<
-				std::setw(max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right <<
-				std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
-				std::setw(max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
-				std::setw(max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]"
-				"\n";
-
-			const auto result = str.str();
-			assert(number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1 == result.size());
-
-			return fn(result.c_str(), data);
-		}
-
-		int print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *const data) const
-		{
-			std::ostringstream str;
-			str.imbue(std::locale(str.getloc(), new misc::space_out));
-
-			n_++;
-			const char fill = (step_guides_ && (0 == n_ % step_guides_)) ? fill_symbol : ' ';
-			str <<
-				std::setw(number_len_) << n_ << ". " << std::setfill(fill) << std::left <<
-				std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<
-				std::setw(max_len_average_) << i.average_txt_ << " [" <<
-				std::setw(max_len_total_) << i.total_txt_ << " / " <<
-				std::setw(max_len_amount_) << i.amount_ << "]"
-				"\n";
-
-			const auto result = str.str();
-			assert(number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1 == result.size());
-
-			return fn(result.c_str(), data);
-		}
+		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
+		int print_header(const vi_tmLogSTR_t fn, void *const data) const;
+		int print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *const data) const;
 	};
+}
+
+formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
+:	number_len_{ itms.empty() ? 1U : 1U + static_cast<std::size_t>(std::floor(std::log10(itms.size()))) },
+	flags_{ flags },
+	step_guides_{ itms.size() > 4U ? 3U : 0U }
+{	std::size_t *ptr = nullptr;
+	switch (flags_ & vi_tmSortMask)
+	{
+	default:
+		assert(false);
+		[[fallthrough]];
+	case vi_tmSortByName:
+		ptr = &max_len_name_;
+		break;
+	case vi_tmSortByAmount:
+		ptr = &max_len_amount_;
+		break;
+	case vi_tmSortByTime:
+		ptr = &max_len_total_;
+		break;
+	case vi_tmSortBySpeed:
+		ptr = &max_len_average_;
+		break;
+	}
+	*ptr += ((flags & vi_tmSortAscending) ? std::size(Ascending): std::size(Descending)) - 1;
+
+	std::size_t max_amount = 0U;
+	for (auto &itm : itms)
+	{	max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
+		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
+		max_len_name_ = std::max(max_len_name_, itm.name_.length());
+		if (itm.amount_ > max_amount)
+		{
+			max_amount = itm.amount_;
+			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount)));
+			len += len / 3; // for thousand separators
+			len += 1U;
+			max_len_amount_ = std::max(max_len_amount_, len);
+		}
+	}
+}
+
+int formatter_t::print_header(const vi_tmLogSTR_t fn, void *const data) const
+{	
+	if (flags_ & vi_tmShowNoHeader)
+	{	return 0;
+	}
+
+	auto sort = vi_tmSortByName;
+	switch (auto s = flags_ & vi_tmSortMask)
+	{
+	case vi_tmSortByName:
+	case vi_tmSortBySpeed:
+	case vi_tmSortByAmount:
+	case vi_tmSortByTime:
+		sort = static_cast<vi_tmReportFlags_e>(s);
+		break;
+	default:
+		assert(false);
+		break;
+	}
+
+	auto title = [sort, order = (flags_ & vi_tmSortAscending) ? Ascending : Descending]
+	(const char *name, vi_tmReportFlags_e s)
+		{	return std::string{ name } + (sort == s ? order : "");
+		};
+
+	std::ostringstream str;
+	str <<
+		std::setw(number_len_) << "#" << "  " << std::setfill(fill_symbol) << std::left <<
+		std::setw(max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right <<
+		std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
+		std::setw(max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
+		std::setw(max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]"
+		"\n";
+
+	const auto result = str.str();
+	assert(number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1 == result.size());
+
+	return fn(result.c_str(), data);
+}
+
+int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *const data) const
+{
+	std::ostringstream str;
+	str.imbue(std::locale(str.getloc(), new misc::space_out));
+
+	n_++;
+	const char fill = (step_guides_ && (0 == n_ % step_guides_)) ? fill_symbol : ' ';
+	str <<
+		std::setw(number_len_) << n_ << ". " << std::setfill(fill) << std::left <<
+		std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<
+		std::setw(max_len_average_) << i.average_txt_ << " [" <<
+		std::setw(max_len_total_) << i.total_txt_ << " / " <<
+		std::setw(max_len_amount_) << i.amount_ << "]"
+		"\n";
+
+	const auto result = str.str();
+	assert(number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1 == result.size());
+
+	return fn(result.c_str(), data);
 }
 
 int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
@@ -280,7 +284,7 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	return result;
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HANDLE h, unsigned flags, vi_tmLogSTR_t fn, void *data)
+int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags, vi_tmLogSTR_t fn, void *data)
 {	int result = 0;
 
 	props(); // Preventing deadlock in traits_t::results_callback().

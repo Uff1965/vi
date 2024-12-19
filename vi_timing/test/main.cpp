@@ -33,4 +33,6 @@ int main()
 			result = std::sin(n) * std::cos(n);
 		}
 	}
+
+	std::puts("Hello, World!");
 }
