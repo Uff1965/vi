@@ -97,17 +97,15 @@ namespace {
 
 		std::cout << "\ntest_multithreaded()... " << std::endl;
 
-		static const auto j = vi_tmSheet(nullptr, "");
-
 		auto load = [h = h.get()]
-		{	static auto j = vi_tmSheet(h, "load");
-			vi_tm::meter_t tm{ j };
+		{	static auto j_load = vi_tmSheet(h, "load");
+			vi_tm::meter_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
-			{	const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				const auto s = vi_tmClock();
+			{	const auto s = vi_tmClock();
 				const auto f = vi_tmClock();
-				vi_tmRecord(j, f - s, 1);
+				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
+				vi_tmRecord(vi_tmSheet(h, name.c_str()), f - s, 1);
 				v++;
 			}
 		};
@@ -128,7 +126,7 @@ namespace {
 
 		std::cout << "v: " << v << " [" << CNT << "*" << threads.size() << "]" << "\n";
 		std::cout << "Timing:\n";
-		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
+		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		std::cout << "done" << std::endl;
 		return true;
 	}
@@ -165,15 +163,13 @@ namespace {
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HBOOK>, decltype(&vi_tmBookClose)> handler{ vi_tmBookCreate(), &vi_tmBookClose };
 		{	auto const h = handler.get();
 
-			vi_tmBookClear(h, "vi_tm_ex");
-			vi_tmBookClear(h, "Empty vi_tm_ex");
 			vi_tmBookClear(h, "vi_tm");
 			vi_tmBookClear(h, "Empty vi_tm");
 			vi_tmBookClear(nullptr, "VI_TM");
 			vi_tmBookClear(nullptr, "Empty VI_TM");
 
-			static auto const j0 = vi_tmSheet(h, "vi_tm_ex");
-			static auto const j1 = vi_tmSheet(h, "Empty vi_tm_ex");
+			static auto const j0 = vi_tmSheet(h, "vi_tm");
+			static auto const j1 = vi_tmSheet(h, "Empty vi_tm");
 
 			for (int n = 0; n < 100'000; ++n)
 			{
