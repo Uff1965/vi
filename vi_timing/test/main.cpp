@@ -9,28 +9,28 @@
 #include <cstdio>
 
 namespace
-{
-	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration); // Initialize the library and request a report at the end of the program.
-
+{	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration); // Initialize the library and request a report at the end of the program.
 	VI_TM("Global");
 }
 
 int main()
 {	VI_TM_FUNC; // Timing of function 'main' from this line and to end scope.
 
+	auto foo = [](int n) { return std::sin(n) * std::cos(n); };
+
 	for (int k = 0; k < 1'000; ++k)
 	{	constexpr auto CNT = 1'000;
 		volatile auto result = .0;
 
-		{	VI_TM("math series", CNT);
-			for (int n = 0; n < CNT; ++n)
-			{	result = std::sin(n) * std::cos(n);
-			}
+		for (auto n = 0; n < CNT; ++n)
+		{	VI_TM("Separately");
+			result = foo(n);
 		}
 
-		for (auto n = 0; n < CNT; ++n)
-		{	VI_TM("math");
-			result = std::sin(n) * std::cos(n);
+		{	VI_TM("Together", CNT);
+			for (int n = 0; n < CNT; ++n)
+			{	result = foo(n);
+			}
 		}
 	}
 
