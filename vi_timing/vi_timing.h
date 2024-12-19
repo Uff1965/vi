@@ -152,17 +152,6 @@ extern "C"
 #	ifdef __cplusplus
 namespace vi_tm
 {
-	class meter_t
-	{	VI_TM_HSHEET h_;
-		unsigned amt_;
-		const vi_tmTicks_t start_ = vi_tmClock(); // Order matters!!! 'start_' must be initialized last!
-		meter_t(const meter_t &) = delete;
-		void operator=(const meter_t &) = delete;
-	public:
-		meter_t(VI_TM_HSHEET h, unsigned amt = 1): h_{h}, amt_{amt} {/**/}
-		~meter_t() { const auto finish = vi_tmClock(); vi_tmRecord(h_, finish - start_, amt_); }
-	};
-
 	class init_t
 	{	static constexpr auto default_cb = &vi_tmReportCallback;
 		static inline const auto default_data = reinterpret_cast<void*>(stdout);
@@ -224,7 +213,18 @@ namespace vi_tm
 		vi_tmReport(nullptr, flags_, cb_, data_);
 		vi_tmFinit();
 	}
-}
+
+	class meter_t
+	{	VI_TM_HSHEET h_;
+		unsigned amt_;
+		const vi_tmTicks_t start_ = vi_tmClock(); // Order matters!!! 'start_' must be initialized last!
+		meter_t(const meter_t &) = delete;
+		void operator=(const meter_t &) = delete;
+	public:
+		meter_t(VI_TM_HSHEET h, unsigned amt = 1): h_{h}, amt_{amt} {/**/}
+		~meter_t() { const auto finish = vi_tmClock(); vi_tmRecord(h_, finish - start_, amt_); }
+	};
+} // namespace vi_tm
 
 #		if defined(VI_TM_DISABLE)
 #			define VI_TM_INIT(...) static const int VI_MAKE_ID(_vi_tm_) = 0
@@ -241,7 +241,7 @@ namespace vi_tm
 						return vi_tm::meter_t{h, a};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
-#			define VI_TM_REPORT(...) vi_tmReport(NULL, __VA_ARGS__)
+#			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
 #			define VI_TM_CLEAR(...) vi_tmBookClear(nullptr, __VA_ARGS__)
 #			define VI_TM_INFO(id) vi_tmInfo(id)
 #		endif
