@@ -97,7 +97,6 @@ elseif (UNIX)
   PRIVATE
     rt
     pthread
-  PUBLIC
     atomic
   )
 endif()
