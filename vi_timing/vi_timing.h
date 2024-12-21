@@ -232,7 +232,7 @@ namespace vi_tm
 #			define VI_TM_FUNC ((void)0)
 #			define VI_TM_REPORT(...) ((void)0)
 #			define VI_TM_CLEAR ((void)0)
-#			define VI_TM_INFO(f) NULL
+#			define VI_TM_FULLVERSION ""
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
@@ -243,7 +243,7 @@ namespace vi_tm
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
 #			define VI_TM_CLEAR(...) vi_tmBookClear(nullptr, __VA_ARGS__)
-#			define VI_TM_INFO(id) vi_tmInfo(id)
+#			define VI_TM_FULLVERSION reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_VERSION))
 #		endif
 
 #	endif // #ifdef __cplusplus

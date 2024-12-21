@@ -1,5 +1,5 @@
 // Uncomment the next line to remove timings.
-//#define VI_TM_DISABLE
+#define VI_TM_DISABLE
 #include <vi_timing/vi_timing.h>
 
 namespace
@@ -7,13 +7,17 @@ namespace
 	VI_TM("Global");
 }
 
-int main()
+int main(int argn, char* args[])
 {	VI_TM_FUNC;
 	constexpr auto CNT = 10'000;
+	printf("Version of \'vi_timing\' library: %s\n\n", VI_TM_FULLVERSION);
 	
+	static const auto cnt = argn > 1 ? std::atoi(args[1]) : 10'000;
+	printf("n = %d\n\n", cnt);
+
+	static volatile auto dummy = 0U;
 	auto foo = []()
-		{	volatile auto dummy = 0U;
-			for (auto n = 10'000; n--; )
+		{	for (auto n = cnt; n--; )
 				++dummy;
 		};
 
