@@ -213,9 +213,9 @@ int main()
 	std::cout <<
 		"Information about the \'vi_timing\' library:" << "\n"
 		"\tBuild type: " << reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
-		"\tVer: " << VI_TM_INFO(VI_TM_INFO_VER) << "\n"
-		"\tBuild number: " << VI_TM_INFO(VI_TM_INFO_BUILDNUMBER) << "\n"
-		"\tVersion: " << reinterpret_cast<const char*>(VI_TM_INFO(VI_TM_INFO_VERSION)) << "\n" <<
+		"\tVer: " << vi_tmInfo(VI_TM_INFO_VER) << "\n"
+		"\tBuild number: " << vi_tmInfo(VI_TM_INFO_BUILDNUMBER) << "\n"
+		"\tVersion: " << VI_TM_FULLVERSION << "\n" <<
 		std::endl;
 
 	struct space_out final: std::numpunct<char>
