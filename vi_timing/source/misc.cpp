@@ -75,12 +75,12 @@ namespace
 
 	std::string_view suffix = "ps";
 	double factor = 1e12;
-	if(1e-11 > num)
+	if(1e-12 > num)
 	{	num = 0.0;
 	}
 	else
 	{	const auto triple = static_cast<int>(std::floor(std::log10(num))) - 3 * ((prec - dec - 1) / 3);
-		if (-11 > triple) { num = 0.0; }
+		if (-12 > triple) { num = 0.0; }
 		else if (-9 > triple) { suffix = "ps"; factor = 1e12; }
 		else if (-6 > triple) { suffix = "ns"; factor = 1e9; }
 		else if (-3 > triple) { suffix = "us"; factor = 1e6; }
