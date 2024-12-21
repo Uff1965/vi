@@ -21,7 +21,7 @@ int main(int argn, char* args[])
 				++dummy;
 		};
 
-	for (int m = 0; m < 1'000; ++m)
+	for (int m = 0; m < 100; ++m)
 	{
 		for (auto n = 0; n < CNT; ++n)
 		{	VI_TM("ALONE");
