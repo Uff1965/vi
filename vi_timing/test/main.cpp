@@ -1,4 +1,4 @@
-// Uncomment the following line to remove timings.
+// Uncomment the next line to remove timings.
 //#define VI_TM_DISABLE
 #include <vi_timing/vi_timing.h>
 
@@ -17,18 +17,14 @@ int main()
 				++dummy;
 		};
 
-	{
-		for (auto n = 0; n < CNT; ++n)
-		{	VI_TM("Separately");
-			foo();
-		}
+	for (auto n = 0; n < CNT; ++n)
+	{	VI_TM("Separately");
+		foo();
 	}
 
-	{
-		VI_TM("Together", CNT);
+	{	VI_TM("Together", CNT);
 		for (int n = 0; n < CNT; ++n)
 		{	foo();
 		}
 	}
 }
-
