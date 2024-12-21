@@ -111,7 +111,7 @@ extern "C"
 	VI_TM_API VI_NODISCARD VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate(void);
 	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
 	VI_TM_API VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char* name);
-	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t ticks, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HBOOK h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HBOOK h, vi_tmLogRAW_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmBookClear(VI_TM_HBOOK h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
@@ -216,12 +216,12 @@ namespace vi_tm
 
 	class meter_t
 	{	VI_TM_HSHEET h_;
-		unsigned amt_;
+		std::size_t amt_;
 		const vi_tmTicks_t start_ = vi_tmClock(); // Order matters!!! 'start_' must be initialized last!
 		meter_t(const meter_t &) = delete;
 		void operator=(const meter_t &) = delete;
 	public:
-		meter_t(VI_TM_HSHEET h, unsigned amt = 1): h_{h}, amt_{amt} {/**/}
+		meter_t(VI_TM_HSHEET h, std::size_t amt = 1): h_{h}, amt_{amt} {/**/}
 		~meter_t() { const auto finish = vi_tmClock(); vi_tmRecord(h_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
@@ -232,18 +232,18 @@ namespace vi_tm
 #			define VI_TM_FUNC ((void)0)
 #			define VI_TM_REPORT(...) ((void)0)
 #			define VI_TM_CLEAR ((void)0)
-#			define VI_TM_INFO(f) NULL
+#			define VI_TM_FULLVERSION ""
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
-				const auto VI_MAKE_ID(_vi_tm_) = [](const char *n, unsigned a = 1)\
+				const auto VI_MAKE_ID(_vi_tm_) = [](const char *n, std::size_t a = 1)\
 					{	static VI_TM_HSHEET const h = vi_tmSheet(nullptr, n);\
 						return vi_tm::meter_t{h, a};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
 #			define VI_TM_CLEAR(...) vi_tmBookClear(nullptr, __VA_ARGS__)
-#			define VI_TM_INFO(id) vi_tmInfo(id)
+#			define VI_TM_FULLVERSION reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_VERSION))
 #		endif
 
 #	endif // #ifdef __cplusplus
