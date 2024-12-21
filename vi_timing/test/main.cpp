@@ -2,8 +2,6 @@
 //#define VI_TM_DISABLE
 #include <vi_timing/vi_timing.h>
 
-#include <thread>
-
 namespace
 {	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration);
 	VI_TM("GLOBAL");
