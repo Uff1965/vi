@@ -90,8 +90,8 @@ struct vi_tm_journal_t
 {	std::atomic<vi_tmTicks_t> total_ = 0U;
 	std::atomic<std::size_t> counter_ = 0U;
 	std::atomic<std::size_t> calls_cnt_ = 0U;
-	void add(vi_tmTicks_t ticks, std::size_t amount) noexcept
-	{	total_.fetch_add(ticks, std::memory_order_relaxed);
+	void add(vi_tmTicks_t tick_diff, std::size_t amount) noexcept
+	{	total_.fetch_add(tick_diff, std::memory_order_relaxed);
 		counter_.fetch_add(amount, std::memory_order_relaxed);
 		calls_cnt_.fetch_add(1, std::memory_order_relaxed);
 	}
@@ -200,10 +200,10 @@ VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char *name)
 	return &itm;
 }
 
-void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t ticks, std::size_t amount) noexcept
+void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, std::size_t amount) noexcept
 {	assert(j);
 	if (j)
-	{	j->add(ticks, amount);
+	{	j->add(tick_diff, amount);
 	}
 }
 

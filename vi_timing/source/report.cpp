@@ -152,8 +152,8 @@ namespace
 		std::size_t max_len_amount_{ std::size(TitleAmount) - 1 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
-		int print_header(const vi_tmLogSTR_t fn, void *const data) const;
-		int print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *const data) const;
+		int print_header(const vi_tmLogSTR_t fn, void *data) const;
+		int print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *data) const;
 	};
 }
 
@@ -198,7 +198,7 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 	}
 }
 
-int formatter_t::print_header(const vi_tmLogSTR_t fn, void *const data) const
+int formatter_t::print_header(const vi_tmLogSTR_t fn, void *data) const
 {	
 	if (flags_ & vi_tmShowNoHeader)
 	{	return 0;
@@ -238,7 +238,7 @@ int formatter_t::print_header(const vi_tmLogSTR_t fn, void *const data) const
 	return fn(result.c_str(), data);
 }
 
-int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *const data) const
+int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *data) const
 {
 	std::ostringstream str;
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
@@ -286,6 +286,13 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 
 int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags, vi_tmLogSTR_t fn, void *data)
 {	int result = 0;
+
+	if (nullptr == fn)
+	{	fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs);
+		if (nullptr == data)
+		{	data = stdout;
+		}
+	}
 
 	props(); // Preventing deadlock in traits_t::results_callback().
 	result += print_props(fn, data, flags);
