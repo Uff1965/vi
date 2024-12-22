@@ -28,7 +28,7 @@ int main(int argn, char* args[])
 			burden();
 		}
 
-		{	VI_TM("JOINTLY", CNT);
+		{	VI_TM("GROUP", CNT);
 			for (int n = 0; n < CNT; ++n)
 			{	burden();
 			}
