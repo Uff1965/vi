@@ -9,10 +9,9 @@ namespace
 
 int main(int argn, char* args[])
 {	VI_TM_FUNC;
-	constexpr auto CNT = 1'000;
 	printf("Version of \'vi_timing\' library: %s\n\n", VI_TM_FULLVERSION);
 	
-	static const auto cnt = argn > 1 ? std::atoi(args[1]) : 1'000;
+	static const auto cnt = argn == 2 ? std::atoi(args[1]) : 1'000;
 	printf("Burden: %d\n\n", cnt);
 
 	static volatile auto dummy = 0U;
@@ -21,6 +20,7 @@ int main(int argn, char* args[])
 				++dummy;
 		};
 
+	constexpr auto CNT = 1'000;
 	for (int m = 0; m < 100; ++m)
 	{
 		for (auto n = 0; n < CNT; ++n)
