@@ -126,5 +126,23 @@ int main(int argn, char* args[])
 				}
 			}
 		}
+
+		{	static std::atomic<unsigned> dummy = 0U;
+			auto burden = []()
+				{	for (auto n = cnt; n; --n)
+						dummy.fetch_add(1, std::memory_order_consume);
+				};
+
+			for (auto n = 0; n < CNT; ++n)
+			{	VI_TM("ALONE consume");
+				burden();
+			}
+
+			{	VI_TM("GROUP consume", CNT);
+				for (int n = 0; n < CNT; ++n)
+				{	burden();
+				}
+			}
+		}
 	}
 }
