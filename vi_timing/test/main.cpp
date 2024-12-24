@@ -21,7 +21,7 @@ int main(int argn, char* args[])
 	{
 		{	static volatile auto dummy = 0U;
 			auto burden = []()
-				{	for (auto n = cnt; n; --n)
+				{	for (auto n = 0; n < cnt; ++n)
 					++dummy;
 				};
 
@@ -39,7 +39,7 @@ int main(int argn, char* args[])
 
 		{	static std::atomic<unsigned> dummy = 0U;
 			auto burden = []()
-				{	for (auto n = cnt; n; --n)
+				{	for (auto n = 0; n < cnt; ++n)
 						dummy.fetch_add(1, std::memory_order_seq_cst);
 				};
 
@@ -57,7 +57,7 @@ int main(int argn, char* args[])
 
 		{	static std::atomic<unsigned> dummy = 0U;
 			auto burden = []()
-				{	for (auto n = cnt; n; --n)
+				{	for (auto n = 0; n < cnt; ++n)
 						dummy.fetch_add(1, std::memory_order_relaxed);
 				};
 
@@ -75,7 +75,7 @@ int main(int argn, char* args[])
 
 		{	static std::atomic<unsigned> dummy = 0U;
 			auto burden = []()
-				{	for (auto n = cnt; n; --n)
+				{	for (auto n = 0; n < cnt; ++n)
 						dummy.fetch_add(1, std::memory_order_release);
 				};
 
@@ -93,7 +93,7 @@ int main(int argn, char* args[])
 
 		{	static std::atomic<unsigned> dummy = 0U;
 			auto burden = []()
-				{	for (auto n = cnt; n; --n)
+				{	for (auto n = 0; n < cnt; ++n)
 						dummy.fetch_add(1, std::memory_order_acquire);
 				};
 
@@ -111,7 +111,7 @@ int main(int argn, char* args[])
 
 		{	static std::atomic<unsigned> dummy = 0U;
 			auto burden = []()
-				{	for (auto n = cnt; n; --n)
+				{	for (auto n = 0; n < cnt; ++n)
 						dummy.fetch_add(1, std::memory_order_acq_rel);
 				};
 
@@ -129,7 +129,7 @@ int main(int argn, char* args[])
 
 		{	static std::atomic<unsigned> dummy = 0U;
 			auto burden = []()
-				{	for (auto n = cnt; n; --n)
+				{	for (auto n = 0; n < cnt; ++n)
 						dummy.fetch_add(1, std::memory_order_consume);
 				};
 
