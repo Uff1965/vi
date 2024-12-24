@@ -7,6 +7,19 @@
 namespace
 {	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration);
 	VI_TM("GLOBAL");
+
+	void burden(int cnt)
+	{	static std::atomic<unsigned> dummy = 0U;
+		for (auto n = 0; n < cnt; ++n)
+			++dummy;
+	};
+
+	template<std::memory_order M>
+	void burden(int cnt)
+	{	static std::atomic<unsigned> dummy = 0U;
+		for (auto n = 0; n < cnt; ++n)
+			dummy.fetch_add(1, M);
+	};
 }
 
 int main(int argn, char* args[])
@@ -19,128 +32,93 @@ int main(int argn, char* args[])
 	constexpr auto CNT = 1'000;
 	for (int m = 0; m < 100; ++m)
 	{
-		{	static volatile auto dummy = 0U;
-			auto burden = []()
-				{	for (auto n = 0; n < cnt; ++n)
-					++dummy;
-				};
-
+		{
 			for (auto n = 0; n < CNT; ++n)
 			{	VI_TM("ALONE volatile");
-				burden();
+				burden(cnt);
 			}
 
 			{	VI_TM("GROUP volatile", CNT);
 				for (int n = 0; n < CNT; ++n)
-				{	burden();
+				{	burden(cnt);
 				}
 			}
 		}
 
-		{	static std::atomic<unsigned> dummy = 0U;
-			auto burden = []()
-				{	for (auto n = 0; n < cnt; ++n)
-						dummy.fetch_add(1, std::memory_order_seq_cst);
-				};
-
+		{
 			for (auto n = 0; n < CNT; ++n)
 			{	VI_TM("ALONE seq_cst");
-				burden();
+				burden<std::memory_order_seq_cst>(cnt);
 			}
 
 			{	VI_TM("GROUP seq_cst", CNT);
 				for (int n = 0; n < CNT; ++n)
-				{	burden();
+				{	burden<std::memory_order_seq_cst>(cnt);
 				}
 			}
 		}
 
-		{	static std::atomic<unsigned> dummy = 0U;
-			auto burden = []()
-				{	for (auto n = 0; n < cnt; ++n)
-						dummy.fetch_add(1, std::memory_order_relaxed);
-				};
-
+		{
 			for (auto n = 0; n < CNT; ++n)
 			{	VI_TM("ALONE relaxed");
-				burden();
+				burden<std::memory_order_relaxed>(cnt);
 			}
 
 			{	VI_TM("GROUP relaxed", CNT);
 				for (int n = 0; n < CNT; ++n)
-				{	burden();
+				{	burden<std::memory_order_relaxed>(cnt);
 				}
 			}
 		}
 
-		{	static std::atomic<unsigned> dummy = 0U;
-			auto burden = []()
-				{	for (auto n = 0; n < cnt; ++n)
-						dummy.fetch_add(1, std::memory_order_release);
-				};
-
+		{
 			for (auto n = 0; n < CNT; ++n)
 			{	VI_TM("ALONE release");
-				burden();
+				burden<std::memory_order_release>(cnt);
 			}
 
 			{	VI_TM("GROUP release", CNT);
 				for (int n = 0; n < CNT; ++n)
-				{	burden();
+				{	burden<std::memory_order_release>(cnt);
 				}
 			}
 		}
 
-		{	static std::atomic<unsigned> dummy = 0U;
-			auto burden = []()
-				{	for (auto n = 0; n < cnt; ++n)
-						dummy.fetch_add(1, std::memory_order_acquire);
-				};
-
+		{
 			for (auto n = 0; n < CNT; ++n)
 			{	VI_TM("ALONE acquire");
-				burden();
+				burden<std::memory_order_acquire>(cnt);
 			}
 
 			{	VI_TM("GROUP acquire", CNT);
 				for (int n = 0; n < CNT; ++n)
-				{	burden();
+				{	burden<std::memory_order_acquire>(cnt);
 				}
 			}
 		}
 
-		{	static std::atomic<unsigned> dummy = 0U;
-			auto burden = []()
-				{	for (auto n = 0; n < cnt; ++n)
-						dummy.fetch_add(1, std::memory_order_acq_rel);
-				};
-
+		{
 			for (auto n = 0; n < CNT; ++n)
 			{	VI_TM("ALONE acq_rel");
-				burden();
+				burden<std::memory_order_acq_rel>(cnt);
 			}
 
 			{	VI_TM("GROUP acq_rel", CNT);
 				for (int n = 0; n < CNT; ++n)
-				{	burden();
+				{	burden<std::memory_order_acq_rel>(cnt);
 				}
 			}
 		}
 
-		{	static std::atomic<unsigned> dummy = 0U;
-			auto burden = []()
-				{	for (auto n = 0; n < cnt; ++n)
-						dummy.fetch_add(1, std::memory_order_consume);
-				};
-
+		{
 			for (auto n = 0; n < CNT; ++n)
 			{	VI_TM("ALONE consume");
-				burden();
+				burden<std::memory_order_consume>(cnt);
 			}
 
 			{	VI_TM("GROUP consume", CNT);
 				for (int n = 0; n < CNT; ++n)
-				{	burden();
+				{	burden<std::memory_order_consume>(cnt);
 				}
 			}
 		}
