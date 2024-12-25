@@ -77,7 +77,7 @@ namespace
 #endif
 	const auto init_common = []
 		{	VI_TM("Initialize Common");
-			cpu_affinity();
+//			cpu_affinity();
 			return 0;
 		}();
 }

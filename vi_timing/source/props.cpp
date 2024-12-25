@@ -29,6 +29,14 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "../vi_timing.h"
 #include "internal.h"
 
+#ifdef _WIN32
+#	include <Windows.h> // SetThreadAffinityMask
+#	include <processthreadsapi.h> // GetCurrentProcessorNumber
+#elif defined (__linux__)
+#	include <pthread.h> // For pthread_setaffinity_np.
+#	include <sched.h> // For sched_getcpu.
+#endif
+
 #include <thread>
 #include <chrono>
 
@@ -37,6 +45,62 @@ using namespace std::chrono_literals;
 
 namespace
 {
+	class ThreadAffinityGuard final
+	{ // Overseen on Google Benchmark.
+	public:
+		ThreadAffinityGuard()
+		{
+#if defined(__linux__)
+			if (0 == pthread_getaffinity_np(self_, sizeof(previous_affinity_), &previous_affinity_))
+			{	if (const auto core_id = sched_getcpu(); core_id >= 0)
+				{	cpu_set_t affinity;
+					CPU_ZERO(&affinity);
+					CPU_SET(core_id, &affinity);
+					if (0 == pthread_setaffinity_np(self_, sizeof(affinity), &affinity))
+					{	reset_affinity_ = true;
+					}
+				}
+			}
+#elif defined(_WIN32)
+			const auto affinity = static_cast<DWORD_PTR>(1) << GetCurrentProcessorNumber();
+			previous_affinity_ = SetThreadAffinityMask(self_, affinity);
+			if( previous_affinity_ != 0)
+			{	reset_affinity_ = true;
+			}
+#else
+			assert(false);
+#endif
+		}
+
+		~ThreadAffinityGuard()
+		{	if(reset_affinity_)
+			{
+#if defined(__linux__)
+				const auto ret = pthread_setaffinity_np(self_, sizeof(previous_affinity_), &previous_affinity_);
+				assert(0 == ret);
+#elif defined(_WIN32)
+				const auto ret = SetThreadAffinityMask(self_, previous_affinity_);
+				assert(ret != 0);
+#endif
+			}
+		}
+
+		ThreadAffinityGuard(ThreadAffinityGuard &&) = delete;
+		ThreadAffinityGuard(const ThreadAffinityGuard &) = delete;
+		ThreadAffinityGuard &operator=(ThreadAffinityGuard &&) = delete;
+		ThreadAffinityGuard &operator=(const ThreadAffinityGuard &) = delete;
+
+	private:
+#if defined(__linux__)
+		const pthread_t self_{ pthread_self() };
+		cpu_set_t previous_affinity_;
+#elif defined(_WIN32)
+		const HANDLE self_{ GetCurrentThread() };
+		DWORD_PTR previous_affinity_;
+#endif
+		bool reset_affinity_{ false };
+	};
+
 	constexpr auto cache_warmup = 5U;
 	constexpr auto now = std::chrono::steady_clock::now;
 
@@ -177,7 +241,11 @@ const properties_t& props()
 }
 
 properties_t::properties_t()
-{	vi_tmWarming(1, 500);
+{	ThreadAffinityGuard guard;
+	std::this_thread::yield();
+
+	vi_tmWarming(1, 500);
+
 	vi_tmBookClear(nullptr, "");
 	tick_duration_ = seconds_per_tick();
 	clock_latency_ = measurement_cost();

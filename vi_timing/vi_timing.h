@@ -160,7 +160,9 @@ namespace vi_tm
 		void* data_ = default_data;
 		unsigned flags_ = 0;
 		init_t(const init_t &) = delete;
+		init_t(init_t &&) = delete;
 		init_t &operator=(const init_t &) = delete;
+		init_t &operator=(init_t &&) = delete;
 	public:
 		template<typename... Args>
 		explicit init_t(Args&&... args);
