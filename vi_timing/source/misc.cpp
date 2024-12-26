@@ -139,11 +139,11 @@ namespace
 	}
 } // namespace
 
-void VI_TM_CALL vi_tmAffinityFixate()
+void VI_TM_CALL vi_tmThreadAffinityFixate()
 {	affinity_fix_t::fixate();
 }
 
-void VI_TM_CALL vi_tmAffinityRestore()
+void VI_TM_CALL vi_tmThreadAffinityRestore()
 {	affinity_fix_t::restore();
 }
 
