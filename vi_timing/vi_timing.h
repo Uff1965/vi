@@ -142,6 +142,8 @@ extern "C"
 	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
+	VI_TM_API void VI_TM_CALL vi_tmAffinityFixate(void);
+	VI_TM_API void VI_TM_CALL vi_tmAffinityRestore(void);
 // Supporting functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
@@ -152,6 +154,17 @@ extern "C"
 #	ifdef __cplusplus
 namespace vi_tm
 {
+	class thread_affinity_fix_t
+	{
+		thread_affinity_fix_t(const thread_affinity_fix_t &) = delete;
+		thread_affinity_fix_t(thread_affinity_fix_t &&) = delete;
+		void operator=(const thread_affinity_fix_t &) = delete;
+		void operator=(thread_affinity_fix_t &&) = delete;
+	public:
+		thread_affinity_fix_t() { vi_tmAffinityFixate(); }
+		~thread_affinity_fix_t() { vi_tmAffinityRestore(); }
+	};
+
 	class init_t
 	{	static constexpr auto default_cb = &vi_tmReportCallback;
 		static inline const auto default_data = reinterpret_cast<void*>(stdout);

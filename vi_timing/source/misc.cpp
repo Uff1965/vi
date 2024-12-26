@@ -29,6 +29,14 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "../vi_timing.h"
 #include "internal.h"
 
+#ifdef _WIN32
+#	include <Windows.h> // SetThreadAffinityMask
+#	include <processthreadsapi.h> // GetCurrentProcessorNumber
+#elif defined (__linux__)
+#	include <pthread.h> // For pthread_setaffinity_np.
+#	include <sched.h> // For sched_getcpu.
+#endif
+
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -66,7 +74,78 @@ namespace
 
 		return num;
 	}
+
+	class affinity_fix_t
+	{
+#if defined(_WIN32)
+		DWORD_PTR previous_affinity_{};
+#elif defined(__linux__)
+		cpu_set_t previous_affinity_{};
+#endif
+		std::size_t cnt_ = 0U;
+		static thread_local affinity_fix_t s_affinity;
+		~affinity_fix_t() { assert(0 == cnt_); }
+	public:
+		static void fixate();
+		static void restore();
+	};
+
+	thread_local affinity_fix_t affinity_fix_t::s_affinity;
+
+	void affinity_fix_t::fixate()
+	{
+		if (0 != s_affinity.cnt_++)
+		{	return;
+		}
+
+#if defined(_WIN32)
+		const auto thread = GetCurrentThread();
+		const auto affinity = static_cast<DWORD_PTR>(1U) << GetCurrentProcessorNumber();
+		s_affinity.previous_affinity_ = SetThreadAffinityMask(thread, affinity);
+		if( s_affinity.previous_affinity_ != 0)
+		{	return; // Ok!
+		}
+#elif defined(__linux__)
+		const auto thread = pthread_self();
+		if (0 == pthread_getaffinity_np(thread, sizeof(s_affinity.previous_affinity_), &s_affinity.previous_affinity_))
+		{	if (const auto core_id = sched_getcpu(); core_id >= 0)
+			{	cpu_set_t affinity;
+				CPU_ZERO(&affinity);
+				CPU_SET(core_id, &affinity);
+				if (0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity))
+				{	return; // Ok!
+				}
+			}
+		}
+#endif
+		assert(false);
+		s_affinity.cnt_ = 0;
+	}
+
+	void affinity_fix_t::restore()
+	{	assert(s_affinity.cnt_ > 0);
+		if (0 == --s_affinity.cnt_)
+		{
+#if defined(_WIN32)
+			const auto thread = GetCurrentThread();
+			const auto ret = SetThreadAffinityMask(thread, s_affinity.previous_affinity_);
+			assert(ret != 0);
+#elif defined(__linux__)
+			const auto thread = pthread_self();
+			const auto ret = pthread_setaffinity_np(thread, sizeof(s_affinity.previous_affinity_), &s_affinity.previous_affinity_);
+			assert(0 == ret);
+#endif
+		}
+	}
 } // namespace
+
+void VI_TM_CALL vi_tmAffinityFixate()
+{	affinity_fix_t::fixate();
+}
+
+void VI_TM_CALL vi_tmAffinityRestore()
+{	affinity_fix_t::restore();
+}
 
 [[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char prec, unsigned char dec)
 {	auto num = sec.count();
