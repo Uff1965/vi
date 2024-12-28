@@ -112,8 +112,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		if(!result)
 		{	//perror("SystemTimer_by_DevMem initial filed"); // Enhanced privileges are required (sudo).
 			static constexpr char msg[] =
-				"Attention! To ensure more accurate time measurements on this machine, "
-				"the vi_timing library may require elevated privileges. Please try running the program with sudo";
+				"\x1B""[31m"
+				"Attention! To ensure more accurate time measurements on this machine, the vi_timing library may require elevated privileges.\n"
+				"Please try running the program with sudo"
+				"\x1B""[0m";
 			perror(msg);
 		}
 
