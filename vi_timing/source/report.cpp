@@ -144,7 +144,7 @@ namespace
 		const std::size_t number_len_{ 1 }; // '#'
 		mutable std::size_t n_{ 0 };
 		const unsigned flags_;
-		const unsigned step_guides_;
+		const unsigned guideline_interval_;
 
 		std::size_t max_len_name_{ std::size(TitleName) - 1 };
 		std::size_t max_len_total_{ std::size(TitleTotal) - 1 };
@@ -160,7 +160,7 @@ namespace
 formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 :	number_len_{ itms.empty() ? 1U : 1U + static_cast<std::size_t>(std::floor(std::log10(itms.size()))) },
 	flags_{ flags },
-	step_guides_{ itms.size() > 4U ? 3U : 0U }
+	guideline_interval_{ itms.size() > 4U ? 3U : 0U }
 {	std::size_t *ptr = nullptr;
 	switch (flags_ & vi_tmSortMask)
 	{
@@ -244,7 +244,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, voi
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
 	n_++;
-	const char fill = (step_guides_ && (0 == n_ % step_guides_)) ? fill_symbol : ' ';
+	const char fill = (guideline_interval_ && (0 == n_ % guideline_interval_)) ? fill_symbol : ' ';
 	str <<
 		std::setw(number_len_) << n_ << ". " << std::setfill(fill) << std::left <<
 		std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<

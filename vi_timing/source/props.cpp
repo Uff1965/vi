@@ -45,7 +45,7 @@ namespace
 	{
 		auto time_point = []
 		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-			for(auto n = 0; n < cache_warmup; ++n) // Preloading a functions into cache
+			for(auto n = 0U; n < cache_warmup; ++n) // Preloading a functions into cache
 			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmClock();
 				[[maybe_unused]] volatile auto dummy_2 = now();
 			}
@@ -121,13 +121,13 @@ VI_OPTIMIZE_OFF
 		{	s = vi_tmClock();
 		}
 
-		for (auto cnt = 0; cnt < CNT; ++cnt)
+		for (auto cnt = 0U; cnt < CNT; ++cnt)
 		{	e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock(); e = vi_tmClock();
 		}
 		const auto pure = e - s;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		for (auto cnt = 0; cnt < cache_warmup; ++cnt)
+		for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
 		{	s = vi_tmClock();
 		}
 

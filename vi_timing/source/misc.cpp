@@ -53,13 +53,6 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	constexpr auto operator""_ps(long double v) noexcept { return ch::duration<double, std::pico>(v); };
-	constexpr auto operator""_ps(unsigned long long v) noexcept { return ch::duration<double, std::pico>(v); };
-	constexpr auto operator""_ks(long double v) noexcept { return ch::duration<double, std::kilo>(v); };
-	constexpr auto operator""_ks(unsigned long long v) noexcept { return ch::duration<double, std::kilo>(v); };
-	constexpr auto operator""_Ms(long double v) noexcept { return ch::duration<double, std::mega>(v); };
-	constexpr auto operator""_Ms(unsigned long long v) noexcept { return ch::duration<double, std::mega>(v); };
-
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
 	{	constexpr auto EPS = std::numeric_limits<decltype(num)>::epsilon();
 		if (num > .0 && prec > 0)
@@ -129,7 +122,7 @@ namespace
 #if defined(_WIN32)
 			if (s_affinity.previous_affinity_ != 0)
 			{	const auto thread = GetCurrentThread();
-				const auto ret = SetThreadAffinityMask(thread, s_affinity.previous_affinity_);
+				[[maybe_unused]] const auto ret = SetThreadAffinityMask(thread, s_affinity.previous_affinity_);
 				assert(ret != 0);
 			}
 #elif defined(__linux__)

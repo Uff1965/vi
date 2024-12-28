@@ -241,8 +241,8 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999); //-V590 "Possible excessive expression or typo."
 					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res; //-V1065
-					const auto sz = snprintf(res.data(), res.size(), VI_TM_VERSION_STR ".%u%c %s", TIME_STAMP(), CONFIG[0], TYPE);
-					assert(0 < sz && sz < res.size()); //-V104 "Implicit type conversion to memsize type in an arithmetic expression."
+					[[maybe_unused]] const auto sz = snprintf(res.data(), res.size(), VI_TM_VERSION_STR ".%u%c %s", TIME_STAMP(), CONFIG[0], TYPE);
+					assert(0 < sz && sz < static_cast<int>(res.size()));
 					return res;
 				}();
 			result = reinterpret_cast<std::uintptr_t>(version.data());

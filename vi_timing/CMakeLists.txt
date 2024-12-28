@@ -99,7 +99,7 @@ if (WIN32)
 
     target_compile_options(${PROJECT_NAME}
         PRIVATE
-        /MP /W3 /nologo /EHsc /Zi
+        /MP /W4 /nologo /EHsc /Zi
     )
 
     if(VI_TM_BUILD_SHARED)

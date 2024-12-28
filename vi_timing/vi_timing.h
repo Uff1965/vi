@@ -47,12 +47,13 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include "common.h"
 
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
-#	if defined(_WIN32) // Windows x86 or x64
-#		define VI_SYS_CALL __cdecl
-#		ifdef _WIN64
-#			define VI_TM_CALL // On the x64 platform, the standard calling convention is __fastcall for C and C++.
+#	if defined(_MSC_VER)
+#		ifdef __i386__
+#			define VI_SYS_CALL __cdecl
+#			define VI_TM_CALL __fastcall
 #		else
-#			define VI_TM_CALL __cdecl // On the 32-bit platform, C and C++ use different default calling conventions.
+#			define VI_SYS_CALL
+#			define VI_TM_CALL
 #		endif
 
 #		ifdef VI_TM_EXPORTS
@@ -74,18 +75,22 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #				pragma comment(lib, "vi_timing_d.lib")
 #			endif
 #		endif
-#	elif defined(__ANDROID__)
-#		define VI_TM_DISABLE "Android not supported yet."
-#	elif defined (__linux__)
-#		define VI_SYS_CALL
-#		define VI_TM_CALL
+#	elif defined (__GNUC__) || defined(__clang__)
+#		ifdef __i386__
+#			define VI_SYS_CALL __attribute__((cdecl))
+#			define VI_TM_CALL __attribute__((fastcall))
+#		else
+#			define VI_SYS_CALL
+#			define VI_TM_CALL
+#		endif
+
 #		ifdef VI_TM_EXPORTS
 #			define VI_TM_API __attribute__((visibility("default")))
 #		else
 #			define VI_TM_API
 #		endif
 #	else
-#		define VI_TM_DISABLE "Unknown platform!"
+#		define VI_TM_DISABLE "Unknown compiler!"
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
