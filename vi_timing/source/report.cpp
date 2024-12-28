@@ -284,7 +284,7 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	return result;
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags, vi_tmLogSTR_t fn, void *data)
+int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags, vi_tmLogSTR_t fn, void *data)
 {	int result = 0;
 
 	if (nullptr == fn)

@@ -83,10 +83,10 @@ namespace
 
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	constexpr std::size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	using storage_t = std::unordered_map<std::string, vi_tm_journal_t>;
+	using storage_t = std::unordered_map<std::string, vi_tmSheet_t>;
 } // namespace
 
-struct vi_tm_journal_t
+struct vi_tmSheet_t
 {	std::atomic<vi_tmTicks_t> total_ = 0U;
 	std::atomic<std::size_t> counter_ = 0U;
 	std::atomic<std::size_t> calls_cnt_ = 0U;
@@ -100,17 +100,17 @@ struct vi_tm_journal_t
 	};
 };
 
-struct vi_tmInstance_t
+struct vi_tmJournal_t
 {	std::mutex storage_guard_;
 	storage_t storage_;
 
-	explicit vi_tmInstance_t()
+	explicit vi_tmJournal_t()
 	{	storage_.max_load_factor(MAX_LOAD_FACTOR);
 		storage_.reserve(DEFAULT_STORAGE_CAPACITY);
 	}
 
-	static vi_tmInstance_t& global()
-	{	static vi_tmInstance_t inst;
+	static vi_tmJournal_t& global()
+	{	static vi_tmJournal_t inst;
 		return inst;
 	}
 
@@ -118,7 +118,7 @@ struct vi_tmInstance_t
 	{	return 0;
 	}
 
-	vi_tm_journal_t& get_item(const char *name)
+	vi_tmSheet_t& get_item(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
 		return storage_[name];
 	}
@@ -167,35 +167,35 @@ struct vi_tmInstance_t
 		}
 	}
 
-	friend vi_tmInstance_t& from_handle(VI_TM_HBOOK h)
+	friend vi_tmJournal_t& from_handle(VI_TM_HJOURNAL h)
 	{	return h? *h: global();
 	}
-}; // struct vi_tmInstance_t
+}; // struct vi_tmJournal_t
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 int VI_TM_CALL vi_tmInit()
-{	return vi_tmInstance_t::global().init();
+{	return vi_tmJournal_t::global().init();
 }
 
 void VI_TM_CALL vi_tmFinit(void)
-{	vi_tmInstance_t::global().clear();
+{	vi_tmJournal_t::global().clear();
 }
 
-VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate()
+VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate()
 {	try
-	{	return new vi_tmInstance_t{};
+	{	return new vi_tmJournal_t{};
 	}
 	catch (const std::bad_alloc &)
 	{	return nullptr;
 	}
 }
 
-void VI_TM_CALL vi_tmBookClose(VI_TM_HBOOK h)
+void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h)
 {	delete h;
 }
 
-VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char *name)
+VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char *name)
 {	auto& itm = from_handle(h).get_item(name);
 	return &itm;
 }
@@ -207,16 +207,16 @@ void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, std::size_t 
 	}
 }
 
-void VI_TM_CALL vi_tmBookClear(VI_TM_HBOOK h, const char* name) noexcept
+void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name) noexcept
 {	from_handle(h).clear(name);
 }
 
-int VI_TM_CALL vi_tmResults(VI_TM_HBOOK h, vi_tmLogRAW_t fn, void *data)
+int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void *data)
 {	return from_handle(h).results(fn, data);
 }
 
 int VI_TM_CALL vi_tmResult
-(	VI_TM_HBOOK h,
+(	VI_TM_HJOURNAL h,
 	const char *name,
 	vi_tmTicks_t *time,
 	std::size_t *amount,

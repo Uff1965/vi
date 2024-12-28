@@ -86,7 +86,7 @@ namespace {
 //	VI_OPTIMIZE_OFF
 	bool test_multithreaded()
 	{	VI_TM_FUNC;
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HBOOK>, decltype(&vi_tmBookClose)> h{ vi_tmBookCreate(), &vi_tmBookClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
 
 #ifdef NDEBUG
 		static constexpr auto CNT = 2'000'000;
@@ -135,7 +135,7 @@ namespace {
 	void test_instances()
 	{	VI_TM("Additional timers");
 		std::cout << "\nAdditional timers...\n";
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HBOOK>, decltype(&vi_tmBookClose)> handler{ vi_tmBookCreate(), &vi_tmBookClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
 			{	static auto j1 = vi_tmSheet(h, "long, long, long, very long name");
 				vi_tm::meter_t tm1{ j1 };
@@ -160,13 +160,13 @@ namespace {
 	{	VI_TM_FUNC;
 		std::cout << "\ntest_empty()...\n";
 
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HBOOK>, decltype(&vi_tmBookClose)> handler{ vi_tmBookCreate(), &vi_tmBookClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto const h = handler.get();
 
-			vi_tmBookClear(h, "vi_tm");
-			vi_tmBookClear(h, "Empty vi_tm");
-			vi_tmBookClear(nullptr, "VI_TM");
-			vi_tmBookClear(nullptr, "Empty VI_TM");
+			vi_tmJournalClear(h, "vi_tm");
+			vi_tmJournalClear(h, "Empty vi_tm");
+			vi_tmJournalClear(nullptr, "VI_TM");
+			vi_tmJournalClear(nullptr, "Empty VI_TM");
 
 			static auto const j0 = vi_tmSheet(h, "vi_tm");
 			static auto const j1 = vi_tmSheet(h, "Empty vi_tm");

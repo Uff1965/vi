@@ -21,7 +21,7 @@ void bar_c(void)
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 	thrd_yield();
 
-	{	VI_TM_HBOOK htimer = vi_tmBookCreate();
+	{	VI_TM_HJOURNAL htimer = vi_tmJournalCreate();
 
 		VI_TM_HSHEET const j1 = vi_tmSheet(htimer, "xxx");
 		VI_TM_HSHEET const j2 = vi_tmSheet(htimer, "yyy");
@@ -33,14 +33,14 @@ void bar_c(void)
 		puts("Original:");
 		vi_tmReport(htimer, vi_tmShowNoHeader, (vi_tmLogSTR_t)fputs, stdout);
 
-		vi_tmBookClear(htimer, "xxx");
-		puts("After vi_tmBookClear(htimer, \"xxx\"):");
+		vi_tmJournalClear(htimer, "xxx");
+		puts("After vi_tmJournalClear(htimer, \"xxx\"):");
 		vi_tmReport(htimer, vi_tmShowNoHeader, (vi_tmLogSTR_t)fputs, stdout);
 
-		vi_tmBookClear(htimer, NULL);
-		puts("After vi_tmBookClear(htimer, NULL):");
+		vi_tmJournalClear(htimer, NULL);
+		puts("After vi_tmJournalClear(htimer, NULL):");
 		vi_tmReport(htimer, vi_tmShowNoHeader, (vi_tmLogSTR_t)fputs, stdout);
-		vi_tmBookClose(htimer);
+		vi_tmJournalClose(htimer);
 	}
 
 	vi_tmFinish(bar_c_journal, bar_c_start, 1);

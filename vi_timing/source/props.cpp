@@ -70,7 +70,7 @@ namespace
 	misc::duration_t duration()
 	{	
 		static auto gauge_zero = []
-			{	static vi_tm_journal_t* const journal = vi_tmSheet(nullptr, "");
+			{	static vi_tmSheet_t* const journal = vi_tmSheet(nullptr, "");
 				const auto start = vi_tmClock();
 				const auto finish = vi_tmClock();
 				vi_tmRecord(journal, finish - start, 1);
@@ -183,7 +183,7 @@ properties_t::properties_t()
 
 	vi_tmWarming(1, 500);
 
-	vi_tmBookClear(nullptr, "");
+	vi_tmJournalClear(nullptr, "");
 	tick_duration_ = seconds_per_tick();
 	clock_latency_ = measurement_cost();
 	all_latency_ = duration();

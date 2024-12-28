@@ -50,9 +50,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	if defined(_WIN32) // Windows x86 or x64
 #		define VI_SYS_CALL __cdecl
 #		ifdef _WIN64
-#			define VI_TM_CALL
+#			define VI_TM_CALL // On the x64 platform, the standard calling convention is __fastcall for C and C++.
 #		else
-#			define VI_TM_CALL __fastcall
+#			define VI_TM_CALL __cdecl // On the 32-bit platform, C and C++ use different default calling conventions.
 #		endif
 
 #		ifdef VI_TM_EXPORTS
@@ -89,10 +89,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef struct vi_tmInstance_t* VI_TM_HBOOK;
-typedef struct vi_tm_journal_t *VI_TM_HSHEET;
+typedef struct vi_tmJournal_t* VI_TM_HJOURNAL;
+typedef struct vi_tmSheet_t *VI_TM_HSHEET;
 typedef VI_STD(uint64_t) vi_tmTicks_t;
-typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
+typedef int (VI_TM_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 enum vi_tmInfo_e
 {	VI_TM_INFO_VER,
 	VI_TM_INFO_VERSION,
@@ -108,18 +108,18 @@ extern "C"
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
-	VI_TM_API VI_NODISCARD VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate(void);
-	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
-	VI_TM_API VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char* name);
-	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
-	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HBOOK h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
-	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HBOOK h, vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmBookClear(VI_TM_HBOOK h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmBookClose(VI_TM_HBOOK h);
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
+	VI_TM_API VI_NODISCARD VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate(void);
+	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h);
+	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
+	VI_TM_API VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char* name);
+	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HJOURNAL h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
+	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void* data);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-// Supporting functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 	enum vi_tmReportFlags_e
 	{	vi_tmSortByTime = 0x00,
@@ -140,11 +140,11 @@ extern "C"
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
 	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
 	}
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityFixate(void);
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityRestore(void);
-// Supporting functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
 }
@@ -257,7 +257,7 @@ namespace vi_tm
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
-#			define VI_TM_CLEAR(...) vi_tmBookClear(nullptr, __VA_ARGS__)
+#			define VI_TM_CLEAR(...) vi_tmJournalClear(nullptr, __VA_ARGS__)
 #			define VI_TM_FULLVERSION reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_VERSION))
 #		endif
 

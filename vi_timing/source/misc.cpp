@@ -99,10 +99,10 @@ namespace
 		}
 
 #if defined(_WIN32)
+		const auto core_id = GetCurrentProcessorNumber();
+		const auto affinity = static_cast<DWORD_PTR>(1U) << core_id;
 		const auto thread = GetCurrentThread();
-		const auto affinity = static_cast<DWORD_PTR>(1U) << GetCurrentProcessorNumber();
-		s_affinity.previous_affinity_ = SetThreadAffinityMask(thread, affinity);
-		if( s_affinity.previous_affinity_ != 0)
+		if( (s_affinity.previous_affinity_ = SetThreadAffinityMask(thread, affinity)) != 0)
 		{	return; // Ok!
 		}
 #elif defined(__linux__)
@@ -119,7 +119,7 @@ namespace
 		}
 #endif
 		assert(false);
-		s_affinity.cnt_ = 0;
+		return; // Fail!
 	}
 
 	void affinity_fix_t::restore()
@@ -127,13 +127,18 @@ namespace
 		if (0 == --s_affinity.cnt_)
 		{
 #if defined(_WIN32)
-			const auto thread = GetCurrentThread();
-			const auto ret = SetThreadAffinityMask(thread, s_affinity.previous_affinity_);
-			assert(ret != 0);
+			if (s_affinity.previous_affinity_ != 0)
+			{	const auto thread = GetCurrentThread();
+				const auto ret = SetThreadAffinityMask(thread, s_affinity.previous_affinity_);
+				assert(ret != 0);
+			}
 #elif defined(__linux__)
-			const auto thread = pthread_self();
-			const auto ret = pthread_setaffinity_np(thread, sizeof(s_affinity.previous_affinity_), &s_affinity.previous_affinity_);
-			assert(0 == ret);
+			constexpr cpu_set_t affinity_zero{};
+			if (!CPU_EQUAL(&s_affinity.previous_affinity_), &affinity_zero)
+			{	const auto thread = pthread_self();
+				const auto ret = pthread_setaffinity_np(thread, sizeof(s_affinity.previous_affinity_), &s_affinity.previous_affinity_);
+				assert(0 == ret);
+			}
 #endif
 		}
 	}

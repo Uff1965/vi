@@ -67,11 +67,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		{	std::uint8_t buf[32];
 			if (auto sz = read(fp, buf, sizeof(buf)); sz >= 32) // Raspberry Pi 4
 			{	result = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
-				assert(result == 0xFE000000);
+				assert(result == 0xFE00'0000);
 			}
 			else if (sz >= 12) // Raspberry Pi 1 - 3
 			{	result = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
-				assert(result == 0x20000000 || result == 0x3F000000);
+				assert(result == 0x2000'0000 || result == 0x3F00'0000);
 			}
 			else
 			{	//printf("SystemTimer_by_DevMem initial filed: Unknown format file \'/proc/device-tree/soc/ranges\'\n");
