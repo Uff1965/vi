@@ -127,7 +127,7 @@ namespace
 			}
 #elif defined(__linux__)
 			static cpu_set_t affinity_zero{};
-			if (!CPU_EQUAL(&s_affinity.previous_affinity_), &affinity_zero)
+			if (!CPU_EQUAL(&s_affinity.previous_affinity_, &affinity_zero))
 			{	const auto thread = pthread_self();
 				const auto ret = pthread_setaffinity_np(thread, sizeof(s_affinity.previous_affinity_), &s_affinity.previous_affinity_);
 				assert(0 == ret);
