@@ -70,7 +70,7 @@ namespace
 		{/**/}
 		else if
 			(	const auto burden = props().clock_latency_ * calls_cnt;
-				total_time <= burden + props().clock_resolution_ * std::max(std::sqrt(calls_cnt), calls_cnt / 4.0)
+				total_time <= burden + props().clock_resolution_ * std::max(std::sqrt(calls_cnt), calls_cnt / 10.0)
 			)
 		{	total_txt_ = Insignificant;
 			average_txt_ = Insignificant;
