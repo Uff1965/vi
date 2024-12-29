@@ -116,7 +116,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 				"Attention! To ensure more accurate time measurements on this machine, the vi_timing library may require elevated privileges.\n"
 				"Please try running the program with sudo.\n"
 				"\x1B""[0m"
-				"Error"
+				"Error";
 			perror(msg);
 		}
 
