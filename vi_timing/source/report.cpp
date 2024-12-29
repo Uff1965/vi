@@ -70,8 +70,8 @@ namespace
 		{/**/}
 		else if
 			(	const auto burden = props().clock_latency_ * calls_cnt;
-				// We show the result as a value no less than the resolution divided by 10 or by the cube root of the number of measurements.
-				total_time <= burden + props().clock_resolution_ * calls_cnt * std::max(std::pow(calls_cnt, -1./3.), 0.1)
+				// Showed the result as a value no less than the resolution divided by 10 or by the cube root of the number of measurements.
+				total_time <= burden + props().clock_resolution_ * calls_cnt * std::max(std::pow(calls_cnt, -1./3.), .1)
 			)
 		{	total_txt_ = Insignificant;
 			average_txt_ = Insignificant;
