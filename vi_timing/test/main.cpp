@@ -76,7 +76,7 @@ namespace
 		}();
 #endif
 	const auto init_common = []
-		{	VI_TM("Initialize Common");
+		{	VI_TM("INITIALIZE COMMON");
 //			cpu_affinity();
 			return 0;
 		}();
@@ -164,30 +164,39 @@ namespace {
 		{	auto const h = handler.get();
 
 			vi_tmJournalClear(h, "vi_tm");
-			vi_tmJournalClear(h, "Empty vi_tm");
-			vi_tmJournalClear(nullptr, "VI_TM");
-			vi_tmJournalClear(nullptr, "Empty VI_TM");
+			vi_tmJournalClear(h, "empty");
+			VI_TM_CLEAR("VI_TM");
+			VI_TM_CLEAR("EMPTY");
 
-			static auto const j0 = vi_tmSheet(h, "vi_tm");
-			static auto const j1 = vi_tmSheet(h, "Empty vi_tm");
+			static auto const jTm = vi_tmSheet(h, "vi_tm");
+			static auto const jEmpty = vi_tmSheet(h, "empty");
 
-			for (int n = 0; n < 100'000; ++n)
+			for (int n = 0; n < 1'000'000; ++n)
 			{
 				{
-					const auto start0 = vi_tmClock();
-					const auto start1 = vi_tmClock(); //-V656 Variables 'start0', 'start1' are initialized through the call to the same function.
+					const auto sTm = vi_tmClock();
+					const auto sEmpty = vi_tmClock(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
 					/**/
-					const auto finish1 = vi_tmClock();
-					vi_tmRecord(j1, finish1 - start1, 1);
-					const auto finish0 = vi_tmClock();
-					vi_tmRecord(j0, finish0 - start0, 1);
+					const auto fEmpty = vi_tmClock();
+					vi_tmRecord(jEmpty, fEmpty - sEmpty, 1);
+					const auto fTm = vi_tmClock();
+					vi_tmRecord(jTm, fTm - sTm, 1);
 				}
 
 				{	VI_TM("VI_TM");
-					VI_TM("Empty VI_TM");
+					VI_TM("EMPTY");
 				}
 			}
 
+			vi_tmTicks_t ticks;
+			std::size_t amount;
+			std::size_t calls_cnt;
+			endl(std::cout);
+			vi_tmResult(h, "vi_tm", &ticks, &amount, &calls_cnt);
+			std::cout << "vi_tm:\tticks = " << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
+			vi_tmResult(h, "empty", &ticks, &amount, &calls_cnt);
+			std::cout << "empty:\tticks = " << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
+			endl(std::cout);
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
 
@@ -236,6 +245,17 @@ int main()
 	test_empty();
 	test_instances();
 	test_multithreaded();
+
+	endl(std::cout);
+	auto results_callback = [](const char* name, vi_tmTicks_t ticks, std::size_t amount, std::size_t calls_cnt, void* data)
+		{
+			if (0U != calls_cnt)
+			{	std::cout << name << ":\tticks = " << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
+			}
+			return -1;
+		};
+	vi_tmResults(nullptr, results_callback, nullptr);
+	endl(std::cout);
 
 	std::cout << "\nHello, World!\n" << std::endl;
 

@@ -36,10 +36,10 @@ namespace misc
 }
 
 struct properties_t
-{	misc::duration_t tick_duration_;
-	double clock_latency_;
-	misc::duration_t all_latency_;
-	double clock_resolution_;
+{	misc::duration_t seconds_per_tick_; // [nanoseconds]
+	double clock_latency_; // Duration of one clock call [ticks]
+	misc::duration_t all_latency_; // Duration of one measurement with preservation. [nanoseconds]
+	double clock_resolution_; // [ticks]
 
 private:
 	properties_t();

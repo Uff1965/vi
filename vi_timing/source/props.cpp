@@ -51,11 +51,11 @@ namespace
 			}
 
 			// Are waiting for the start of a new time interval.
-			auto last = now();
-			for (const auto s = last; s == last; last = now())
+			auto time = now();
+			for (const auto s = time; s == time; time = now())
 			{/**/}
 
-			return std::tuple{ vi_tmClock(), last };
+			return std::tuple{ vi_tmClock(), time };
 		};
 
 		const auto [tick1, time1] = time_point();
@@ -67,13 +67,13 @@ namespace
 		return misc::duration_t(time2 - time1) / (tick2 - tick1);
 	}
 
-	misc::duration_t duration()
+	misc::duration_t measurement_duration()
 	{	
 		static auto gauge_zero = []
-			{	static vi_tmSheet_t* const journal = vi_tmSheet(nullptr, "");
+			{	static vi_tmSheet_t* const sheet = vi_tmSheet(nullptr, "");
 				const auto start = vi_tmClock();
 				const auto finish = vi_tmClock();
-				vi_tmRecord(journal, finish - start, 1);
+				vi_tmRecord(sheet, finish - start, 1);
 			};
 		auto time_point = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
@@ -90,14 +90,14 @@ namespace
 		constexpr auto CNT = 500U;
 		auto s = time_point();
 		for (auto cnt = 0U; cnt < CNT; ++cnt)
-		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); // 5 calls
 		}
 		const auto pure = now() - s;
 
 		constexpr auto EXT = 20U;
 		s = time_point();
 		for (auto cnt = 0U; cnt < CNT; ++cnt)
-		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
+		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); // 5 calls
 
 			// EXT calls
 			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
@@ -115,8 +115,8 @@ VI_OPTIMIZE_OFF
 	{	constexpr auto CNT = 500U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		volatile auto e = vi_tmClock(); // Preloading a function into cache
-		volatile auto s = e;
+		auto e = vi_tmClock(); // Preloading a function into cache
+		auto s = e;
 		for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
 		{	s = vi_tmClock();
 		}
@@ -184,8 +184,8 @@ properties_t::properties_t()
 	vi_tmWarming(1, 500);
 
 	vi_tmJournalClear(nullptr, "");
-	tick_duration_ = seconds_per_tick();
+	seconds_per_tick_ = seconds_per_tick();
 	clock_latency_ = measurement_cost();
-	all_latency_ = duration();
+	all_latency_ = measurement_duration();
 	clock_resolution_ = resolution();
 }
