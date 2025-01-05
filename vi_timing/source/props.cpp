@@ -70,7 +70,7 @@ namespace
 	misc::duration_t measurement_duration()
 	{	
 		static auto gauge_zero = []
-			{	static vi_tmUnit_t* const sheet = vi_tmSheet(nullptr, "");
+			{	static vi_tmUnit_t* const sheet = vi_tmUnit(nullptr, "");
 				const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
 				vi_tmRecord(sheet, finish - start, 1);

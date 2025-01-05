@@ -98,14 +98,14 @@ namespace {
 		std::cout << "\ntest_multithreaded()... " << std::endl;
 
 		auto load = [h = h.get()]
-		{	static auto j_load = vi_tmSheet(h, "load");
+		{	static auto j_load = vi_tmUnit(h, "load");
 			vi_tm::meter_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
 			{	const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				vi_tmRecord(vi_tmSheet(h, name.c_str()), f - s, 1);
+				vi_tmRecord(vi_tmUnit(h, name.c_str()), f - s, 1);
 				v++;
 			}
 		};
@@ -137,16 +137,16 @@ namespace {
 		std::cout << "\nAdditional timers...\n";
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
-			{	static auto j1 = vi_tmSheet(h, "long, long, long, very long name");
+			{	static auto j1 = vi_tmUnit(h, "long, long, long, very long name");
 				vi_tm::meter_t tm1{ j1 };
-				{	static auto j2 = vi_tmSheet(h, "100ms * 10");
+				{	static auto j2 = vi_tmUnit(h, "100ms * 10");
 					vi_tm::meter_t tm2{ j2, 10 };
 					for (int n = 0; n < 10; ++n)
 					{	std::this_thread::sleep_for(100ms);
 
-						static auto j3 = vi_tmSheet(h, "tm");
+						static auto j3 = vi_tmUnit(h, "tm");
 						vi_tm::meter_t tm3{ j3 };
-						static auto j4 = vi_tmSheet(h, "tm_empty");
+						static auto j4 = vi_tmUnit(h, "tm_empty");
 						vi_tm::meter_t tm4{ j4 };
 					}
 				}
@@ -168,8 +168,8 @@ namespace {
 			VI_TM_CLEAR("VI_TM");
 			VI_TM_CLEAR("EMPTY");
 
-			static auto const jTm = vi_tmSheet(h, "vi_tm");
-			static auto const jEmpty = vi_tmSheet(h, "empty");
+			static auto const jTm = vi_tmUnit(h, "vi_tm");
+			static auto const jEmpty = vi_tmUnit(h, "empty");
 
 			for (int n = 0; n < 1'000'000; ++n)
 			{

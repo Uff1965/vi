@@ -195,7 +195,7 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h)
 {	delete h;
 }
 
-VI_TM_HUNIT VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char *name)
+VI_TM_HUNIT VI_TM_CALL vi_tmUnit(VI_TM_HJOURNAL h, const char *name)
 {	auto& itm = from_handle(h).get_item(name);
 	return &itm;
 }

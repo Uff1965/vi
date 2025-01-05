@@ -118,7 +118,7 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h);
 	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
-	VI_TM_API VI_TM_HUNIT VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char* name);
+	VI_TM_API VI_TM_HUNIT VI_TM_CALL vi_tmUnit(VI_TM_HJOURNAL h, const char* name);
 	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HUNIT j, vi_tmTicks_t tick_diff, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HJOURNAL h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void* data);
@@ -257,7 +257,7 @@ namespace vi_tm
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
 				const auto VI_MAKE_ID(_vi_tm_) = [](const char *n, std::size_t a = 1)\
-					{	static VI_TM_HUNIT const h = vi_tmSheet(nullptr, n);\
+					{	static VI_TM_HUNIT const h = vi_tmUnit(nullptr, n);\
 						return vi_tm::meter_t{h, a};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
