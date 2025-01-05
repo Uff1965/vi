@@ -95,7 +95,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
 typedef struct vi_tmJournal_t* VI_TM_HJOURNAL;
-typedef struct vi_tmSheet_t *VI_TM_HSHEET;
+typedef struct vi_tmUnit_t *VI_TM_HUNIT;
 typedef VI_STD(uint64_t) vi_tmTicks_t;
 typedef int (VI_TM_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 enum vi_tmInfo_e
@@ -117,9 +117,9 @@ extern "C"
 	VI_TM_API VI_NODISCARD VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate(void);
 	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h);
-	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
-	VI_TM_API VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char* name);
-	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
+	VI_TM_API VI_TM_HUNIT VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char* name);
+	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HUNIT j, vi_tmTicks_t tick_diff, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HJOURNAL h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void* data);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -235,14 +235,14 @@ namespace vi_tm
 	}
 
 	class meter_t
-	{	VI_TM_HSHEET h_;
+	{	VI_TM_HUNIT h_;
 		std::size_t amt_;
-		const vi_tmTicks_t start_ = vi_tmClock(); // Order matters!!! 'start_' must be initialized last!
+		const vi_tmTicks_t start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
 		meter_t(const meter_t &) = delete;
 		void operator=(const meter_t &) = delete;
 	public:
-		meter_t(VI_TM_HSHEET h, std::size_t amt = 1): h_{h}, amt_{amt} {/**/}
-		~meter_t() { const auto finish = vi_tmClock(); vi_tmRecord(h_, finish - start_, amt_); }
+		meter_t(VI_TM_HUNIT h, std::size_t amt = 1): h_{h}, amt_{amt} {/**/}
+		~meter_t() { const auto finish = vi_tmGetTicks(); vi_tmRecord(h_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
 
@@ -257,7 +257,7 @@ namespace vi_tm
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
 				const auto VI_MAKE_ID(_vi_tm_) = [](const char *n, std::size_t a = 1)\
-					{	static VI_TM_HSHEET const h = vi_tmSheet(nullptr, n);\
+					{	static VI_TM_HUNIT const h = vi_tmSheet(nullptr, n);\
 						return vi_tm::meter_t{h, a};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )

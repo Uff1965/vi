@@ -83,10 +83,10 @@ namespace
 
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	constexpr std::size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	using storage_t = std::unordered_map<std::string, vi_tmSheet_t>;
+	using storage_t = std::unordered_map<std::string, vi_tmUnit_t>;
 } // namespace
 
-struct vi_tmSheet_t
+struct vi_tmUnit_t
 {	std::atomic<vi_tmTicks_t> total_ = 0U;
 	std::atomic<std::size_t> counter_ = 0U;
 	std::atomic<std::size_t> calls_cnt_ = 0U;
@@ -118,7 +118,7 @@ struct vi_tmJournal_t
 	{	return 0;
 	}
 
-	vi_tmSheet_t& get_item(const char *name)
+	vi_tmUnit_t& get_item(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
 		return storage_[name];
 	}
@@ -195,12 +195,12 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h)
 {	delete h;
 }
 
-VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char *name)
+VI_TM_HUNIT VI_TM_CALL vi_tmSheet(VI_TM_HJOURNAL h, const char *name)
 {	auto& itm = from_handle(h).get_item(name);
 	return &itm;
 }
 
-void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, std::size_t amount) noexcept
+void VI_TM_CALL vi_tmRecord(VI_TM_HUNIT j, vi_tmTicks_t tick_diff, std::size_t amount) noexcept
 {	assert(j);
 	if (j)
 	{	j->add(tick_diff, amount);

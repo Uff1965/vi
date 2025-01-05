@@ -102,8 +102,8 @@ namespace {
 			vi_tm::meter_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
-			{	const auto s = vi_tmClock();
-				const auto f = vi_tmClock();
+			{	const auto s = vi_tmGetTicks();
+				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
 				vi_tmRecord(vi_tmSheet(h, name.c_str()), f - s, 1);
 				v++;
@@ -174,12 +174,12 @@ namespace {
 			for (int n = 0; n < 1'000'000; ++n)
 			{
 				{
-					const auto sTm = vi_tmClock();
-					const auto sEmpty = vi_tmClock(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
+					const auto sTm = vi_tmGetTicks();
+					const auto sEmpty = vi_tmGetTicks(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
 					/**/
-					const auto fEmpty = vi_tmClock();
+					const auto fEmpty = vi_tmGetTicks();
 					vi_tmRecord(jEmpty, fEmpty - sEmpty, 1);
-					const auto fTm = vi_tmClock();
+					const auto fTm = vi_tmGetTicks();
 					vi_tmRecord(jTm, fTm - sTm, 1);
 				}
 
