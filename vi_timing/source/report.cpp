@@ -201,7 +201,7 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 
 int formatter_t::print_header(const vi_tmLogSTR_t fn, void *data) const
 {	
-	static_assert(std::is_same_v<int (VI_SYS_CALL*)(const char*, std::FILE*), decltype(&std::fputs)>); // Checked compliance with the calling convention.
+	static_assert(std::is_same_v<int (VI_SYS_CALL*)(const char*, std::FILE*), decltype(&std::fputs)>, "Calling convention mismatch!");
 
 	if (flags_ & vi_tmShowNoHeader)
 	{	return 0;
