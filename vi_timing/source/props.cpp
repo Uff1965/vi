@@ -31,9 +31,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <thread>
 #include <chrono>
-#include <memory>
 
-namespace ch = std::chrono;
 using namespace std::chrono_literals;
 
 namespace
@@ -44,7 +42,7 @@ namespace
 	misc::duration_t seconds_per_tick()
 	{
 		auto time_point = []
-		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
+		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the thread between measurements.
 			for(auto n = 0U; n < cache_warmup; ++n) // Preloading a functions into cache
 			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks();
 				[[maybe_unused]] volatile auto dummy_2 = now();
@@ -67,23 +65,26 @@ namespace
 		return misc::duration_t(time2 - time1) / (tick2 - tick1);
 	}
 
+VI_OPTIMIZE_OFF
 	misc::duration_t measurement_duration()
 	{	
 		static auto gauge_zero = []
-			{	static vi_tmUnit_t* const sheet = vi_tmUnit(nullptr, "");
+			{	static vi_tmUnit_t* const unit = vi_tmUnit(nullptr, ""); // Create a service item with empty name "" and cache preload.
 				const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
-				vi_tmRecord(sheet, finish - start, 1);
+				vi_tmRecord(unit, finish - start, 1);
 			};
 		auto time_point = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
 				for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
-				{	gauge_zero(); // Create a service item with empty name "" and cache preload.
+				{	gauge_zero(); // Preloading a functions into cache
 				}
+
 				// Are waiting for the start of a new time interval.
 				auto result = now();
 				for (const auto s = result; s == result; result = now())
 				{/**/}
+
 				return result;
 			};
 
@@ -110,7 +111,6 @@ namespace
 		return misc::duration_t(dirty - pure) / (EXT * CNT);
 	}
 
-VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{	constexpr auto CNT = 500U;
 
