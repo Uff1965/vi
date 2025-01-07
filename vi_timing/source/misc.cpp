@@ -303,28 +303,28 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 namespace
 {
 	const auto nanotest =
-		(	[]
-			{	const struct
-				{	misc::duration_t v_;
-					std::string_view expected_;
-					unsigned char prec_{3};
-					unsigned char dec_{1};
-					int line_;
-				} vals[] =
-				{
-					{ 0.0, "0.0 ps", 3, 1, __LINE__ },
-					{ 1.2345e12, "1230000.00 Ms", 3, 2, __LINE__ },
-					{ 0.555, "560.0 ms", 2, 1, __LINE__ },
-					{ 5.55, "5.6 s ", 2, 1, __LINE__ },
-					{ 55.5, "56.0 s ", 2, 1, __LINE__ },
-				};
+		[]
+		{	const struct
+			{	misc::duration_t v_;
+				std::string_view expected_;
+				unsigned char prec_{3};
+				unsigned char dec_{1};
+				int line_;
+			} vals[] =
+			{
+				{ 0.0, "0.0 ps", 3, 1, __LINE__ },
+				{ 1.2345e12, "1230000.00 Ms", 3, 2, __LINE__ },
+				{ 0.555, "560.0 ms", 2, 1, __LINE__ },
+				{ 5.55, "5.6 s ", 2, 1, __LINE__ },
+				{ 55.5, "56.0 s ", 2, 1, __LINE__ },
+			};
 
-				for (auto &v : vals)
-				{	const auto s = misc::to_string(v.v_, v.prec_, v.dec_);
-					assert(s == v.expected_);
-				}
-			}(),
-			0
-		);
+			for (auto &v : vals)
+			{	const auto s = misc::to_string(v.v_, v.prec_, v.dec_);
+				assert(s == v.expected_);
+			}
+
+			return 0;
+		}();
 }
 #endif // #ifndef NDEBUG

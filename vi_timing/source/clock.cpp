@@ -50,7 +50,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
 	static inline vi_tmTicks_t vi_tmGetTicks_impl(void) noexcept
 	{	std::uint64_t result;
-		__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
+        asm volatile
+        (   "DSB SY\n\t"
+            "mrs %0, cntvct_el0\n\t"
+            "DSB SY"
+            : "=r"(result)
+        );
 		return result;
 	}
 #elif __ARM_ARCH >= 6 // ARMv6 (RaspberryPi1B+)
