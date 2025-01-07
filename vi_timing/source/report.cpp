@@ -87,7 +87,7 @@ namespace
 	int results_callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
 		static_cast<std::vector<metering_t> *>(data)->emplace_back(name, total, amount, calls_cnt);
-		return 1; // Continue enumerate.
+		return 0; // Ok, continue enumerate.
 	}
 
 	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);

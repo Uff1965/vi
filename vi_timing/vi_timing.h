@@ -99,10 +99,13 @@ typedef struct vi_tmUnit_t *VI_TM_HUNIT;
 typedef VI_STD(uint64_t) vi_tmTicks_t;
 typedef int (VI_TM_CALL *vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 enum vi_tmInfo_e
-{	VI_TM_INFO_VER,
-	VI_TM_INFO_VERSION,
-	VI_TM_INFO_BUILDNUMBER,
-	VI_TM_INFO_BUILDTYPE,
+{	VI_TM_INFO_VER, // unsigned
+	VI_TM_INFO_VERSION, // const char*
+	VI_TM_INFO_BUILDNUMBER, // unsigned
+	VI_TM_INFO_BUILDTYPE, // "Release" or "Debug"
+	VI_TM_INFO_RESOLUTION, // const double* - Clock resolution [sec]
+	VI_TM_INFO_DURATION, // const double* - Measure duration [sec]
+	VI_TM_INFO_OVERHEAD, // const double* - Clock duration [sec]
 };
 
 #	ifdef __cplusplus
