@@ -180,7 +180,7 @@ namespace
 
 } // namespace
 
-constexpr unsigned misc::build_number_updater(const char (&date)[12], const char (&time)[9])
+unsigned misc::build_number_updater(const char (&date)[12], const char (&time)[9])
 {	build_number = std::max(TIME_STAMP(date, time), build_number);
 	return build_number;
 }
