@@ -176,7 +176,7 @@ namespace
 		return(((((year * 100 + month) * 100 + day) * 100 + hour) * 100) + minute);
 	}
 
-	unsigned build_number = TIME_STAMP(__DATE__, __TIME__);
+	unsigned build_number = 0U;
 
 } // namespace
 
