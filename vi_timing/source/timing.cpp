@@ -31,7 +31,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <atomic>
 #include <cassert>
-//#include <functional>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <unordered_map> // unordered_map: "does not invalidate pointers or references to elements".
