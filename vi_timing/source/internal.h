@@ -10,13 +10,8 @@
 
 namespace misc
 {
-	unsigned TIME_STAMP(const char (&date)[12], const char (&time)[9]);
-	extern unsigned BUILD_NUMBER;
-	static auto dummy_BUILD_NUMBER = []
-		{	if (auto ts = TIME_STAMP(__DATE__, __TIME__); BUILD_NUMBER < ts)
-				BUILD_NUMBER = ts;
-			return 0;
-		}();
+	unsigned build_number_updater(const char (&date)[12], const char (&time)[9]); // Converts the date and time to a monotonically increasing number. And stores it in BUILD_NUMBER.
+	static auto dummy_build_number_updater = build_number_updater(__DATE__, __TIME__);
 
 	struct space_out final: std::numpunct<char>
 	{	char do_thousands_sep() const override { return '\''; }  // separate with '

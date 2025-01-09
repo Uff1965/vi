@@ -147,9 +147,12 @@ namespace
 #endif
 		}
 	}
+
+	unsigned build_number = 0U;
+
 } // namespace
 
-unsigned misc::TIME_STAMP(const char (&date)[12], const char (&time)[9])
+unsigned misc::build_number_updater(const char (&date)[12], const char (&time)[9])
 {	// 7.27.3.1 The asctime function. [C17 ballot ISO/IEC 9899:2017]
 	constexpr std::array<std::string_view, 12> mon_names{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 	// "__DATE__ <...> a character string literal of the form 'Mmm dd yyyy'" [15.11 Predefined macro names ISO/IEC JTC1 SC22 WG21 N4860]
@@ -173,10 +176,12 @@ unsigned misc::TIME_STAMP(const char (&date)[12], const char (&time)[9])
 	const unsigned hour = time_c(h1) * 10 + time_c(h2);
 	const unsigned minute = time_c(m1) * 10 + time_c(m2);
 
-	return (((((year * 100 + month) * 100 + day) * 100 + hour) * 100) + minute);
-}
+	const auto result = (((((year * 100 + month) * 100 + day) * 100 + hour) * 100) + minute);
 
-unsigned misc::BUILD_NUMBER = 0U;
+	build_number = std::max(result, build_number);
+
+	return build_number;
+}
 
 void VI_TM_CALL vi_tmThreadAffinityFixate()
 {	affinity_fix_t::fixate();
@@ -262,14 +267,14 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_BUILDNUMBER:
-		{	result = misc::BUILD_NUMBER; //-V101 "Implicit assignment type conversion to memsize type."
+		{	result = build_number; //-V101 "Implicit assignment type conversion to memsize type."
 		} break;
 
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999); //-V590 "Possible excessive expression or typo."
 					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res; //-V1065
-					[[maybe_unused]] const auto sz = snprintf(res.data(), res.size(), VI_TM_VERSION_STR ".%u%c %s", misc::BUILD_NUMBER, CONFIG[0], TYPE);
+					[[maybe_unused]] const auto sz = snprintf(res.data(), res.size(), VI_TM_VERSION_STR ".%u%c %s", build_number, CONFIG[0], TYPE);
 					assert(0 < sz && sz < static_cast<int>(res.size()));
 					return res;
 				}();
