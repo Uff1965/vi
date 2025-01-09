@@ -37,6 +37,17 @@ using namespace std::chrono_literals;
 
 namespace
 {
+	class thread_affinity_fix_t
+	{
+		thread_affinity_fix_t(const thread_affinity_fix_t &) = delete;
+		thread_affinity_fix_t(thread_affinity_fix_t &&) = delete;
+		void operator=(const thread_affinity_fix_t &) = delete;
+		void operator=(thread_affinity_fix_t &&) = delete;
+	public:
+		thread_affinity_fix_t() { vi_tmThreadAffinityFixate(); }
+		~thread_affinity_fix_t() { vi_tmThreadAffinityRestore(); }
+	};
+
 	constexpr auto cache_warmup = 5U;
 	constexpr auto now = std::chrono::steady_clock::now;
 
@@ -174,7 +185,7 @@ VI_OPTIMIZE_ON
 }
 
 misc::properties_t::properties_t()
-{	vi_tm::thread_affinity_fix_t thread_affinity_fix_guard;
+{	thread_affinity_fix_t thread_affinity_fix_guard;
 	std::this_thread::yield();
 
 	vi_tmWarming(1, 500);

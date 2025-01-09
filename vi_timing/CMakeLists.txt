@@ -18,7 +18,6 @@ endif()
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "${VI_ROOT_DIR}/vi_timing/common.h"
   "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
   "${VI_ROOT_DIR}/vi_timing/vi_timing_proxy.h"
 )

@@ -27,12 +27,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TIMING_VI_TIMING_H
 #	pragma once
 
-#	define VI_TM_VERSION_MAJOR 0	// 0 - 99
-#	define VI_TM_VERSION_MINOR 3	// 0 - 999
-#	define VI_TM_VERSION_PATCH 1	// 0 - 9999
-#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
-#	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
-
 #	ifdef __cplusplus
 #		include <cassert>
 #		include <cstdint>
@@ -43,7 +37,37 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		include <stdio.h> // For fputs and stdout
 #	endif
 
-#	include "common.h"
+#	define VI_STR_AUX(s) #s
+#	define VI_STR(s) VI_STR_AUX(s)
+#	define VI_STR_GUM_AUX( a, b ) a##b
+#	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
+#	define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+
+#	define VI_TM_VERSION_MAJOR 0	// 0 - 99
+#	define VI_TM_VERSION_MINOR 1	// 0 - 999
+#	define VI_TM_VERSION_PATCH 0	// 0 - 9999
+#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
+#	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
+
+#ifdef __cplusplus
+#	define VI_DEF(v) = (v)
+#	define VI_NOEXCEPT noexcept
+#	define VI_R_CAST(T, s) reinterpret_cast<T>(s)
+#	define VI_S_CAST(T, s) static_cast<T>(s)
+#	define VI_C_CAST(T, s) const_cast<T>(s)
+#	define VI_NODISCARD [[nodiscard]]
+#	define VI_STD(s) std::s
+#	define VI_MEMORY_ORDER(s) std::memory_order::s
+#else
+#	define VI_DEF(v)
+#	define VI_NOEXCEPT
+#	define VI_R_CAST(T, s) (T)(s)
+#	define VI_S_CAST(T, s) (T)(s)
+#	define VI_C_CAST(T, s) (T)(s)
+#	define VI_NODISCARD
+#	define VI_STD(s) s
+#	define VI_MEMORY_ORDER(s) s
+#endif
 
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
 #	if defined(_MSC_VER)
@@ -154,24 +178,32 @@ extern "C"
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
-}
+} // extern "C"
 #	endif
 
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#ifdef _MSC_VER
+#	define VI_FUNCNAME __FUNCTION__
+#elif defined(__GNUC__)
+#	define VI_FUNCNAME __PRETTY_FUNCTION__
+#else
+#	define VI_FUNCNAME __func__
+#endif
+
+#if defined(_MSC_VER)
+#	define VI_OPTIMIZE_OFF _Pragma("optimize(\"\", off)")
+#	define VI_OPTIMIZE_ON  _Pragma("optimize(\"\", on)")
+#elif defined(__GNUC__)
+#	define VI_OPTIMIZE_OFF _Pragma("GCC push_options") _Pragma("GCC optimize(\"O0\")")
+#	define VI_OPTIMIZE_ON  _Pragma("GCC pop_options")
+#else
+#	define VI_OPTIMIZE_OFF
+#	define VI_OPTIMIZE_ON
+#endif
+
 #	ifdef __cplusplus
 namespace vi_tm
 {
-	class thread_affinity_fix_t
-	{
-		thread_affinity_fix_t(const thread_affinity_fix_t &) = delete;
-		thread_affinity_fix_t(thread_affinity_fix_t &&) = delete;
-		void operator=(const thread_affinity_fix_t &) = delete;
-		void operator=(thread_affinity_fix_t &&) = delete;
-	public:
-		thread_affinity_fix_t() { vi_tmThreadAffinityFixate(); }
-		~thread_affinity_fix_t() { vi_tmThreadAffinityRestore(); }
-	};
-
 	class init_t
 	{	static constexpr auto default_cb = &vi_tmReportCallback;
 		static inline const auto default_data = reinterpret_cast<void*>(stdout);
@@ -184,57 +216,46 @@ namespace vi_tm
 		init_t &operator=(const init_t &) = delete;
 		init_t &operator=(init_t &&) = delete;
 	public:
-		template<typename... Args>
-		explicit init_t(Args&&... args);
-		~init_t();
-		template<typename T, typename... Args> void init(T &&v, Args&&... args);
-		void init();
-	};
+		template<typename... Args> explicit init_t(Args&&... args)
+		{	init(std::forward<Args>(args)...);
+		}
+		~init_t()
+		{	if (!title_.empty())
+			{	cb_(title_.c_str(), data_);
+			}
 
-	inline void init_t::init()
-	{	[[maybe_unused]] const auto result = vi_tmInit();
-		assert(0 == result);
-	}
-	template<typename T, typename... Args>
-	void init_t::init(T &&v, Args&&... args)
-	{
-		if constexpr (std::is_same_v<vi_tmReportFlags_e, std::decay_t<T>>)
-		{	flags_ |= v;
+			vi_tmReport(nullptr, flags_, cb_, data_);
+			vi_tmFinit();
 		}
-		else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::decay_t<T>>)
-		{	assert(default_cb == cb_ && nullptr != v);
-			cb_ = v;
-		}
-		else if constexpr (std::is_same_v<T, decltype(title_)>)
-		{	title_ = std::forward<T>(v);
-		}
-		else if constexpr (std::is_convertible_v<T, decltype(title_)>)
-		{	title_ = v;
-		}
-		else if constexpr (std::is_pointer_v<T>)
-		{	assert(default_data == data_);
-			data_ = v;
-		}
-		else
-		{	assert(false);
-		}
+		template<typename T, typename... Args> void init(T &&v, Args&&... args)
+		{	if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
+			{	flags_ |= v;
+			}
+			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmLogSTR_t>)
+			{	assert(default_cb == cb_ && nullptr != v);
+				cb_ = v;
+			}
+			else if constexpr (std::is_same_v<T, decltype(title_)>)
+			{	title_ = std::forward<T>(v);
+			}
+			else if constexpr (std::is_convertible_v<T, decltype(title_)>)
+			{	title_ = v;
+			}
+			else if constexpr (std::is_pointer_v<T>)
+			{	assert(default_data == data_);
+				data_ = v;
+			}
+			else
+			{	assert(false);
+			}
 
-		init(std::forward<Args>(args)...);
-	}
-
-	template<typename... Args>
-	init_t::init_t(Args&&... args)
-	{	init(std::forward<Args>(args)...);
-	}
-
-	inline init_t::~init_t()
-	{	if (!title_.empty())
-		{	cb_(title_.c_str(), data_);
+			init(std::forward<Args>(args)...);
 		}
-
-		vi_tmReport(nullptr, flags_, cb_, data_);
-		vi_tmFinit();
-	}
+		void init()
+		{	[[maybe_unused]] const auto result = vi_tmInit();
+			assert(0 == result);
+		}
+	}; // class init_t
 
 	class meter_t
 	{	VI_TM_HUNIT h_;
