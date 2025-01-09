@@ -38,7 +38,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		include <cstdint>
 #		include <cstdio> // For fputs and stdout
 #		include <string>
-//#		include <utility>
 #	else
 #		include <stdint.h>
 #		include <stdio.h> // For fputs and stdout
