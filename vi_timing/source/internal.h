@@ -2,11 +2,22 @@
 #	define VI_TIMING_SOURCE_INTERNAL_H
 #	pragma once
 
+#include <array>
 #include <chrono>
 #include <locale>
+#include <string_view>
+
 
 namespace misc
 {
+	unsigned TIME_STAMP(const char (&date)[12], const char (&time)[9]);
+	extern unsigned BUILD_NUMBER;
+	static auto dummy_BUILD_NUMBER = []
+		{	if (auto ts = TIME_STAMP(__DATE__, __TIME__); BUILD_NUMBER < ts)
+				BUILD_NUMBER = ts;
+			return 0;
+		}();
+
 	struct space_out final: std::numpunct<char>
 	{	char do_thousands_sep() const override { return '\''; }  // separate with '
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
@@ -47,5 +58,7 @@ private:
 };
 
 const properties_t& props(); //-V1071 Consider inspecting the 'props' function. The return value is not always used.
+
+
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H
