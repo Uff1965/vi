@@ -27,6 +27,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
 #include "../vi_timing.h"
+#include "build_number.h"
 #include "internal.h"
 
 #include <thread>
@@ -172,12 +173,7 @@ VI_OPTIMIZE_OFF
 VI_OPTIMIZE_ON
 }
 
-const properties_t& props()
-{	static const properties_t inst_;
-	return inst_;
-}
-
-properties_t::properties_t()
+misc::properties_t::properties_t()
 {	vi_tm::thread_affinity_fix_t thread_affinity_fix_guard;
 	std::this_thread::yield();
 
@@ -188,4 +184,9 @@ properties_t::properties_t()
 	clock_latency_ = measurement_cost();
 	all_latency_ = measurement_duration();
 	clock_resolution_ = resolution();
+}
+
+const misc::properties_t& misc::properties_t::props()
+{	static const misc::properties_t inst_;
+	return inst_;
 }

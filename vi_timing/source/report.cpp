@@ -27,6 +27,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
 #include "../vi_timing.h"
+#include "build_number.h"
 #include "internal.h"
 
 #include <algorithm>
@@ -69,15 +70,15 @@ namespace
 		if (0 == amount)
 		{/**/}
 		else if
-			(	const auto burden = props().clock_latency_ * calls_cnt;
+			(	const auto burden = misc::properties_t::props().clock_latency_ * calls_cnt;
 				// Showed the result as a value no less than the resolution divided by 16 or by the cube root of the number of measurements.
-				total_time <= burden + props().clock_resolution_ * calls_cnt * std::max(std::pow(calls_cnt, -1./3.), 1./16.)
+				total_time <= burden + misc::properties_t::props().clock_resolution_ * calls_cnt * std::max(std::pow(calls_cnt, -1./3.), 1./16.)
 			)
 		{	total_txt_ = Insignificant;
 			average_txt_ = Insignificant;
 		}
 		else
-		{	total_ = props().seconds_per_tick_ * (total_time - burden);
+		{	total_ = misc::properties_t::props().seconds_per_tick_ * (total_time - burden);
 			total_txt_ = to_string(total_);
 			average_ = total_ / amount_;
 			average_txt_ = to_string(average_);
@@ -268,16 +269,16 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	{	std::ostringstream str;
 
 		if (flags & vi_tmShowResolution)
-		{	str << "Resolution: " << misc::duration_t(props().seconds_per_tick_ * props().clock_resolution_) << ". ";
+		{	str << "Resolution: " << misc::duration_t(misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_resolution_) << ". ";
 		}
 		if (flags & vi_tmShowDuration)
-		{	str << "Duration: " << props().all_latency_ << ". ";
+		{	str << "Duration: " << misc::properties_t::props().all_latency_ << ". ";
 		}
 		if (flags & vi_tmShowUnit)
-		{	str << "One tick: " << props().seconds_per_tick_ << ". ";
+		{	str << "One tick: " << misc::properties_t::props().seconds_per_tick_ << ". ";
 		}
 		if (flags & vi_tmShowOverhead)
-		{	str << "Additive: " << misc::duration_t(props().seconds_per_tick_ * props().clock_latency_) << ". ";
+		{	str << "Additive: " << misc::duration_t(misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_latency_) << ". ";
 		}
 
 		str << '\n';
@@ -297,7 +298,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags, vi_tmLogSTR_t fn, v
 		}
 	}
 
-	props(); // Preventing deadlock in traits_t::results_callback().
+	misc::properties_t::props(); // Preventing deadlock in traits_t::results_callback().
 	result += print_props(fn, data, flags);
 
 	std::vector<metering_t> meterings;

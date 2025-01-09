@@ -2,17 +2,13 @@
 #	define VI_TIMING_SOURCE_INTERNAL_H
 #	pragma once
 
-#include <array>
 #include <chrono>
 #include <locale>
-#include <string_view>
 
+#include "build_number.h"
 
 namespace misc
 {
-	unsigned build_number_updater(const char (&date)[12], const char (&time)[9]); // Converts the date and time to a monotonically increasing number. Stores it in BUILD_NUMBER.
-	static const auto dummy_build_number_updater = build_number_updater(__DATE__, __TIME__);
-
 	struct space_out final: std::numpunct<char>
 	{	char do_thousands_sep() const override { return '\''; }  // separate with '
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
@@ -39,21 +35,16 @@ namespace misc
     };
 
 	std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
+
+	struct properties_t
+	{	misc::duration_t seconds_per_tick_; // [nanoseconds]
+		double clock_latency_; // Duration of one clock call [ticks]
+		misc::duration_t all_latency_; // Duration of one measurement with preservation. [nanoseconds]
+		double clock_resolution_; // [ticks]
+		static const properties_t& props();
+	private:
+		properties_t();
+	};
 }
-
-struct properties_t
-{	misc::duration_t seconds_per_tick_; // [nanoseconds]
-	double clock_latency_; // Duration of one clock call [ticks]
-	misc::duration_t all_latency_; // Duration of one measurement with preservation. [nanoseconds]
-	double clock_resolution_; // [ticks]
-
-private:
-	properties_t();
-	friend const properties_t& props();
-};
-
-const properties_t& props(); //-V1071 Consider inspecting the 'props' function. The return value is not always used.
-
-
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H

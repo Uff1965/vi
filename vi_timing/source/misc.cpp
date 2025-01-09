@@ -27,6 +27,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
 #include "../vi_timing.h"
+#include "build_number.h"
 #include "internal.h"
 
 #ifdef _WIN32
@@ -149,7 +150,7 @@ namespace
 		}
 	}
 
-	constexpr unsigned TIME_STAMP(const char (&date)[12], const char (&time)[9])
+	constexpr unsigned time_stamp(const char (&date)[12], const char (&time)[9])
 	{	// 7.27.3.1 The asctime function. [C17 ballot ISO/IEC 9899:2017]
 		constexpr std::array<std::string_view, 12> mon_names{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 		// "__DATE__ <...> a character string literal of the form 'Mmm dd yyyy'" [15.11 Predefined macro names ISO/IEC JTC1 SC22 WG21 N4860]
@@ -176,12 +177,12 @@ namespace
 		return(((((year * 100 + month) * 100 + day) * 100 + hour) * 100) + minute);
 	}
 
-	unsigned build_number = 0U;
+	unsigned build_number = 0U; // build_number is initialized by the compilation time of the last unit of translation in the YYMMDDhhmm format.
 
 } // namespace
 
 unsigned misc::build_number_updater(const char (&date)[12], const char (&time)[9])
-{	build_number = std::max(TIME_STAMP(date, time), build_number);
+{	build_number = std::max(time_stamp(date, time), build_number);
 	return build_number;
 }
 
@@ -288,17 +289,17 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_RESOLUTION: // double - Clock resolution [sec]
-		{	static const double resolution = props().clock_resolution_ * props().seconds_per_tick_.count();
+		{	static const double resolution = misc::properties_t::props().clock_resolution_ * misc::properties_t::props().seconds_per_tick_.count();
 			result = reinterpret_cast<std::uintptr_t>(&resolution);
 		} break;
 
 		case VI_TM_INFO_DURATION: // double - Measure duration [sec]
-		{	static const double duration = props().all_latency_.count() * props().seconds_per_tick_.count();
+		{	static const double duration = misc::properties_t::props().all_latency_.count() * misc::properties_t::props().seconds_per_tick_.count();
 			result = reinterpret_cast<std::uintptr_t>(&duration);
 		} break;
 
 		case VI_TM_INFO_OVERHEAD: // double - Clock duration [sec]
-		{	static const double overhead = props().clock_latency_ * props().seconds_per_tick_.count();
+		{	static const double overhead = misc::properties_t::props().clock_latency_ * misc::properties_t::props().seconds_per_tick_.count();
 			result = reinterpret_cast<std::uintptr_t>(&overhead);
 		} break;
 

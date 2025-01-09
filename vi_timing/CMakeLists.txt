@@ -27,6 +27,7 @@ list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
   "source/internal.h"
+  "source/build_number.h"
 )
 source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
