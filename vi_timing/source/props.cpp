@@ -81,10 +81,10 @@ VI_OPTIMIZE_OFF
 	misc::duration_t measurement_duration()
 	{	
 		static auto gauge_zero = []
-			{	static vi_tmUnit_t* const unit = vi_tmUnit(nullptr, ""); // Create a service item with empty name "" and cache preload.
+			{	static vi_tmMeasPoint_t* const meas_point = vi_tmMeasPoint(nullptr, ""); // Create a service item with empty name "" and cache preload.
 				const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
-				vi_tmRecord(unit, finish - start, 1);
+				vi_tmMeasPointAdd(meas_point, finish - start, 1U);
 			};
 		auto time_point = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
@@ -160,8 +160,8 @@ VI_OPTIMIZE_OFF
 
 	double resolution()
 	{	for (auto CNT = 8;; CNT *= 8) //-V1044 Loop break conditions do not depend on the number of iterations.
-		{	vi_tmTicks_t first = 0;
-			vi_tmTicks_t last = 0;
+		{	VI_TM_TICK first = 0;
+			VI_TM_TICK last = 0;
 
 			std::this_thread::yield(); // Reduce the likelihood of interrupting measurements by switching threads.
 			const auto limit = now() + 256us;

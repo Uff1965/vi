@@ -301,7 +301,7 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_DURATION: // double - Measure duration [sec]
-		{	static const double duration = misc::properties_t::props().all_latency_.count() * misc::properties_t::props().seconds_per_tick_.count();
+		{	static const double duration = misc::properties_t::props().all_latency_.count();
 			result = reinterpret_cast<std::uintptr_t>(&duration);
 		} break;
 

@@ -58,10 +58,10 @@ namespace
 		std::string average_txt_{ NotAvailable };
 		std::size_t amount_{}; // Number of measured units
 
-		metering_t(const char *name, vi_tmTicks_t total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
+		metering_t(const char *name, VI_TM_TICK total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
 	};
 
-	metering_t::metering_t(const char *name, vi_tmTicks_t total_time, std::size_t amount, std::size_t calls_cnt) noexcept
+	metering_t::metering_t(const char *name, VI_TM_TICK total_time, std::size_t amount, std::size_t calls_cnt) noexcept
 	:	name_{ name },
 		amount_{ amount }
 	{	assert(amount >= calls_cnt);
@@ -85,7 +85,7 @@ namespace
 		}
 	}
 
-	int results_callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
+	int results_callback(const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
 		static_cast<std::vector<metering_t> *>(data)->emplace_back(name, total, amount, calls_cnt);
 		return 0; // Ok, continue enumerate.

@@ -98,14 +98,14 @@ namespace {
 		std::cout << "\ntest_multithreaded()... " << std::endl;
 
 		auto load = [h = h.get()]
-		{	static auto j_load = vi_tmUnit(h, "load");
+		{	static auto j_load = vi_tmMeasPoint(h, "load");
 			vi_tm::meter_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
 			{	const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				vi_tmRecord(vi_tmUnit(h, name.c_str()), f - s, 1);
+				vi_tmMeasPointAdd(vi_tmMeasPoint(h, name.c_str()), f - s, 1);
 				v++;
 			}
 		};
@@ -137,16 +137,16 @@ namespace {
 		std::cout << "\nAdditional timers...\n";
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
-			{	static auto j1 = vi_tmUnit(h, "long, long, long, very long name");
+			{	static auto j1 = vi_tmMeasPoint(h, "long, long, long, very long name");
 				vi_tm::meter_t tm1{ j1 };
-				{	static auto j2 = vi_tmUnit(h, "100ms * 10");
+				{	static auto j2 = vi_tmMeasPoint(h, "100ms * 10");
 					vi_tm::meter_t tm2{ j2, 10 };
 					for (int n = 0; n < 10; ++n)
 					{	std::this_thread::sleep_for(100ms);
 
-						static auto j3 = vi_tmUnit(h, "tm");
+						static auto j3 = vi_tmMeasPoint(h, "tm");
 						vi_tm::meter_t tm3{ j3 };
-						static auto j4 = vi_tmUnit(h, "tm_empty");
+						static auto j4 = vi_tmMeasPoint(h, "tm_empty");
 						vi_tm::meter_t tm4{ j4 };
 					}
 				}
@@ -168,8 +168,8 @@ namespace {
 			VI_TM_CLEAR("VI_TM");
 			VI_TM_CLEAR("EMPTY");
 
-			static auto const jTm = vi_tmUnit(h, "vi_tm");
-			static auto const jEmpty = vi_tmUnit(h, "empty");
+			static auto const jTm = vi_tmMeasPoint(h, "vi_tm");
+			static auto const jEmpty = vi_tmMeasPoint(h, "empty");
 
 			for (int n = 0; n < 1'000'000; ++n)
 			{
@@ -178,9 +178,9 @@ namespace {
 					const auto sEmpty = vi_tmGetTicks(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
 					/**/
 					const auto fEmpty = vi_tmGetTicks();
-					vi_tmRecord(jEmpty, fEmpty - sEmpty, 1);
+					vi_tmMeasPointAdd(jEmpty, fEmpty - sEmpty, 1);
 					const auto fTm = vi_tmGetTicks();
-					vi_tmRecord(jTm, fTm - sTm, 1);
+					vi_tmMeasPointAdd(jTm, fTm - sTm, 1);
 				}
 
 				{	VI_TM("VI_TM");
@@ -188,7 +188,7 @@ namespace {
 				}
 			}
 
-			vi_tmTicks_t ticks;
+			VI_TM_TICK ticks;
 			std::size_t amount;
 			std::size_t calls_cnt;
 			endl(std::cout);
@@ -244,10 +244,25 @@ int main()
 	foo_c();
 	test_empty();
 	test_instances();
+
+	{
+		endl(std::cout);
+
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_RESOLUTION)); ptr)
+		{	std::cout << "Resolution: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
+		}
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_DURATION)); ptr)
+		{	std::cout << "Duration: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
+		}
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)); ptr)
+		{	std::cout << "Additive: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
+		}
+	}
+
 	test_multithreaded();
 
 	endl(std::cout);
-	auto results_callback = [](const char* name, vi_tmTicks_t ticks, std::size_t amount, std::size_t calls_cnt, void* data)
+	auto results_callback = [](const char* name, VI_TM_TICK ticks, std::size_t amount, std::size_t calls_cnt, void* data)
 		{
 			if (0U != calls_cnt)
 			{	std::cout << name << ":\tticks = " << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;

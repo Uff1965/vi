@@ -47,14 +47,14 @@ namespace
 {
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	constexpr std::size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	using storage_t = std::unordered_map<std::string, vi_tmUnit_t>;
+	using storage_t = std::unordered_map<std::string, vi_tmMeasPoint_t>;
 } // namespace
 
-struct vi_tmUnit_t
-{	std::atomic<vi_tmTicks_t> total_ = 0U;
+struct vi_tmMeasPoint_t
+{	std::atomic<VI_TM_TICK> total_ = 0U;
 	std::atomic<std::size_t> counter_ = 0U;
 	std::atomic<std::size_t> calls_cnt_ = 0U;
-	void add(vi_tmTicks_t tick_diff, std::size_t amount) noexcept
+	void add(VI_TM_TICK tick_diff, std::size_t amount) noexcept
 	{	total_.fetch_add(tick_diff, std::memory_order_relaxed);
 		counter_.fetch_add(amount, std::memory_order_relaxed);
 		calls_cnt_.fetch_add(1, std::memory_order_relaxed);
@@ -84,12 +84,12 @@ struct vi_tmJournal_t
 	{	return 0;
 	}
 
-	vi_tmUnit_t& get_item(const char *name)
+	vi_tmMeasPoint_t& get_item(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
 		return storage_[name];
 	}
 
-	int result(const char *name, vi_tmTicks_t &time, std::size_t &amount, std::size_t &calls_cnt)
+	int result(const char *name, VI_TM_TICK &time, std::size_t &amount, std::size_t &calls_cnt)
 	{	assert(name);
 		if (nullptr == name)
 		{	return -1;
@@ -178,12 +178,12 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h)
 {	delete h;
 }
 
-VI_TM_HUNIT VI_TM_CALL vi_tmUnit(VI_TM_HJOURNAL h, const char *name)
+VI_TM_HMEASPOINT VI_TM_CALL vi_tmMeasPoint(VI_TM_HJOURNAL h, const char *name)
 {	auto& itm = from_handle(h).get_item(name);
 	return &itm;
 }
 
-void VI_TM_CALL vi_tmRecord(VI_TM_HUNIT j, vi_tmTicks_t tick_diff, std::size_t amount) noexcept
+void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT j, VI_TM_TICK tick_diff, std::size_t amount) noexcept
 {	assert(j);
 	if (j)
 	{	j->add(tick_diff, amount);
@@ -201,12 +201,12 @@ int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void *data)
 int VI_TM_CALL vi_tmResult
 (	VI_TM_HJOURNAL h,
 	const char *name,
-	vi_tmTicks_t *time,
+	VI_TM_TICK *time,
 	std::size_t *amount,
 	std::size_t *calls_cnt
 )
 {	assert(name);
-	vi_tmTicks_t dummy_ticks = 0;
+	VI_TM_TICK dummy_ticks = 0;
 	std::size_t dummy_size = 0;
 	return from_handle(h).result
 		(	name,
