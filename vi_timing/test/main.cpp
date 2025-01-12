@@ -245,9 +245,9 @@ int main()
 	foo_c();
 	test_empty();
 	test_instances();
-	test_vi_tmResults();
 	test_multithreaded();
 	prn_clock_properties();
+	test_vi_tmResults();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 
