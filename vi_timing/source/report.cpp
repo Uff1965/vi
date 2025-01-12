@@ -27,6 +27,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
 #include "../vi_timing.h"
+#include "build_number_maker.h"
 #include "internal.h"
 
 #include <algorithm>
@@ -57,10 +58,10 @@ namespace
 		std::string average_txt_{ NotAvailable };
 		std::size_t amount_{}; // Number of measured units
 
-		metering_t(const char *name, vi_tmTicks_t total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
+		metering_t(const char *name, VI_TM_TICK total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
 	};
 
-	metering_t::metering_t(const char *name, vi_tmTicks_t total_time, std::size_t amount, std::size_t calls_cnt) noexcept
+	metering_t::metering_t(const char *name, VI_TM_TICK total_time, std::size_t amount, std::size_t calls_cnt) noexcept
 	:	name_{ name },
 		amount_{ amount }
 	{	assert(amount >= calls_cnt);
@@ -69,24 +70,25 @@ namespace
 		if (0 == amount)
 		{/**/}
 		else if
-			(	const auto burden = props().clock_latency_ * calls_cnt;
-				total_time <= burden + props().clock_resolution_ * std::max(std::sqrt(calls_cnt), calls_cnt / 4.0)
+			(	const auto burden = misc::properties_t::props().clock_latency_ * calls_cnt;
+				// Showed the result as a value no less than the resolution divided by 16 or by the cube root of the number of measurements.
+				total_time <= burden + misc::properties_t::props().clock_resolution_ * calls_cnt * std::max(std::pow(calls_cnt, -1./3.), 1./16.)
 			)
 		{	total_txt_ = Insignificant;
 			average_txt_ = Insignificant;
 		}
 		else
-		{	total_ = props().tick_duration_ * (total_time - burden);
+		{	total_ = misc::properties_t::props().seconds_per_tick_ * (total_time - burden);
 			total_txt_ = to_string(total_);
 			average_ = total_ / amount_;
 			average_txt_ = to_string(average_);
 		}
 	}
 
-	int results_callback(const char *name, vi_tmTicks_t total, std::size_t amount, std::size_t calls_cnt, void *data)
+	int results_callback(const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
 		static_cast<std::vector<metering_t> *>(data)->emplace_back(name, total, amount, calls_cnt);
-		return 1; // Continue enumerate.
+		return 0; // Ok, continue enumerate.
 	}
 
 	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);
@@ -144,7 +146,7 @@ namespace
 		const std::size_t number_len_{ 1 }; // '#'
 		mutable std::size_t n_{ 0 };
 		const unsigned flags_;
-		const unsigned step_guides_;
+		const unsigned guideline_interval_;
 
 		std::size_t max_len_name_{ std::size(TitleName) - 1 };
 		std::size_t max_len_total_{ std::size(TitleTotal) - 1 };
@@ -160,7 +162,7 @@ namespace
 formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 :	number_len_{ itms.empty() ? 1U : 1U + static_cast<std::size_t>(std::floor(std::log10(itms.size()))) },
 	flags_{ flags },
-	step_guides_{ itms.size() > 4U ? 3U : 0U }
+	guideline_interval_{ itms.size() > 4U ? 3U : 0U }
 {	std::size_t *ptr = nullptr;
 	switch (flags_ & vi_tmSortMask)
 	{
@@ -200,6 +202,8 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 
 int formatter_t::print_header(const vi_tmLogSTR_t fn, void *data) const
 {	
+	static_assert(std::is_same_v<int (VI_SYS_CALL*)(const char*, std::FILE*), decltype(&std::fputs)>, "Calling convention mismatch!");
+
 	if (flags_ & vi_tmShowNoHeader)
 	{	return 0;
 	}
@@ -244,7 +248,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, voi
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
 	n_++;
-	const char fill = (step_guides_ && (0 == n_ % step_guides_)) ? fill_symbol : ' ';
+	const char fill = (guideline_interval_ && (0 == n_ % guideline_interval_)) ? fill_symbol : ' ';
 	str <<
 		std::setw(number_len_) << n_ << ". " << std::setfill(fill) << std::left <<
 		std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<
@@ -265,16 +269,16 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	{	std::ostringstream str;
 
 		if (flags & vi_tmShowResolution)
-		{	str << "Resolution: " << misc::duration_t(props().tick_duration_ * props().clock_resolution_) << ". ";
+		{	str << "Resolution: " << misc::duration_t(misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_resolution_) << ". ";
 		}
 		if (flags & vi_tmShowDuration)
-		{	str << "Duration: " << props().all_latency_ << ". ";
+		{	str << "Duration: " << misc::properties_t::props().all_latency_ << ". ";
 		}
 		if (flags & vi_tmShowUnit)
-		{	str << "One tick: " << props().tick_duration_ << ". ";
+		{	str << "One tick: " << misc::properties_t::props().seconds_per_tick_ << ". ";
 		}
 		if (flags & vi_tmShowOverhead)
-		{	str << "Additive: " << misc::duration_t(props().tick_duration_ * props().clock_latency_) << ". ";
+		{	str << "Additive: " << misc::duration_t(misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_latency_) << ". ";
 		}
 
 		str << '\n';
@@ -284,7 +288,7 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	return result;
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags, vi_tmLogSTR_t fn, void *data)
+int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags, vi_tmLogSTR_t fn, void *data)
 {	int result = 0;
 
 	if (nullptr == fn)
@@ -294,7 +298,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags, vi_tmLogSTR_t fn, void
 		}
 	}
 
-	props(); // Preventing deadlock in traits_t::results_callback().
+	misc::properties_t::props(); // Preventing deadlock in traits_t::results_callback().
 	result += print_props(fn, data, flags);
 
 	std::vector<metering_t> meterings;

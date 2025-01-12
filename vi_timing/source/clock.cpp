@@ -37,7 +37,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	else
 #		error "Undefined compiler"
 #	endif
-	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
 	{	std::uint32_t _; // Will be removed by the optimizer.
 		const std::uint64_t result = __rdtscp(&_);
 		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
@@ -48,9 +48,14 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		return result;
 	}
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
-	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
 	{	std::uint64_t result;
-		__asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(result));
+        asm volatile
+        (   "DSB SY\n\t"
+            "mrs %0, cntvct_el0\n\t"
+            "DSB SY"
+            : "=r"(result)
+        );
 		return result;
 	}
 #elif __ARM_ARCH >= 6 // ARMv6 (RaspberryPi1B+)
@@ -67,11 +72,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		{	std::uint8_t buf[32];
 			if (auto sz = read(fp, buf, sizeof(buf)); sz >= 32) // Raspberry Pi 4
 			{	result = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
-				assert(result == 0xFE000000);
+				assert(result == 0xFE00'0000);
 			}
 			else if (sz >= 12) // Raspberry Pi 1 - 3
 			{	result = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
-				assert(result == 0x20000000 || result == 0x3F000000);
+				assert(result == 0x2000'0000 || result == 0x3F00'0000);
 			}
 			else
 			{	//printf("SystemTimer_by_DevMem initial filed: Unknown format file \'/proc/device-tree/soc/ranges\'\n");
@@ -112,16 +117,19 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		if(!result)
 		{	//perror("SystemTimer_by_DevMem initial filed"); // Enhanced privileges are required (sudo).
 			static constexpr char msg[] =
-				"Attention! To ensure more accurate time measurements on this machine, "
-				"the vi_timing library may require elevated privileges. Please try running the program with sudo";
+				"\x1B""[31m"
+				"Attention! To ensure more accurate time measurements on this machine, the vi_timing library may require elevated privileges.\n"
+				"Please try running the program with sudo.\n"
+				"\x1B""[0m"
+				"Error";
 			perror(msg);
 		}
 
 		return result;
 	}
 
-	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
-	{	vi_tmTicks_t result = 0;
+	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
+	{	VI_TM_TICK result = 0;
 
 		static volatile std::uint32_t *const timer_base = get_timer_base();
 		if (timer_base)
@@ -139,14 +147,14 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 	}
 #elif defined(_WIN32) // Windows
 #	include <Windows.h>
-	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
 	{	LARGE_INTEGER cnt;
 		QueryPerformanceCounter(&cnt);
 		return cnt.QuadPart;
 	}
 #elif defined(__linux__)
 #	include <time.h>
-	static inline vi_tmTicks_t vi_tmGetTicks(void) noexcept
+	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
 	{	struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 		return 1'000'000'000U * ts.tv_sec + ts.tv_nsec;
@@ -156,7 +164,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #endif
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-vi_tmTicks_t VI_TM_CALL vi_tmClock(void) noexcept
-{	return vi_tmGetTicks();
+VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
+{	return vi_tmGetTicks_impl();
 }
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

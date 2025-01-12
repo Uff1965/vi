@@ -18,7 +18,6 @@ endif()
 set(SOURCE_FILES)
 
 set(FILE_GROUP
-  "${VI_ROOT_DIR}/vi_timing/common.h"
   "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
   "${VI_ROOT_DIR}/vi_timing/vi_timing_proxy.h"
 )
@@ -27,6 +26,7 @@ list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
   "source/internal.h"
+  "source/build_number_maker.h"
 )
 source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
@@ -99,7 +99,7 @@ if (WIN32)
 
     target_compile_options(${PROJECT_NAME}
         PRIVATE
-        /MP /W3 /nologo /EHsc /Zi
+        /MP /W4 /nologo /EHsc /Zi
     )
 
     if(VI_TM_BUILD_SHARED)

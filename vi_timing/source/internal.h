@@ -5,6 +5,8 @@
 #include <chrono>
 #include <locale>
 
+#include "build_number_maker.h"
+
 namespace misc
 {
 	struct space_out final: std::numpunct<char>
@@ -33,19 +35,16 @@ namespace misc
     };
 
 	std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
+
+	struct properties_t
+	{	misc::duration_t seconds_per_tick_; // [nanoseconds]
+		double clock_latency_; // Duration of one clock call [ticks]
+		misc::duration_t all_latency_; // Duration of one measurement with preservation. [nanoseconds]
+		double clock_resolution_; // [ticks]
+		static const properties_t& props();
+	private:
+		properties_t();
+	};
 }
-
-struct properties_t
-{	misc::duration_t tick_duration_;
-	double clock_latency_;
-	misc::duration_t all_latency_;
-	double clock_resolution_;
-
-private:
-	properties_t();
-	friend const properties_t& props();
-};
-
-const properties_t& props(); //-V1071 Consider inspecting the 'props' function. The return value is not always used.
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H

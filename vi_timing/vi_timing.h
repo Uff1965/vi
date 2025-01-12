@@ -28,31 +28,45 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	pragma once
 
 #	define VI_TM_VERSION_MAJOR 0	// 0 - 99
-#	define VI_TM_VERSION_MINOR 3	// 0 - 999
-#	define VI_TM_VERSION_PATCH 1	// 0 - 9999
-#	define VI_TM_VERSION (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH))
-#	define VI_TM_VERSION_STR VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH)
+#	define VI_TM_VERSION_MINOR 1	// 0 - 999
+#	define VI_TM_VERSION_PATCH 0	// 0 - 9999
 
 #	ifdef __cplusplus
 #		include <cassert>
 #		include <cstdint>
 #		include <cstdio> // For fputs and stdout
 #		include <string>
-#		include <utility>
 #	else
 #		include <stdint.h>
 #		include <stdio.h> // For fputs and stdout
 #	endif
 
-#	include "common.h"
+#ifdef __cplusplus
+#	define VI_CAST_C(T, s) const_cast<T>(s)
+#	define VI_CAST_R(T, s) reinterpret_cast<T>(s)
+#	define VI_CAST_S(T, s) static_cast<T>(s)
+#	define VI_DEF(v) = (v)
+#	define VI_NODISCARD [[nodiscard]]
+#	define VI_NOEXCEPT noexcept
+#	define VI_STD(s) std::s
+#else
+#	define VI_CAST_C(T, s) (T)(s)
+#	define VI_CAST_R(T, s) (T)(s)
+#	define VI_CAST_S(T, s) (T)(s)
+#	define VI_DEF(v)
+#	define VI_NODISCARD
+#	define VI_NOEXCEPT
+#	define VI_STD(s) s
+#endif
 
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
-#	if defined(_WIN32) // Windows x86 or x64
-#		define VI_SYS_CALL __cdecl
-#		ifdef _WIN64
-#			define VI_TM_CALL
-#		else
+#	if defined(_MSC_VER)
+#		ifdef __i386__
+#			define VI_SYS_CALL __cdecl
 #			define VI_TM_CALL __fastcall
+#		else
+#			define VI_SYS_CALL
+#			define VI_TM_CALL
 #		endif
 
 #		ifdef VI_TM_EXPORTS
@@ -74,30 +88,38 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #				pragma comment(lib, "vi_timing_d.lib")
 #			endif
 #		endif
-#	elif defined(__ANDROID__)
-#		define VI_TM_DISABLE "Android not supported yet."
-#	elif defined (__linux__)
-#		define VI_SYS_CALL
-#		define VI_TM_CALL
+#	elif defined (__GNUC__) || defined(__clang__)
+#		ifdef __i386__
+#			define VI_SYS_CALL __attribute__((cdecl))
+#			define VI_TM_CALL __attribute__((fastcall))
+#		else
+#			define VI_SYS_CALL
+#			define VI_TM_CALL
+#		endif
+
 #		ifdef VI_TM_EXPORTS
 #			define VI_TM_API __attribute__((visibility("default")))
 #		else
 #			define VI_TM_API
 #		endif
 #	else
-#		define VI_TM_DISABLE "Unknown platform!"
+#		define VI_TM_DISABLE "Unknown compiler!"
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef struct vi_tmInstance_t* VI_TM_HBOOK;
-typedef struct vi_tm_journal_t *VI_TM_HSHEET;
-typedef VI_STD(uint64_t) vi_tmTicks_t;
-typedef int (*vi_tmLogRAW_t)(const char* name, vi_tmTicks_t time, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
+typedef struct vi_tmJournal_t* VI_TM_HJOURNAL;
+typedef struct vi_tmMeasPoint_t *VI_TM_HMEASPOINT;
+typedef VI_STD(uint64_t) VI_TM_TICK;
+typedef int (VI_TM_CALL *vi_tmLogRAW_t)(const char* name, VI_TM_TICK total, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
 enum vi_tmInfo_e
-{	VI_TM_INFO_VER,
-	VI_TM_INFO_VERSION,
-	VI_TM_INFO_BUILDNUMBER,
-	VI_TM_INFO_BUILDTYPE,
+{	VI_TM_INFO_VER, // unsigned
+	VI_TM_INFO_VERSION, // const char*
+	VI_TM_INFO_BUILDNUMBER, // unsigned
+	VI_TM_INFO_BUILDTYPE, // "Release" or "Debug"
+	VI_TM_INFO_RESOLUTION, // const double* - Clock resolution [sec]
+	VI_TM_INFO_DURATION, // const double* - Measure duration [sec]
+	VI_TM_INFO_OVERHEAD, // const double* - Clock duration [sec]
+	VI_TM_INFO_UNIT, // const double* - seconds per tick [sec]
 };
 
 #	ifdef __cplusplus
@@ -107,19 +129,19 @@ extern "C"
 
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
-	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
-	VI_TM_API VI_NODISCARD VI_TM_HBOOK VI_TM_CALL vi_tmBookCreate(void);
-	VI_TM_API vi_tmTicks_t VI_TM_CALL vi_tmClock(void) VI_NOEXCEPT;
-	VI_TM_API VI_TM_HSHEET VI_TM_CALL vi_tmSheet(VI_TM_HBOOK h, const char* name);
-	VI_TM_API void VI_TM_CALL vi_tmRecord(VI_TM_HSHEET j, vi_tmTicks_t tick_diff, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
-	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HBOOK h, const char* name, vi_tmTicks_t *ticks, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
-	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HBOOK h, vi_tmLogRAW_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmBookClear(VI_TM_HBOOK h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmBookClose(VI_TM_HBOOK h);
+	VI_TM_API VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
+	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
+	VI_TM_API VI_NODISCARD VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate(void);
+	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h);
+	VI_TM_API VI_TM_HMEASPOINT VI_TM_CALL vi_tmMeasPoint(VI_TM_HJOURNAL h, const char* name);
+	VI_TM_API void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT j, VI_TM_TICK duration, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HJOURNAL h, const char* name, VI_TM_TICK *total, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
+	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void* data);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-// Supporting functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
 	enum vi_tmReportFlags_e
 	{	vi_tmSortByTime = 0x00,
@@ -138,17 +160,38 @@ extern "C"
 	};
 
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
-	{	return VI_STD(fputs)(str, VI_R_CAST(VI_STD(FILE)*, data));
+	{	return VI_STD(fputs)(str, VI_CAST_R(VI_STD(FILE)*, data));
 	}
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HBOOK h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
-// Supporting functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityFixate(void);
+	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityRestore(void);
+// Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
-}
+} // extern "C"
 #	endif
 
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#ifdef _MSC_VER
+#	define VI_FUNCNAME __FUNCTION__
+#elif defined(__GNUC__)
+#	define VI_FUNCNAME __PRETTY_FUNCTION__
+#else
+#	define VI_FUNCNAME __func__
+#endif
+
+#if defined(_MSC_VER)
+#	define VI_OPTIMIZE_OFF _Pragma("optimize(\"\", off)")
+#	define VI_OPTIMIZE_ON  _Pragma("optimize(\"\", on)")
+#elif defined(__GNUC__)
+#	define VI_OPTIMIZE_OFF _Pragma("GCC push_options") _Pragma("GCC optimize(\"O0\")")
+#	define VI_OPTIMIZE_ON  _Pragma("GCC pop_options")
+#else
+#	define VI_OPTIMIZE_OFF
+#	define VI_OPTIMIZE_ON
+#endif
+
 #	ifdef __cplusplus
 namespace vi_tm
 {
@@ -160,71 +203,68 @@ namespace vi_tm
 		void* data_ = default_data;
 		unsigned flags_ = 0;
 		init_t(const init_t &) = delete;
+		init_t(init_t &&) = delete;
 		init_t &operator=(const init_t &) = delete;
+		init_t &operator=(init_t &&) = delete;
 	public:
-		template<typename... Args>
-		explicit init_t(Args&&... args);
-		~init_t();
-		template<typename T, typename... Args> void init(T &&v, Args&&... args);
-		void init();
-	};
+		template<typename... Args> explicit init_t(Args&&... args)
+		{	init(std::forward<Args>(args)...);
+		}
+		~init_t()
+		{	if (!title_.empty())
+			{	cb_(title_.c_str(), data_);
+			}
 
-	inline void init_t::init()
-	{	[[maybe_unused]] const auto result = vi_tmInit();
-		assert(0 == result);
-	}
-	template<typename T, typename... Args>
-	void init_t::init(T &&v, Args&&... args)
-	{
-		if constexpr (std::is_same_v<vi_tmReportFlags_e, std::decay_t<T>>)
-		{	flags_ |= v;
+			vi_tmReport(nullptr, flags_, cb_, data_);
+			vi_tmFinit();
 		}
-		else if constexpr (std::is_same_v<vi_tmLogSTR_t, std::decay_t<T>>)
-		{	assert(default_cb == cb_ && nullptr != v);
-			cb_ = v;
-		}
-		else if constexpr (std::is_same_v<T, decltype(title_)>)
-		{	title_ = std::forward<T>(v);
-		}
-		else if constexpr (std::is_convertible_v<T, decltype(title_)>)
-		{	title_ = v;
-		}
-		else if constexpr (std::is_pointer_v<T>)
-		{	assert(default_data == data_);
-			data_ = v;
-		}
-		else
-		{	assert(false);
-		}
+		template<typename T, typename... Args> void init(T &&v, Args&&... args)
+		{	if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
+			{	flags_ |= v;
+			}
+			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmLogSTR_t>)
+			{	assert(default_cb == cb_ && nullptr != v);
+				cb_ = v;
+			}
+			else if constexpr (std::is_same_v<T, decltype(title_)>)
+			{	title_ = std::forward<T>(v);
+			}
+			else if constexpr (std::is_convertible_v<T, decltype(title_)>)
+			{	title_ = v;
+			}
+			else if constexpr (std::is_pointer_v<T>)
+			{	assert(default_data == data_);
+				data_ = v;
+			}
+			else
+			{	assert(false);
+			}
 
-		init(std::forward<Args>(args)...);
-	}
-
-	template<typename... Args>
-	init_t::init_t(Args&&... args)
-	{	init(std::forward<Args>(args)...);
-	}
-
-	inline init_t::~init_t()
-	{	if (!title_.empty())
-		{	cb_(title_.c_str(), data_);
+			init(std::forward<Args>(args)...);
 		}
-
-		vi_tmReport(nullptr, flags_, cb_, data_);
-		vi_tmFinit();
-	}
+		void init()
+		{	[[maybe_unused]] const auto result = vi_tmInit();
+			assert(0 == result);
+		}
+	}; // class init_t
 
 	class meter_t
-	{	VI_TM_HSHEET h_;
+	{	VI_TM_HMEASPOINT h_;
 		std::size_t amt_;
-		const vi_tmTicks_t start_ = vi_tmClock(); // Order matters!!! 'start_' must be initialized last!
+		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
 		meter_t(const meter_t &) = delete;
 		void operator=(const meter_t &) = delete;
 	public:
-		meter_t(VI_TM_HSHEET h, std::size_t amt = 1): h_{h}, amt_{amt} {/**/}
-		~meter_t() { const auto finish = vi_tmClock(); vi_tmRecord(h_, finish - start_, amt_); }
+		meter_t(VI_TM_HMEASPOINT h, std::size_t amt = 1): h_{h}, amt_{amt} {/**/}
+		~meter_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasPointAdd(h_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
+
+#		define VI_STR_AUX(s) #s
+#		define VI_STR(s) VI_STR_AUX(s)
+#		define VI_STR_GUM_AUX( a, b ) a##b
+#		define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
+#		define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
 
 #		if defined(VI_TM_DISABLE)
 #			define VI_TM_INIT(...) static const int VI_MAKE_ID(_vi_tm_) = 0
@@ -236,13 +276,14 @@ namespace vi_tm
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
-				const auto VI_MAKE_ID(_vi_tm_) = [](const char *n, std::size_t a = 1)\
-					{	static VI_TM_HSHEET const h = vi_tmSheet(nullptr, n);\
-						return vi_tm::meter_t{h, a};\
+				const auto VI_MAKE_ID(_vi_tm_) = []\
+					(const char *name, std::size_t amount = 1)\
+					{	static VI_TM_HMEASPOINT const h = vi_tmMeasPoint(nullptr, name);\
+						return vi_tm::meter_t{h, amount};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
-#			define VI_TM_CLEAR(...) vi_tmBookClear(nullptr, __VA_ARGS__)
+#			define VI_TM_CLEAR(...) vi_tmJournalClear(nullptr, __VA_ARGS__)
 #			define VI_TM_FULLVERSION reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_VERSION))
 #		endif
 
