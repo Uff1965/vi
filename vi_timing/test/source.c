@@ -49,7 +49,7 @@ void bar_c(void)
 void foo_c(void)
 {	VI_TM_HMEASPOINT const foo_c_journal = vi_tmMeasPoint(NULL, "foo_c");
 	const VI_TM_TICK foo_c_start = vi_tmGetTicks();
-	printf("\n%s...\n", __func__); //-V2600
+	printf("\n%s:\n", __func__); //-V2600
 	
 	vi_tmWarming(0, 2);
 	vi_tmWarming(2, 2);
@@ -118,6 +118,6 @@ void foo_c(void)
 		vi_tmFinish(j, start, 1);
 	}
 
-	printf("done\n"); //-V2600
+	printf("%s - done\n", __func__); //-V2600
 	vi_tmFinish(foo_c_journal, foo_c_start, 1);
 }

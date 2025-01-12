@@ -11,14 +11,6 @@
 
 #include "../vi_timing.h"
 
-#ifdef _WIN32
-#	include <Windows.h> // SetThreadAffinityMask
-#	include <processthreadsapi.h> // GetCurrentProcessorNumber
-#elif defined (__linux__)
-#	include <pthread.h> // For pthread_setaffinity_np.
-#	include <sched.h> // For sched_getcpu.
-#endif
-
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -44,37 +36,6 @@ namespace
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
 
-	bool cpu_affinity(int core_id = -1)
-	{
-		if (core_id < 0)
-		{
-#ifdef _WIN32
-			core_id = GetCurrentProcessorNumber();
-#elif defined __linux__
-			core_id = sched_getcpu();
-#else
-#	error "Unknown OS."
-#endif
-		}
-
-		bool result = false;
-		if (core_id >= 0)
-		{
-#ifdef _WIN32
-			const auto mask = static_cast<DWORD_PTR>(1U) << core_id; // Set the bit corresponding to the kernel
-			result = (0 != SetThreadAffinityMask(GetCurrentThread(), mask));
-#elif defined __linux__
-			cpu_set_t cpuset;
-			CPU_ZERO(&cpuset); // Clearing the bit mask
-			CPU_SET(core_id, &cpuset); // Installing the target kernel
-			result = (0 == pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset));
-#endif
-		}
-
-		assert(result);
-		return result;
-	}
-
 	VI_TM_INIT(vi_tmSortBySpeed, "Global timing report:\n", vi_tmShowDuration, vi_tmShowOverhead, vi_tmShowUnit, vi_tmShowResolution);
 	VI_TM("GLOBAL");
 
@@ -88,14 +49,14 @@ namespace
 #endif
 	const auto init_common = []
 		{	VI_TM("INITIALIZE COMMON");
-//			cpu_affinity();
+//			vi_tmThreadAffinityFixate();
 			return 0;
 		}();
 }
 
 namespace {
 //	VI_OPTIMIZE_OFF
-	bool test_multithreaded()
+	void test_multithreaded()
 	{	VI_TM_FUNC;
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
 
@@ -106,7 +67,7 @@ namespace {
 #endif
 		static std::atomic<std::size_t> v{};
 
-		std::cout << "\ntest_multithreaded()... " << std::endl;
+		std::cout << "\nTest multithreaded():" << std::endl;
 
 		auto load = [h = h.get()]
 		{	static auto j_load = vi_tmMeasPoint(h, "load");
@@ -138,14 +99,13 @@ namespace {
 		std::cout << "v: " << v << " [" << CNT << "*" << threads.size() << "]" << "\n";
 		std::cout << "Timing:\n";
 		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
-		std::cout << "done" << std::endl;
-		return true;
+		std::cout << "nTest multithreaded - done" << std::endl;
 	}
 //	VI_OPTIMIZE_ON
 
 	void test_instances()
-	{	VI_TM("Additional timers");
-		std::cout << "\nAdditional timers...\n";
+	{	VI_TM("Test additional timers");
+		std::cout << "\nAdditional timers:\n";
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
 			{	static auto j1 = vi_tmMeasPoint(h, "long, long, long, very long name");
@@ -164,12 +124,12 @@ namespace {
 			}
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		}
-		std::cout << "done" << std::endl;
+		std::cout << "nTest additional timers - done" << std::endl;
 	}
 
 	void test_empty()
 	{	VI_TM_FUNC;
-		std::cout << "\ntest_empty()...\n";
+		std::cout << "\nTest test_empty:\n";
 
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto const h = handler.get();
@@ -202,16 +162,15 @@ namespace {
 			VI_TM_TICK ticks;
 			std::size_t amount;
 			std::size_t calls_cnt;
-			endl(std::cout);
 			vi_tmResult(h, "vi_tm", &ticks, &amount, &calls_cnt);
-			std::cout << "vi_tm:\tticks = " << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
+			std::cout << "vi_tm:\tticks = " << std::setw(16) << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
 			vi_tmResult(h, "empty", &ticks, &amount, &calls_cnt);
-			std::cout << "empty:\tticks = " << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
+			std::cout << "empty:\tticks = " << std::setw(16)  << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
 			endl(std::cout);
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
 
-		std::cout << "\ntest_empty() Done" << std::endl;
+		std::cout << "Test test_empty - Done" << std::endl;
 	}
 
 	void prn_header()
@@ -238,12 +197,12 @@ namespace {
 		{	VI_TM("Warming in main()");
 			vi_tmWarming(1);
 		}
-		std::cout << "done" << std::endl;
 		assert(0 == errno);
+		std::cout << "done" << std::endl;
 	}
 
 	void prn_clock_properties()
-	{	
+	{	std::cout << "\nClock properties:";
 		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_RESOLUTION)); ptr)
 		{	std::cout << "\nResolution: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
@@ -256,9 +215,24 @@ namespace {
 		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT)); ptr)
 		{	std::cout << "\nTick: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
-		endl(std::cout);
+		std::cout << "\nClock properties - done" << std::endl;
 	}
 
+	void test_vi_tmResults()
+	{	std::cout << "\nTest vi_tmResults:";
+		auto results_callback = [](const char* name, VI_TM_TICK ticks, std::size_t amount, std::size_t calls_cnt, void* data)
+			{	if (0U != calls_cnt)
+				{	std::cout << 
+					"\n"<< std::left << std::setw(48) << name << ":"
+					"\tticks = " << std::setw(16) << std::right << ticks << ","
+					"\tamount = " << std::setw(12) << std::right << amount << ","
+					"\tcalls = " << std::setw(12) << std::right << calls_cnt;
+				}
+				return 0;
+			};
+		vi_tmResults(nullptr, results_callback, nullptr);
+		std::cout << "\nTest vi_tmResults - done" << std::endl;
+	}
 } // namespace
 
 int main()
@@ -271,19 +245,9 @@ int main()
 	foo_c();
 	test_empty();
 	test_instances();
-	prn_clock_properties();
+	test_vi_tmResults();
 	test_multithreaded();
-
-	endl(std::cout);
-	auto results_callback = [](const char* name, VI_TM_TICK ticks, std::size_t amount, std::size_t calls_cnt, void* data)
-		{
-			if (0U != calls_cnt)
-			{	std::cout << name << ":\tticks = " << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
-			}
-			return -1;
-		};
-	vi_tmResults(nullptr, results_callback, nullptr);
-	endl(std::cout);
+	prn_clock_properties();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 
