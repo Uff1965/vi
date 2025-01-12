@@ -33,6 +33,17 @@ namespace ch = std::chrono;
 
 namespace
 {
+#ifdef NDEBUG
+	constexpr char CONFIG[] = "Release";
+#else
+	constexpr char CONFIG[] = "Debug";
+#endif
+
+	struct space_out final: std::numpunct<char>
+	{	char do_thousands_sep() const override { return '\''; }  // separate with '
+		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
+	};
+
 	bool cpu_affinity(int core_id = -1)
 	{
 		if (core_id < 0)
@@ -200,68 +211,67 @@ namespace {
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
 
-		std::cout << "\ntest_empty() Done\n";
+		std::cout << "\ntest_empty() Done" << std::endl;
 	}
+
+	void prn_header()
+	{	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
+
+		std::cout <<
+			"\n"
+	#pragma warning(suppress: 4996)
+			"Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
+			"Build type: " << CONFIG << "\n" <<
+			std::endl;
+
+		std::cout <<
+			"Information about the \'vi_timing\' library:" << "\n"
+			"\tBuild type: " << reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
+			"\tVer: " << vi_tmInfo(VI_TM_INFO_VER) << "\n"
+			"\tBuild number: " << vi_tmInfo(VI_TM_INFO_BUILDNUMBER) << "\n"
+			"\tVersion: " << VI_TM_FULLVERSION << std::endl;
+	}
+
+	void warming()
+	{	endl(std::cout);
+		std::cout << "Warming... ";
+		{	VI_TM("Warming in main()");
+			vi_tmWarming(1);
+		}
+		std::cout << "done" << std::endl;
+		assert(0 == errno);
+	}
+
+	void prn_clock_properties()
+	{	
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_RESOLUTION)); ptr)
+		{	std::cout << "\nResolution: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		}
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_DURATION)); ptr)
+		{	std::cout << "\nDuration: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		}
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)); ptr)
+		{	std::cout << "\nAdditive: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		}
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT)); ptr)
+		{	std::cout << "\nTick: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		}
+		endl(std::cout);
+	}
+
 } // namespace
 
 int main()
 {	VI_TM_FUNC;
-#ifdef NDEBUG
-	static constexpr char build_type[] = "Release";
-#else
-	static constexpr char build_type[] = "Debug";
-#endif
+	prn_header();
 
-	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
-	std::cout <<
-#pragma warning(suppress: 4996)
-		"Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
-		"Build type: " << build_type << "\n" <<
-		std::endl;
-
-	std::cout <<
-		"Information about the \'vi_timing\' library:" << "\n"
-		"\tBuild type: " << reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
-		"\tVer: " << vi_tmInfo(VI_TM_INFO_VER) << "\n"
-		"\tBuild number: " << vi_tmInfo(VI_TM_INFO_BUILDNUMBER) << "\n"
-		"\tVersion: " << VI_TM_FULLVERSION << "\n" <<
-		std::endl;
-
-	struct space_out final: std::numpunct<char>
-	{	char do_thousands_sep() const override { return '\''; }  // separate with '
-		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
-	};
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
-	std::cout << "Warming... ";
-	{	VI_TM("Warming in main()");
-		vi_tmWarming(1);
-	}
-	std::cout << "done" << std::endl;
-
-	assert(0 == errno);
-
+	warming();
 	foo_c();
 	test_empty();
 	test_instances();
-
-	{
-		endl(std::cout);
-
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_RESOLUTION)); ptr)
-		{	std::cout << "Resolution: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
-		}
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_DURATION)); ptr)
-		{	std::cout << "Duration: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
-		}
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)); ptr)
-		{	std::cout << "Additive: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
-		}
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT)); ptr)
-		{	std::cout << "Tick: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
-		}
-	}
-
+	prn_clock_properties();
 	test_multithreaded();
 
 	endl(std::cout);
