@@ -310,6 +310,11 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 			result = reinterpret_cast<std::uintptr_t>(&overhead);
 		} break;
 
+		case VI_TM_INFO_UNIT: // double - Clock duration [sec]
+		{	static const double unit = misc::properties_t::props().seconds_per_tick_.count();
+			result = reinterpret_cast<std::uintptr_t>(&unit);
+		} break;
+
 		default:
 		{	assert(false);
 		} break;

@@ -257,6 +257,9 @@ int main()
 		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)); ptr)
 		{	std::cout << "Additive: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
 		}
+		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT)); ptr)
+		{	std::cout << "Tick: " << std::setprecision(3) << 1e9 * *ptr << " ns.\n";
+		}
 	}
 
 	test_multithreaded();
