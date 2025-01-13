@@ -204,13 +204,13 @@ namespace {
 	void prn_clock_properties()
 	{	std::cout << "\nClock properties:";
 		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_RESOLUTION)); ptr)
-		{	std::cout << "\nResolution: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		{	std::cout << "\nResolution: " << std::setprecision(3) << *ptr << " ticks";
 		}
 		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_DURATION)); ptr)
 		{	std::cout << "\nDuration: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
 		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)); ptr)
-		{	std::cout << "\nAdditive: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		{	std::cout << "\nAdditive: " << std::setprecision(3) << *ptr << " ticks";
 		}
 		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT)); ptr)
 		{	std::cout << "\nTick: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
