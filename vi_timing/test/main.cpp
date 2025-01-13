@@ -49,10 +49,10 @@ int main(int argn, char* args[])
 
 	const double *overhead = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD));
 	const double *unit = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT));
-	printf("Overhead: %.4g\nUnit: %.4g sec.\n", *overhead, *unit);
+	printf("Overhead: %.3g ticks;\nUnit: %.3g sec.\n\n", *overhead, *unit);
 
 	auto fn = [](const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *)
-		{	printf("%10s: total = %10zd, amount = %6zd, calls = %6zd\n", name, total, amount, calls_cnt);
+		{	printf("%-10s: total = %10zd, amount = %6zd, calls = %6zd\n", name, total, amount, calls_cnt);
 			return 0;
 		};
 	vi_tmResults(nullptr, fn, nullptr);
