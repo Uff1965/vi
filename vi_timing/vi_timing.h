@@ -116,9 +116,9 @@ enum vi_tmInfo_e
 	VI_TM_INFO_VERSION, // const char*
 	VI_TM_INFO_BUILDNUMBER, // unsigned
 	VI_TM_INFO_BUILDTYPE, // "Release" or "Debug"
-	VI_TM_INFO_RESOLUTION, // const double* - Clock resolution [sec]
+	VI_TM_INFO_RESOLUTION, // const double* - Clock resolution [ticks]
 	VI_TM_INFO_DURATION, // const double* - Measure duration [sec]
-	VI_TM_INFO_OVERHEAD, // const double* - Clock duration [sec]
+	VI_TM_INFO_OVERHEAD, // const double* - Clock duration [ticks]
 	VI_TM_INFO_UNIT, // const double* - seconds per tick [sec]
 };
 
