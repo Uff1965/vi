@@ -1,58 +1,50 @@
-// Uncomment the next line to remove timings.
+// Uncomment the next line to remove timing.
 //#define VI_TM_DISABLE
 #include <vi_timing/vi_timing.h>
 
 namespace
-{	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration);
-	VI_TM("GLOBAL");
+{
+	void load(int cnt)
+	{	static volatile auto dummy = 0U;
+		for (auto n = cnt; n; --n)
+		{	++dummy;
+		}
+	}
+
+	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration);
 }
 
-int main(int argn, char* args[])
+int main(int argn, char *args[])
 {	VI_TM_FUNC;
-	printf("Version of \'vi_timing\' library: %s\n\n", VI_TM_FULLVERSION);
 
-	const auto cnt1 = argn == 2 ? std::atoi(args[1]) : 50;
-	const auto cnt10 = 10 * cnt1;
-	printf("Burden: %d\n\n", cnt1);
-	
-	auto burden = [](int cnt)
-		{	static volatile auto dummy = 0U;
-			for (auto n = cnt; n; --n)
-				++dummy;
-		};
+	constexpr int CNT = 100;
+	const auto amt = argn == 2 ? std::atoi(args[1]) : 500'000;
+	const auto amt100 = amt * 100;
 
-	for (int m = 0; m < 100; ++m)
-	{	constexpr auto CNT = 1'000;
+	printf("amt = %d\n", amt);
 
-		for (auto n = 0; n < CNT; ++n)
-		{	VI_TM("ALONE");
-			burden(cnt1);
-		}
+	vi_tmThreadAffinityFixate();
+	vi_tmWarming();
+	vi_tmThreadYield();
+	for(int n = 0; n < 5; ++n)
+	{	VI_TM("");
+		load(amt);
+	}
 
-		{	VI_TM("GROUP", CNT);
-			for (int n = 0; n < CNT; ++n)
-			{	burden(cnt1);
-			}
-		}
+	for (int n = 0; n < CNT; ++n)
+	{	VI_TM("load*100");
+		load(amt100);
+	}
 
-		for (auto n = 0; n < CNT; ++n)
-		{	VI_TM("ALONE 10");
-			burden(cnt10);
+	{	VI_TM("load group", CNT);
+		for (int n = 0; n < CNT; ++n)
+		{	load(amt);
 		}
 	}
 
-	{	VI_TM("ALONE SINGLE");
-		burden(cnt1);
+	{	VI_TM("load");
+		load(amt);
 	}
 
-	const double *overhead = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD));
-	const double *unit = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT));
-	printf("Overhead: %.3g ticks;\nUnit: %.3g sec.\n\n", *overhead, *unit);
-
-	auto fn = [](const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *)
-		{	printf("%-16s: total = %10zd, amount = %6zd, calls = %6zd\n", name, total, amount, calls_cnt);
-			return 0;
-		};
-	vi_tmResults(nullptr, fn, nullptr);
-	puts("");
+	puts("Hello, World!\n");
 }
