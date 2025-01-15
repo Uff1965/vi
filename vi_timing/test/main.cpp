@@ -33,7 +33,6 @@ int main(int argn, char *args[])
 	}
 
 	VI_TM_CLEAR("load*100");
-	for (int n = 0; n < CNT; ++n)
 	{	VI_TM("load*100");
 		load(amt100);
 	}
