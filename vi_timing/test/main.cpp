@@ -26,6 +26,7 @@ int main(int argn, char *args[])
 	vi_tmThreadAffinityFixate();
 	vi_tmWarming();
 	vi_tmThreadYield();
+
 	for(int n = 0; n < 5; ++n)
 	{	VI_TM("");
 		load(amt);
