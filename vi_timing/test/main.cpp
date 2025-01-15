@@ -27,24 +27,24 @@ int main(int argn, char *args[])
 	vi_tmWarming();
 	vi_tmThreadYield();
 
+	VI_TM_CLEAR("load group");
+	VI_TM_CLEAR("load*100");
+	VI_TM_CLEAR("load");
 	for(int n = 0; n < 5; ++n)
 	{	VI_TM("");
 		load(amt);
 	}
 
-	VI_TM_CLEAR("load*100");
-	{	VI_TM("load*100");
-		load(amt100);
-	}
-
-	VI_TM_CLEAR("load group");
 	{	VI_TM("load group", CNT);
 		for (int n = 0; n < CNT; ++n)
 		{	load(amt);
 		}
 	}
 
-	VI_TM_CLEAR("load");
+	{	VI_TM("load*100");
+		load(amt100);
+	}
+
 	{	VI_TM("load");
 		load(amt);
 	}
