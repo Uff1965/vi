@@ -45,7 +45,7 @@ int main(int argn, char *args[])
 	}
 
 	{	vi_tmThreadAffinityFixate();
-		vi_tmWarming();
+		vi_tmWarming(1);
 		vi_tmThreadYield();
 
 		VI_TM_CLEAR("load group");
