@@ -194,6 +194,10 @@ void VI_TM_CALL vi_tmThreadAffinityRestore()
 {	affinity_fix_t::restore();
 }
 
+void VI_TM_CALL vi_tmThreadYield(void)
+{	std::this_thread::yield();
+}
+
 [[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char prec, unsigned char dec)
 {	auto num = sec.count();
 	assert(.0 <= num && 0 < prec && 0 <= dec && dec + 3 >= prec);
