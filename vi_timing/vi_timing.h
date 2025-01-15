@@ -166,6 +166,7 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityFixate(void);
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityRestore(void);
+	VI_TM_API void VI_TM_CALL vi_tmThreadYield(void);
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
