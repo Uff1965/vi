@@ -18,7 +18,7 @@ int main(int argn, char *args[])
 {	VI_TM_FUNC;
 
 	constexpr int CNT = 100;
-	const auto amt = argn == 2 ? std::atoi(args[1]) : 500'000;
+	const auto amt = argn == 2 ? std::atoi(args[1]) : 5000;
 	const auto amt100 = amt * 100;
 
 	printf("amt = %d\n", amt);
@@ -32,20 +32,25 @@ int main(int argn, char *args[])
 		load(amt);
 	}
 
+	VI_TM_CLEAR("load*100");
 	for (int n = 0; n < CNT; ++n)
 	{	VI_TM("load*100");
 		load(amt100);
 	}
 
+	VI_TM_CLEAR("load group");
 	{	VI_TM("load group", CNT);
 		for (int n = 0; n < CNT; ++n)
 		{	load(amt);
 		}
 	}
 
+	VI_TM_CLEAR("load");
 	{	VI_TM("load");
 		load(amt);
 	}
+
+	vi_tmThreadAffinityRestore();
 
 	puts("Hello, World!\n");
 }
