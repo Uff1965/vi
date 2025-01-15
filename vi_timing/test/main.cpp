@@ -5,7 +5,7 @@
 namespace
 {
 	void load(int cnt)
-	{	static volatile auto dummy = 0U;
+	{	volatile auto dummy = 0U;
 		for (auto n = cnt; n; --n)
 		{	++dummy;
 		}
