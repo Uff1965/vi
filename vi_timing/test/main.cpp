@@ -241,13 +241,18 @@ int main()
 
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
-	warming();
-	foo_c();
-	test_empty();
-	test_instances();
+	{	vi_tmThreadPrepare();
+
+		foo_c();
+		test_empty();
+		test_instances();
+		prn_clock_properties();
+		test_vi_tmResults();
+
+		vi_tmThreadAffinityRestore();
+	}
+
 	test_multithreaded();
-	prn_clock_properties();
-	test_vi_tmResults();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 
