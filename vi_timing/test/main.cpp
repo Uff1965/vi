@@ -1,4 +1,4 @@
-//#define VI_TM_DISABLE // Uncomment the next line to remove timing.
+//#define VI_TM_DISABLE // Uncomment this line to remove timing.
 #include <vi_timing/vi_timing.h>
 
 namespace
