@@ -11,24 +11,22 @@ namespace
 	constexpr char NOTHING[] = "Nothing";
 }
 
-VI_OPTIMIZE_OFF
+//VI_OPTIMIZE_OFF
 int main()
 {	VI_TM_FUNC;
 
 	vi_tmThreadPrepare();
 	VI_TM_CLEAR(GROUP);
 	VI_TM_CLEAR(NOTHING);
-	for (int n = 0; n < 5; ++n)
-	{	VI_TM("");
-	}
 
 	{	VI_TM(GROUP, CNT);
 		for (int n = 0; n < CNT; ++n)
 		{	VI_TM(NOTHING);
 		}
 	}
+
 	vi_tmThreadAffinityRestore();
 
 	puts("Hello, World!\n");
 }
-VI_OPTIMIZE_ON
+//VI_OPTIMIZE_ON
