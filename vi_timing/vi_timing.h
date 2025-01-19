@@ -167,6 +167,11 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityFixate(void);
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityRestore(void);
 	VI_TM_API void VI_TM_CALL vi_tmThreadYield(void);
+	static inline void vi_tmThreadPrepare(void)
+	{	vi_tmThreadAffinityFixate();
+		vi_tmWarming(1, 500);
+		vi_tmThreadYield();
+	}
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
@@ -277,9 +282,8 @@ namespace vi_tm
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
-				const auto VI_MAKE_ID(_vi_tm_) = []\
-					(const char *name, std::size_t amount = 1)\
-					{	static VI_TM_HMEASPOINT const h = vi_tmMeasPoint(nullptr, name);\
+				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, std::size_t amount = 1)\
+					{	static auto const h = vi_tmMeasPoint(nullptr, name);\
 						return vi_tm::meter_t{h, amount};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )

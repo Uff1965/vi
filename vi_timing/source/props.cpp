@@ -81,7 +81,7 @@ VI_OPTIMIZE_OFF
 	misc::duration_t measurement_duration()
 	{	
 		static auto gauge_zero = []
-			{	static vi_tmMeasPoint_t* const meas_point = vi_tmMeasPoint(nullptr, ""); // Create a service item with empty name "" and cache preload.
+			{	static auto const meas_point = vi_tmMeasPoint(nullptr, ""); // Create a service item with empty name "" and cache preload.
 				const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
 				vi_tmMeasPointAdd(meas_point, finish - start, 1U);
