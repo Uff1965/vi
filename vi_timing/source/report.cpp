@@ -96,7 +96,7 @@ namespace
 	template<> auto make_tuple<vi_tmSortByName>(const metering_t &v)
 	{	return std::tuple{ v.name_, v.average_, v.total_, v.amount_ };
 	}
-	template<> auto make_tuple<vi_tmSortBySpeed>(const metering_t &v)
+	template<> auto make_tuple<vi_tmSortByAverage>(const metering_t &v)
 	{	return std::tuple{ v.average_, v.total_, v.amount_, v.name_ };
 	}
 	template<> auto make_tuple<vi_tmSortByTime>(const metering_t &v)
@@ -131,8 +131,8 @@ namespace
 			case vi_tmSortByTime:
 				pr_ = less<vi_tmSortByTime>;
 				break;
-			case vi_tmSortBySpeed:
-				pr_ = less<vi_tmSortBySpeed>;
+			case vi_tmSortByAverage:
+				pr_ = less<vi_tmSortByAverage>;
 				break;
 			}
 		}
@@ -178,7 +178,7 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 	case vi_tmSortByTime:
 		ptr = &max_len_total_;
 		break;
-	case vi_tmSortBySpeed:
+	case vi_tmSortByAverage:
 		ptr = &max_len_average_;
 		break;
 	}
@@ -212,7 +212,7 @@ int formatter_t::print_header(const vi_tmLogSTR_t fn, void *data) const
 	switch (auto s = flags_ & vi_tmSortMask)
 	{
 	case vi_tmSortByName:
-	case vi_tmSortBySpeed:
+	case vi_tmSortByAverage:
 	case vi_tmSortByAmount:
 	case vi_tmSortByTime:
 		sort = static_cast<vi_tmReportFlags_e>(s);
@@ -231,7 +231,7 @@ int formatter_t::print_header(const vi_tmLogSTR_t fn, void *data) const
 	str <<
 		std::setw(number_len_) << "#" << "  " << std::setfill(fill_symbol) << std::left <<
 		std::setw(max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right <<
-		std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
+		std::setw(max_len_average_) << title(TitleAverage, vi_tmSortByAverage) << " [" <<
 		std::setw(max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
 		std::setw(max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]"
 		"\n";

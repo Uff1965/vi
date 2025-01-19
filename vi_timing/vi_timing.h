@@ -146,7 +146,7 @@ extern "C"
 	enum vi_tmReportFlags_e
 	{	vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
-		vi_tmSortBySpeed = 0x02,
+		vi_tmSortByAverage = 0x02,
 		vi_tmSortByAmount = 0x03,
 		vi_tmSortMask = 0x07,
 		vi_tmSortDescending = 0x00,
