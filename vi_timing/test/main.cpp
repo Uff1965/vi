@@ -1,78 +1,34 @@
-// Uncomment the next line to remove timing.
-//#define VI_TM_DISABLE
+//#define VI_TM_DISABLE // Uncomment the next line to remove timing.
 #include <vi_timing/vi_timing.h>
 
 namespace
 {
-	void load(int cnt)
-	{	volatile auto dummy = 0U;
-		for (auto n = cnt; n; --n)
-		{	++dummy;
-		}
-	}
+	VI_TM_INIT(vi_tmSortByAverage, vi_tmShowResolution, vi_tmShowDuration);
 
-	VI_TM_INIT(vi_tmSortBySpeed, vi_tmShowResolution, vi_tmShowDuration);
+	VI_TM("CNT"); // Lifespan of the CNT variable.
+	constexpr int CNT = 10;
+	constexpr char GROUP[] = "Group";
+	constexpr char NOTHING[] = "Nothing";
 }
 
-int main(int argn, char *args[])
+VI_OPTIMIZE_OFF
+int main()
 {	VI_TM_FUNC;
 
-	constexpr int CNT = 100;
-	const auto amt = argn == 2 ? std::atoi(args[1]) : 5000;
-	const auto amt100 = amt * 100;
-
-	printf("amt = %d\n", amt);
-
-	{
-		for (int n = 0; n < 5; ++n)
-		{	VI_TM("");
-			load(amt);
-		}
-
-		{	VI_TM("*load group", CNT);
-			for (int n = 0; n < CNT; ++n)
-			{	load(amt);
-			}
-		}
-
-		{	VI_TM("*load*100");
-			load(amt100);
-		}
-
-		{	VI_TM("*load");
-			load(amt);
-		}
+	vi_tmThreadPrepare();
+	VI_TM_CLEAR(GROUP);
+	VI_TM_CLEAR(NOTHING);
+	for (int n = 0; n < 5; ++n)
+	{	VI_TM("");
 	}
 
-	{	vi_tmThreadAffinityFixate();
-		vi_tmWarming(1);
-		vi_tmThreadYield();
-
-		VI_TM_CLEAR("load group");
-		VI_TM_CLEAR("load*100");
-		VI_TM_CLEAR("load");
-
-		for (int n = 0; n < 5; ++n)
-		{	VI_TM("");
-			load(amt);
+	{	VI_TM(GROUP, CNT);
+		for (int n = 0; n < CNT; ++n)
+		{	VI_TM(NOTHING);
 		}
-
-		{	VI_TM("load group", CNT);
-			for (int n = 0; n < CNT; ++n)
-			{	load(amt);
-			}
-		}
-
-		{	VI_TM("load*100");
-			load(amt100);
-		}
-
-		{	VI_TM("load");
-			load(amt);
-		}
-
-		vi_tmThreadAffinityRestore();
 	}
+	vi_tmThreadAffinityRestore();
 
 	puts("Hello, World!\n");
 }
+VI_OPTIMIZE_ON
