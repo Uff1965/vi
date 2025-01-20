@@ -32,18 +32,35 @@ int main()
 		constexpr auto N = 10'000U;
 
 		{	int i = 0;
+			VI_TM_CLEAR("_int");
+			VI_TM("_int", N);
+			for (unsigned n = 0; n < N; ++n)
+			{	i = 777;
+			}
+		}
+
+		{	VI_TM_CLEAR("_Empty");
+			VI_TM("_Empty", N);
+			for (unsigned n = 0; n < N; ++n)
+			{/**/}
+		}
+
+		{	int i = 0;
+			VI_TM_CLEAR("int");
 			VI_TM("int", N);
 			for (unsigned n = 0; n < N; ++n)
 			{	i = 777;
 			}
 		}
 
-		{	VI_TM("Empty", N);
+		{	VI_TM_CLEAR("Empty");
+			VI_TM("Empty", N);
 			for (unsigned n = 0; n < N; ++n)
 			{/**/}
 		}
 
 		{	volatile int i = 0;
+			VI_TM_CLEAR("volatile");
 			VI_TM("volatile", N);
 			for (unsigned n = 0; n < N; ++n)
 			{
@@ -52,28 +69,32 @@ int main()
 		}
 
 		std::atomic<int> i = 0;
-		{	VI_TM("atomic", N);
+		{	VI_TM_CLEAR("atomic");
+			VI_TM("atomic", N);
 			for (unsigned n = 0; n < N; ++n)
 			{
 				i = 777;
 			}
 		}
 
-		{	VI_TM("seq_cst", N);
+		{	VI_TM_CLEAR("seq_cst");
+			VI_TM("seq_cst", N);
 			for (unsigned n = 0; n < N; ++n)
 			{
 				i.store(777, std::memory_order_seq_cst);
 			}
 		}
 
-		{	VI_TM("relaxed", N);
+		{	VI_TM_CLEAR("relaxed");
+			VI_TM("relaxed", N);
 			for (unsigned n = 0; n < N; ++n)
 			{
 				i.store(777, std::memory_order_relaxed);
 			}
 		}
 
-		{	VI_TM("release", N);
+		{	VI_TM_CLEAR("release");
+			VI_TM("release", N);
 			for (unsigned n = 0; n < N; ++n)
 			{
 				i.store(777, std::memory_order_release);
