@@ -31,16 +31,12 @@ int main()
 	{
 		constexpr auto N = 10'000U;
 
-		{	int i = 0;
-			VI_TM_CLEAR("_int");
-			VI_TM("_int", N);
-			for (unsigned n = 0; n < N; ++n)
-			{	i = 777;
-			}
+		for (unsigned n = 0; n < N; ++n)
+		{	VI_TM("");
 		}
 
-		{	VI_TM_CLEAR("_Empty");
-			VI_TM("_Empty", N);
+		{	VI_TM_CLEAR("Empty");
+			VI_TM("Empty", N);
 			for (unsigned n = 0; n < N; ++n)
 			{/**/}
 		}
@@ -51,12 +47,6 @@ int main()
 			for (unsigned n = 0; n < N; ++n)
 			{	i = 777;
 			}
-		}
-
-		{	VI_TM_CLEAR("Empty");
-			VI_TM("Empty", N);
-			for (unsigned n = 0; n < N; ++n)
-			{/**/}
 		}
 
 		{	volatile int i = 0;
