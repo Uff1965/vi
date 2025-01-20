@@ -29,7 +29,7 @@ int main()
 	}
 
 	{
-		constexpr auto N = 10'000U;
+		constexpr auto N = 100'000U;
 
 		for (unsigned n = 0; n < N; ++n)
 		{	VI_TM("");
