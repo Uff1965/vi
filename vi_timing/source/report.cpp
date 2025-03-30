@@ -292,7 +292,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags, vi_tmLogSTR_t fn, v
 {	int result = 0;
 
 	if (nullptr == fn)
-	{	fn = reinterpret_cast<vi_tmLogSTR_t>(&std::fputs);
+	{	fn = [](const char *str, void *data) { return std::fputs(str, static_cast<std::FILE *>(data)); };
 		if (nullptr == data)
 		{	data = stdout;
 		}

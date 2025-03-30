@@ -39,16 +39,13 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #endif
 
 #include <array>
-#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <iomanip>
-#include <limits>
 #include <sstream>
 #include <string_view>
 #include <thread>
-#include <utility>
 #include <vector>
 
 namespace ch = std::chrono;
@@ -68,12 +65,10 @@ namespace
 #endif
 
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
-	{	constexpr auto EPS = std::numeric_limits<decltype(num)>::epsilon();
-		if (num > .0 && prec > 0)
-		{	const auto exp = static_cast<int>(std::ceil(std::log10(num)));
-			assert(-EPS < num * std::pow(10, -exp) && num * std::pow(10, -exp) < 1.0 + EPS);
+	{	if (num > .0 && prec > 0)
+		{	const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
 			const auto factor = std::pow(10, prec - exp);
-			num = std::round(num * (1.0 + EPS) * factor) / factor;
+			num = std::round(num * factor) / factor;
 		}
 		else
 		{	assert(num >= .0 && prec > 0);
@@ -165,10 +160,10 @@ namespace
 		const unsigned month = [](const char *date)
 			{	// 7.27.3.1 The asctime function. [C17 ballot ISO/IEC 9899:2017]
 				constexpr std::array<std::string_view, 13> mon_names{"", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-				auto n = static_cast<unsigned>(mon_names.size());
+				auto n = mon_names.size();
 				while (--n && std::string_view{ date, 3 } != mon_names[n])
 				{/**/}
-				return n;
+				return static_cast<unsigned>(n);
 			}(date);
 		const unsigned day = date_c(D1) * 10 + date_c(D2);
 		const unsigned hour = time_c(h1) * 10 + time_c(h2);
@@ -200,28 +195,34 @@ void VI_TM_CALL vi_tmThreadYield(void)
 
 [[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char prec, unsigned char dec)
 {	auto num = sec.count();
-	assert(.0 <= num && 0 < prec && 0 <= dec && dec + 3 >= prec);
+	assert(.0 <= num && 0 < prec && 0 <= dec && dec < prec);
 	num = round_ext(num, prec);
 
-	std::string_view suffix = "ps";
-	double factor = 1e12;
+	struct
+	{	std::string_view suffix_;
+		double factor_;
+	} itm;
+
 	if(1e-12 > num)
 	{	num = 0.0;
+		itm = {"ps", 1e12};
 	}
 	else
-	{	const auto triple = static_cast<int>(std::floor(std::log10(num))) - 3 * ((prec - dec - 1) / 3);
-		if (-12 > triple) { num = 0.0; }
-		else if (-9 > triple) { suffix = "ps"; factor = 1e12; }
-		else if (-6 > triple) { suffix = "ns"; factor = 1e9; }
-		else if (-3 > triple) { suffix = "us"; factor = 1e6; }
-		else if (0 > triple) { suffix = "ms"; factor = 1e3; }
-		else if (+3 > triple) { suffix = "s "; factor = 1e0; }
-		else if (+6 > triple) { suffix = "ks"; factor = 1e-3; }
-		else { suffix = "Ms"; factor = 1e-6; }
+	{	constexpr auto GROUP = 3;
+		const auto pull_up = GROUP * ((prec - dec - 1) / GROUP);
+		const auto triple = static_cast<int>(std::floor(std::log10(num))) - pull_up;
+
+		if (-9 > triple) { itm = { "ps", 1e12 }; }
+		else if (-6 > triple) { itm = { "ns", 1e9 }; }
+		else if (-3 > triple) { itm = { "us", 1e6 }; }
+		else if (0 > triple) { itm = { "ms", 1e3 }; }
+		else if (+3 > triple) { itm = { "s ", 1e0 }; }
+		else if (+6 > triple) { itm = { "ks", 1e-3 }; }
+		else { itm = { "Ms", 1e-6 }; }
 	}
 
 	std::ostringstream ss;
-	ss << std::fixed << std::setprecision(dec) << num * factor << ' ' << suffix;
+	ss << std::fixed << std::setprecision(dec) << num * itm.factor_ << ' ' << itm.suffix_;
 	return ss.str();
 }
 
@@ -329,21 +330,39 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 #ifndef NDEBUG
 namespace
 {
-	const auto nanotest =
-		[]
+	const auto nanotest = []
 		{	const struct
 			{	misc::duration_t v_;
 				std::string_view expected_;
-				unsigned char prec_{3};
-				unsigned char dec_{1};
+				unsigned char prec_;
+				unsigned char dec_;
 				int line_;
 			} vals[] =
-			{
-				{ 0.0, "0.0 ps", 3, 1, __LINE__ },
+			{	{ 0.0, "0.0 ps", 3, 1, __LINE__ },
+				{ 0.9994e-12, "0.0 ps", 3, 1, __LINE__ },
+				{ 0.9996e-12, "1.0 ps", 3, 1, __LINE__ },
+				{ 1e-12, "1.0 ps", 3, 1, __LINE__ },
 				{ 1.2345e12, "1230000.00 Ms", 3, 2, __LINE__ },
 				{ 0.555, "560.0 ms", 2, 1, __LINE__ },
 				{ 5.55, "5.6 s ", 2, 1, __LINE__ },
 				{ 55.5, "56.0 s ", 2, 1, __LINE__ },
+				{ 123.456789,  "123457.0 ms", 6, 1, __LINE__ },
+				{ 12.3456789,   "12345.7 ms", 6, 1, __LINE__ },
+				{ 1.23456789,    "1234.6 ms", 6, 1, __LINE__ },
+				{ 123.456789, "123456.80 ms", 7, 2, __LINE__ },
+				{ 1.23456789,   "1234.57 ms", 7, 2, __LINE__ },
+				{ 12.3456789,  "12345.68 ms", 7, 2, __LINE__ },
+				{ 123.456789, "123456.80 ms", 7, 2, __LINE__ },
+				{ 1234.56789,   "1234.57 s ", 7, 2, __LINE__ },
+				{ 12345.6789,  "12345.68 s ", 7, 2, __LINE__ },
+				{ 123456.789, "123456.80 s ", 7, 2, __LINE__ },
+				{ 1234567.89,   "1234.57 ks", 7, 2, __LINE__ },
+				{ 12345678.9,  "12345.68 ks", 7, 2, __LINE__ },
+				{ 123456789., "123456.80 ks", 7, 2, __LINE__ },
+				{ 1.23456, "1.2 s ", 3, 1, __LINE__ },
+				{ 12.3456, "12.3 s ", 3, 1, __LINE__ },
+				{ 123.456, "123.0 s ", 3, 1, __LINE__ },
+				{ 1234.56, "1.2 ks", 3, 1, __LINE__ },
 			};
 
 			for (auto &v : vals)

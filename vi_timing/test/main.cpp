@@ -233,6 +233,111 @@ namespace {
 		vi_tmResults(nullptr, results_callback, nullptr);
 		std::cout << "\nTest vi_tmResults - done" << std::endl;
 	}
+
+	void test()
+	{	std::cout << "\nTest test:";
+		
+		auto nothing = [] {/**/};
+		constexpr auto CNT = 10'000;
+
+		vi_tmThreadPrepare();
+		{	VI_TM("Test");
+
+			for (auto n = 0; n < 100; ++n)
+			{	vi_tmGetTicks();
+			}
+
+			{	VI_TM("TestA First");
+				VI_TM("TestA");
+				nothing();
+			}
+			{	for (auto n = 0; n < CNT; ++n)
+				{	VI_TM("TestA Other");
+					VI_TM("TestA");
+					nothing();
+				}
+			}
+
+			{	VI_TM("TestB First");
+				const auto start = vi_tmGetTicks();
+				nothing();
+				const auto finish = vi_tmGetTicks();
+				vi_tmMeasPointAdd(vi_tmMeasPoint(nullptr, "TestB"), finish - start);
+			}
+			{	VI_TM("TestB Other", CNT);
+				for (auto n = 0; n < CNT; ++n)
+				{	const auto start = vi_tmGetTicks();
+					nothing();
+					const auto finish = vi_tmGetTicks();
+					vi_tmMeasPointAdd(vi_tmMeasPoint(nullptr, "TestB"), finish - start);
+				}
+			}
+
+			{	VI_TM("TestC First");
+				static auto const h = vi_tmMeasPoint(nullptr, "TestC");
+				const auto start = vi_tmGetTicks();
+				nothing();
+				const auto finish = vi_tmGetTicks();
+				vi_tmMeasPointAdd(h, finish - start);
+			}
+			{	VI_TM("TestC Other", CNT);
+				for (auto n = 0; n < CNT; ++n)
+				{	static auto const h = vi_tmMeasPoint(nullptr, "TestC");
+					const auto start = vi_tmGetTicks();
+					nothing();
+					const auto finish = vi_tmGetTicks();
+					vi_tmMeasPointAdd(h, finish - start);
+				}
+			}
+
+			{	VI_TM("TestD First");
+				const auto start = vi_tmGetTicks();
+				nothing();
+				const auto finish = vi_tmGetTicks();
+				static auto const h = vi_tmMeasPoint(nullptr, "TestD");
+				vi_tmMeasPointAdd(h, finish - start);
+			}
+			{	VI_TM("TestD Other", CNT);
+				for (auto n = 0; n < CNT; ++n)
+				{	const auto start = vi_tmGetTicks();
+					nothing();
+					const auto finish = vi_tmGetTicks();
+					static auto const h = vi_tmMeasPoint(nullptr, "TestD");
+					vi_tmMeasPointAdd(h, finish - start);
+				}
+			}
+
+			{	VI_TM("TestE First");
+				VI_TM("TestE");
+				nothing();
+			}
+			{	VI_TM("TestE Other", CNT);
+				for (auto n = 0; n < CNT; ++n)
+				{	VI_TM("TestE");
+					nothing();
+				}
+			}
+
+			{	VI_TM("TestF First");
+				const auto start = vi_tmGetTicks();
+				nothing();
+				const auto finish = vi_tmGetTicks();
+				vi_tmMeasPointAdd(vi_tmMeasPoint(nullptr, "TestF"), finish - start);
+			}
+			{	VI_TM("TestF Other", CNT);
+				const auto h = vi_tmMeasPoint(nullptr, "TestF");
+				for (auto n = 0; n < CNT; ++n)
+				{	const auto start = vi_tmGetTicks();
+					nothing();
+					const auto finish = vi_tmGetTicks();
+					vi_tmMeasPointAdd(h, finish - start);
+				}
+			}
+		}
+		vi_tmThreadAffinityRestore();
+
+		std::cout << "\nTest test - done" << std::endl;
+	}
 } // namespace
 
 int main()
@@ -248,6 +353,7 @@ int main()
 		test_instances();
 		prn_clock_properties();
 		test_vi_tmResults();
+		test();
 
 		vi_tmThreadAffinityRestore();
 	}
