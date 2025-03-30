@@ -66,13 +66,11 @@ namespace
 #endif
 
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
-	{	if (num > .0 && prec > 0)
+	{	assert(num >= .0 && prec > 0);
+		if (num > .0 && prec > 0)
 		{	const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
 			const auto factor = std::pow(10, prec - exp);
 			num = std::round(num * factor) / factor;
-		}
-		else
-		{	assert(num >= .0 && prec > 0);
 		}
 
 		return num;
@@ -202,11 +200,10 @@ void VI_TM_CALL vi_tmThreadYield(void)
 	struct
 	{	std::string_view suffix_;
 		double factor_;
-	} itm;
+	} itm = {"ps", 1e12};
 
 	if(1e-12 > num)
 	{	num = 0.0;
-		itm = {"ps", 1e12};
 	}
 	else
 	{	constexpr auto GROUP = 3;
