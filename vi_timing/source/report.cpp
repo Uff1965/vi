@@ -33,6 +33,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include "duration.h"
 #include <iomanip>
 #include <sstream>
 #include <string>
