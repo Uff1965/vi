@@ -215,7 +215,9 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	done = true;
 
 	for (auto &t : additional_threads)
-	{	t.join();
+	{	if (t.joinable())
+		{	t.join();
+		}
 	}
 }
 

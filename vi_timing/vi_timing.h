@@ -179,6 +179,12 @@ extern "C"
 #	endif
 
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#define VI_STR_AUX(s) #s
+#define VI_STR(s) VI_STR_AUX(s)
+#define VI_STR_GUM_AUX( a, b ) a##b
+#define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
+#define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+
 #ifdef _MSC_VER
 #	define VI_FUNCNAME __FUNCTION__
 #elif defined(__GNUC__)
@@ -202,12 +208,13 @@ extern "C"
 namespace vi_tm
 {
 	class init_t
-	{	static constexpr auto default_cb = &vi_tmReportCallback;
-		static inline const auto default_data = reinterpret_cast<void*>(stdout);
+	{	static constexpr auto default_callback_fn = &vi_tmReportCallback;
+		static inline const auto default_callback_data = static_cast<void*>(stdout);
 		std::string title_ = "Timing report:\n";
-		vi_tmLogSTR_t cb_ = default_cb;
-		void* data_ = default_data;
+		vi_tmLogSTR_t callback_function_ = default_callback_fn;
+		void* callback_data_ = default_callback_data;
 		unsigned flags_ = 0;
+
 		init_t(const init_t &) = delete;
 		init_t(init_t &&) = delete;
 		init_t &operator=(const init_t &) = delete;
@@ -218,10 +225,10 @@ namespace vi_tm
 		}
 		~init_t()
 		{	if (!title_.empty())
-			{	cb_(title_.c_str(), data_);
+			{	callback_function_(title_.c_str(), callback_data_);
 			}
 
-			vi_tmReport(nullptr, flags_, cb_, data_);
+			vi_tmReport(nullptr, flags_, callback_function_, callback_data_);
 			vi_tmFinit();
 		}
 		template<typename T, typename... Args> void init(T &&v, Args&&... args)
@@ -229,8 +236,8 @@ namespace vi_tm
 			{	flags_ |= v;
 			}
 			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmLogSTR_t>)
-			{	assert(default_cb == cb_ && nullptr != v);
-				cb_ = v;
+			{	assert(default_callback_fn == callback_function_ && nullptr != v);
+				callback_function_ = v;
 			}
 			else if constexpr (std::is_same_v<T, decltype(title_)>)
 			{	title_ = std::forward<T>(v);
@@ -239,16 +246,16 @@ namespace vi_tm
 			{	title_ = v;
 			}
 			else if constexpr (std::is_pointer_v<T>)
-			{	assert(default_data == data_);
-				data_ = v;
+			{	assert(default_callback_data == callback_data_);
+				callback_data_ = v;
 			}
 			else
-			{	assert(false);
+			{	static_assert(false, "Unknown parameter type");
 			}
 
 			init(std::forward<Args>(args)...);
 		}
-		void init()
+		void init() const
 		{	[[maybe_unused]] const auto result = vi_tmInit();
 			assert(0 == result);
 		}
@@ -265,12 +272,6 @@ namespace vi_tm
 		~meter_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasPointAdd(h_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
-
-#		define VI_STR_AUX(s) #s
-#		define VI_STR(s) VI_STR_AUX(s)
-#		define VI_STR_GUM_AUX( a, b ) a##b
-#		define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#		define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
 
 #		if defined(VI_TM_DISABLE)
 #			define VI_TM_INIT(...) static const int VI_MAKE_ID(_vi_tm_) = 0
