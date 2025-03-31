@@ -66,9 +66,9 @@ namespace
 #endif
 
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
-	{	assert(num >= .0 && prec > 0);
-		if (num > .0 && prec > 0)
-		{	const auto exp = 1 + static_cast<int>(std::floor(std::log10(num)));
+	{	assert(prec);
+		if (0 != prec && 0.0 != num)
+		{	const auto exp = 1 + static_cast<int>(std::floor(std::log10(std::abs(num))));
 			const auto factor = std::pow(10, prec - exp);
 			num = std::round(num * factor) / factor;
 		}
@@ -200,27 +200,26 @@ void VI_TM_CALL vi_tmThreadYield(void)
 	struct
 	{	std::string_view suffix_;
 		double factor_;
-	} itm = {"ps", 1e12};
+	} unit = {"ps", 1e12};
 
 	if(1e-12 > num)
 	{	num = 0.0;
 	}
 	else
 	{	constexpr auto GROUP = 3;
-		const auto pull_up = GROUP * ((prec - dec - 1) / GROUP);
-		const auto triple = static_cast<int>(std::floor(std::log10(num))) - pull_up;
+		const auto order_offset = ((prec - dec - 1) / GROUP) * GROUP;
+		const auto order = static_cast<int>(std::floor(std::log10(num))) - order_offset;
 
-		if (-9 > triple) { itm = { "ps", 1e12 }; }
-		else if (-6 > triple) { itm = { "ns", 1e9 }; }
-		else if (-3 > triple) { itm = { "us", 1e6 }; }
-		else if (0 > triple) { itm = { "ms", 1e3 }; }
-		else if (+3 > triple) { itm = { "s ", 1e0 }; }
-		else if (+6 > triple) { itm = { "ks", 1e-3 }; }
-		else { itm = { "Ms", 1e-6 }; }
+		if (+6 <= order) { unit = { "Ms", 1e-6 }; }
+		else if (+3 <= order) { unit = { "ks", 1e-3 }; }
+		else if (0 <= order) { unit = { "s ", 1e0 }; }
+		else if (-3 <= order) { unit = { "ms", 1e3 }; }
+		else if (-6 <= order) { unit = { "us", 1e6 }; }
+		else if (-9 <= order) { unit = { "ns", 1e9 }; }
 	}
 
 	std::ostringstream ss;
-	ss << std::fixed << std::setprecision(dec) << num * itm.factor_ << ' ' << itm.suffix_;
+	ss << std::fixed << std::setprecision(dec) << num * unit.factor_ << ' ' << unit.suffix_;
 	return ss.str();
 }
 
@@ -336,7 +335,9 @@ namespace
 				unsigned char dec_;
 				int line_;
 			} vals[] =
-			{	{ 0.0, "0.0 ps", 3, 1, __LINE__ },
+			{	
+				//****************
+				{ 0.0, "0.0 ps", 3, 1, __LINE__ },
 				{ 0.9994e-12, "0.0 ps", 3, 1, __LINE__ },
 				{ 0.9996e-12, "1.0 ps", 3, 1, __LINE__ },
 				{ 1e-12, "1.0 ps", 3, 1, __LINE__ },
@@ -361,12 +362,43 @@ namespace
 				{ 12.3456, "12.3 s ", 3, 1, __LINE__ },
 				{ 123.456, "123.0 s ", 3, 1, __LINE__ },
 				{ 1234.56, "1.2 ks", 3, 1, __LINE__ },
+				{ 12.3456789e-6, "12345680 ps", 7, 0, __LINE__},
+				{ 12.3456789e-6, "12345.7 ns", 7, 1, __LINE__},
+				{ 12.3456789e-6, "12345.68 ns", 7, 2, __LINE__},
+				{ 12.3456789e-6, "12345.680 ns", 7, 3, __LINE__},
+				{ 12.3456789e-6, "12.3457 us", 7, 4, __LINE__},
+				{ 12.3456789e-6, "12.34568 us", 7, 5, __LINE__},
 			};
 
 			for (auto &v : vals)
 			{	const auto s = misc::to_string(v.v_, v.prec_, v.dec_);
 				assert(s == v.expected_);
 			}
+
+			return 0;
+		}();
+
+	const auto nanotest_2 = []
+		{
+			assert(0.0 == round_ext(0.00, 1));
+
+			assert(1.0 == round_ext(0.95, 1));
+			assert(1.0 == round_ext(1.00, 1));
+			assert(1.0 == round_ext(1.40, 1));
+			assert(-1.0 == round_ext(-0.95, 1));
+			assert(-1.0 == round_ext(-1.00, 1));
+			assert(-1.0 == round_ext(-1.40, 1));
+
+			assert(0.10 == round_ext(.0995, 2));
+			assert(0.10 == round_ext(.1000, 2));
+			assert(0.10 == round_ext(.1044, 2));
+			assert(-0.10 == round_ext(-.0995, 2));
+			assert(-0.10 == round_ext(-.1000, 2));
+			assert(-0.10 == round_ext(-.1044, 2));
+
+			assert(1.0e-16 == round_ext(0.95e-16, 1));
+			assert(1.0e-16 == round_ext(1.00e-16, 1));
+			assert(1.0e-16 == round_ext(1.40e-16, 1));
 
 			return 0;
 		}();
