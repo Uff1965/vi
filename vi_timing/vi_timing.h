@@ -250,7 +250,7 @@ namespace vi_tm
 				callback_data_ = v;
 			}
 			else
-			{	static_assert(false, "Unknown parameter type");
+			{	assert(false); // Unknown parameter type.
 			}
 
 			init(std::forward<Args>(args)...);
