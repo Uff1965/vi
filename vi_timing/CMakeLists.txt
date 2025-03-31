@@ -25,18 +25,20 @@ source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "source/internal.h"
   "source/build_number_maker.h"
+  "source/duration.h"
+  "source/internal.h"
 )
 source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
   "source/clock.cpp"
+  "source/duration.cpp"
   "source/misc.cpp"
   "source/props.cpp"
-  "source/timing.cpp"
   "source/report.cpp"
+  "source/timing.cpp"
 )
 source_group("Source files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
