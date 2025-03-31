@@ -297,7 +297,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags, vi_tmLogSTR_t fn, v
 		}
 	}
 
-	misc::properties_t::props(); // Preventing deadlock in traits_t::results_callback().
+	(void) misc::properties_t::props(); // Preventing deadlock in traits_t::results_callback().
 	result += print_props(fn, data, flags);
 
 	std::vector<metering_t> meterings;

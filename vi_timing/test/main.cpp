@@ -244,7 +244,7 @@ namespace {
 		{	VI_TM("Test");
 
 			for (auto n = 0; n < 100; ++n)
-			{	vi_tmGetTicks();
+			{	(void) vi_tmGetTicks();
 			}
 
 			{	VI_TM("TestA First");

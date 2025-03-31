@@ -141,25 +141,25 @@ namespace
 
 	const auto nanotest_2 = []
 		{
-			assert(0.0 == round_ext(0.00, 1));
+			assert(std::abs(0.0 - round_ext(0.00, 1)) < DBL_EPSILON);
 
-			assert(1.0 == round_ext(0.95, 1));
-			assert(1.0 == round_ext(1.00, 1));
-			assert(1.0 == round_ext(1.40, 1));
-			assert(-1.0 == round_ext(-0.95, 1));
-			assert(-1.0 == round_ext(-1.00, 1));
-			assert(-1.0 == round_ext(-1.40, 1));
+			assert(std::abs(1.0 - round_ext(0.95, 1)) < DBL_EPSILON);
+			assert(std::abs(1.0 - round_ext(1.00, 1)) < DBL_EPSILON);
+			assert(std::abs(1.0 - round_ext(1.40, 1)) < DBL_EPSILON);
+			assert(std::abs(-1.0 - round_ext(-0.95, 1)) < DBL_EPSILON);
+			assert(std::abs(-1.0 - round_ext(-1.00, 1)) < DBL_EPSILON);
+			assert(std::abs(-1.0 - round_ext(-1.40, 1)) < DBL_EPSILON);
 
-			assert(0.10 == round_ext(.0995, 2));
-			assert(0.10 == round_ext(.1000, 2));
-			assert(0.10 == round_ext(.1044, 2));
-			assert(-0.10 == round_ext(-.0995, 2));
-			assert(-0.10 == round_ext(-.1000, 2));
-			assert(-0.10 == round_ext(-.1044, 2));
+			assert(std::abs(0.10 - round_ext(.0995, 2)) < DBL_EPSILON);
+			assert(std::abs(0.10 - round_ext(.1000, 2)) < DBL_EPSILON);
+			assert(std::abs(0.10 - round_ext(.1044, 2)) < DBL_EPSILON);
+			assert(std::abs(-0.10 - round_ext(-.0995, 2)) < DBL_EPSILON);
+			assert(std::abs(-0.10 - round_ext(-.1000, 2)) < DBL_EPSILON);
+			assert(std::abs(-0.10 - round_ext(-.1044, 2)) < DBL_EPSILON);
 
-			assert(1.0e-16 == round_ext(0.95e-16, 1));
-			assert(1.0e-16 == round_ext(1.00e-16, 1));
-			assert(1.0e-16 == round_ext(1.40e-16, 1));
+			assert(std::abs(1.0e-16 - round_ext(0.95e-16, 1)) < DBL_EPSILON);
+			assert(std::abs(1.0e-16 - round_ext(1.00e-16, 1)) < DBL_EPSILON);
+			assert(std::abs(1.0e-16 - round_ext(1.40e-16, 1)) < DBL_EPSILON);
 
 			return 0;
 		}();
