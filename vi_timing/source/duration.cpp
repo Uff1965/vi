@@ -43,26 +43,35 @@ namespace
 {
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
 	{	assert(prec);
-		if (0 != prec && 0.0 != num)
-		{	const auto exp = 1 + static_cast<int>(std::floor(std::log10(std::abs(num))));
-			const auto factor = std::pow(10, prec - exp);
+		if (0 != prec && !std::isnan(num) && !std::isinf(num) && 0.0 != num)
+		{	const auto exp = std::floor(std::log10(std::abs(num)));
+			const auto factor = std::pow(10.0, prec - exp - 1.0);
 			num = std::round(num * factor) / factor;
 		}
 
 		return num;
 	}
-
 }
 
 [[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char prec, unsigned char dec)
 {	auto num = sec.count();
 	assert(.0 <= num && 0 < prec && 0 <= dec && dec < prec);
-	num = round_ext(num, prec);
+	if (std::isnan(num))
+	{	return "NaN";
+	}
+	if (std::isinf(num))
+	{	return (num > .0) ? "INF" : "-INF";
+	}
+	if (.0 > num)
+	{	return "Neg!";
+	}
 
 	struct
 	{	std::string_view suffix_;
 		double factor_;
 	} unit = {"ps", 1e12};
+
+	num = round_ext(num, prec);
 
 	if(1e-12 > num)
 	{	num = 0.0;
@@ -141,25 +150,25 @@ namespace
 
 	const auto nanotest_2 = []
 		{
-			assert(std::abs(0.0 - round_ext(0.00, 1)) < DBL_EPSILON);
+			assert(0.0 == round_ext(0.00, 1));
 
-			assert(std::abs(1.0 - round_ext(0.95, 1)) < DBL_EPSILON);
-			assert(std::abs(1.0 - round_ext(1.00, 1)) < DBL_EPSILON);
-			assert(std::abs(1.0 - round_ext(1.40, 1)) < DBL_EPSILON);
-			assert(std::abs(-1.0 - round_ext(-0.95, 1)) < DBL_EPSILON);
-			assert(std::abs(-1.0 - round_ext(-1.00, 1)) < DBL_EPSILON);
-			assert(std::abs(-1.0 - round_ext(-1.40, 1)) < DBL_EPSILON);
+			assert(1.0 == round_ext(0.95, 1));
+			assert(1.0 == round_ext(1.00, 1));
+			assert(1.0 == round_ext(1.40, 1));
+			assert(-1.0 == round_ext(-0.95, 1));
+			assert(-1.0 == round_ext(-1.00, 1));
+			assert(-1.0 == round_ext(-1.40, 1));
 
-			assert(std::abs(0.10 - round_ext(.0995, 2)) < DBL_EPSILON);
-			assert(std::abs(0.10 - round_ext(.1000, 2)) < DBL_EPSILON);
-			assert(std::abs(0.10 - round_ext(.1044, 2)) < DBL_EPSILON);
-			assert(std::abs(-0.10 - round_ext(-.0995, 2)) < DBL_EPSILON);
-			assert(std::abs(-0.10 - round_ext(-.1000, 2)) < DBL_EPSILON);
-			assert(std::abs(-0.10 - round_ext(-.1044, 2)) < DBL_EPSILON);
+			assert(0.10 == round_ext(.0995, 2));
+			assert(0.10 == round_ext(.1000, 2));
+			assert(0.10 == round_ext(.1044, 2));
+			assert(-0.10 == round_ext(-.0995, 2));
+			assert(-0.10 == round_ext(-.1000, 2));
+			assert(-0.10 == round_ext(-.1044, 2));
 
-			assert(std::abs(1.0e-16 - round_ext(0.95e-16, 1)) < DBL_EPSILON);
-			assert(std::abs(1.0e-16 - round_ext(1.00e-16, 1)) < DBL_EPSILON);
-			assert(std::abs(1.0e-16 - round_ext(1.40e-16, 1)) < DBL_EPSILON);
+			assert(1.0e-16 == round_ext(0.95e-16, 1));
+			assert(1.0e-16 == round_ext(1.00e-16, 1));
+			assert(1.0e-16 == round_ext(1.40e-16, 1));
 
 			return 0;
 		}();
