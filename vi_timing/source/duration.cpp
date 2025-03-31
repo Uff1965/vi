@@ -42,10 +42,10 @@ using namespace std::chrono_literals;
 namespace
 {
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
-	{	assert(prec);
+	{	assert(0 != prec);
 		if (0 != prec && !std::isnan(num) && !std::isinf(num) && 0.0 != num)
-		{	const auto exp = std::floor(std::log10(std::abs(num)));
-			const auto factor = std::pow(10.0, prec - exp - 1.0);
+		{	const auto exp = std::ceil(std::log10(std::abs(num)));
+			const auto factor = std::pow(10.0, prec - exp);
 			num = std::round(num * factor) / factor;
 		}
 
@@ -78,15 +78,15 @@ namespace
 	}
 	else
 	{	constexpr auto GROUP = 3;
-		const auto order_offset = ((prec - dec - 1) / GROUP) * GROUP;
-		const auto order = static_cast<int>(std::floor(std::log10(num))) - order_offset;
+		const auto order = ((prec - dec - 1) / GROUP) * GROUP;
+		const auto magnitude = static_cast<int>(std::floor(std::log10(num))) - order;
 
-		if (+6 <= order) { unit = { "Ms", 1e-6 }; }
-		else if (+3 <= order) { unit = { "ks", 1e-3 }; }
-		else if (0 <= order) { unit = { "s ", 1e0 }; }
-		else if (-3 <= order) { unit = { "ms", 1e3 }; }
-		else if (-6 <= order) { unit = { "us", 1e6 }; }
-		else if (-9 <= order) { unit = { "ns", 1e9 }; }
+		if (+6 <= magnitude) { unit = { "Ms", 1e-6 }; }
+		else if (+3 <= magnitude) { unit = { "ks", 1e-3 }; }
+		else if (0 <= magnitude) { unit = { "s ", 1e0 }; }
+		else if (-3 <= magnitude) { unit = { "ms", 1e3 }; }
+		else if (-6 <= magnitude) { unit = { "us", 1e6 }; }
+		else if (-9 <= magnitude) { unit = { "ns", 1e9 }; }
 	}
 
 	std::ostringstream ss;
@@ -106,6 +106,12 @@ namespace
 				int line_;
 			} vals[] =
 			{	
+				{ 11.0, "10 s ", 1, 0, __LINE__ },
+				{ 11.0, "11 s ", 2, 0, __LINE__ },
+				{ 10.0, "10 s ", 1, 0, __LINE__ },
+				{ 5.0, "5 s ", 1, 0, __LINE__ },
+				{ 1.1, "1.1 s ", 2, 1, __LINE__ },
+				{ 1.1, "1 s ", 1, 0, __LINE__ },
 				//****************
 				{ 0.0, "0.0 ps", 3, 1, __LINE__ },
 				{ 0.9994e-12, "0.0 ps", 3, 1, __LINE__ },
