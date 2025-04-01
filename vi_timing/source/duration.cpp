@@ -71,11 +71,11 @@ namespace
 /// <param name="dec">The number of decimal places to display.</param>
 /// <returns>A string representation of the duration.</returns>
 /// <remarks>
-/// This function handles special cases such as NaN, infinity, and negative values.
+/// This function handles special cases such as NaN, infinity values.
 /// It rounds the duration to the specified precision and formats it with the appropriate unit suffix.
 /// </remarks>
 [[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char prec, unsigned char dec)
-{	assert(dec < prec && .0 <= sec.count());
+{	assert(dec < prec);
 
 	std::string result;
 	
@@ -85,9 +85,6 @@ namespace
 	else if (std::isinf(num))
 	{	result = (num > .0) ? "INF" : "-INF";
 	}
-	else if (.0 > num)
-	{	result = "Neg!";
-	}
 	else
 	{	num = round_ext(num, prec);
 
@@ -96,20 +93,20 @@ namespace
 			double factor_;
 		} unit = { "ps", 1e12 };
 
-		if (1e-12 > num)
+		if (1e-12 > std::abs(num))
 		{	num = 0.0;
 		}
 		else
 		{	constexpr auto GROUP = 3;
-			const auto order = ((prec - dec - 1) / GROUP) * GROUP;
-			const auto magnitude = static_cast<int>(std::floor(std::log10(num))) - order;
-
-			if (+6 <= magnitude) { unit = { "Ms", 1e-6 }; }
-			else if (+3 <= magnitude) { unit = { "ks", 1e-3 }; }
-			else if (+0 <= magnitude) { unit = { "s ", 1e+0 }; }
-			else if (-3 <= magnitude) { unit = { "ms", 1e+3 }; }
-			else if (-6 <= magnitude) { unit = { "us", 1e+6 }; }
-			else if (-9 <= magnitude) { unit = { "ns", 1e+9 }; }
+			const auto site_size = ((prec - dec - 1) / GROUP) * GROUP;
+			const auto magnitude = std::floor(std::log10(std::abs(num)));
+			const auto diff = static_cast<int>(magnitude) - site_size;
+			if (+6 <= diff) { unit = { "Ms", 1e-6 }; }
+			else if (+3 <= diff) { unit = { "ks", 1e-3 }; }
+			else if (+0 <= diff) { unit = { "s ", 1e+0 }; }
+			else if (-3 <= diff) { unit = { "ms", 1e+3 }; }
+			else if (-6 <= diff) { unit = { "us", 1e+6 }; }
+			else if (-9 <= diff) { unit = { "ns", 1e+9 }; }
 		}
 
 		std::ostringstream ss;
@@ -124,7 +121,7 @@ namespace
 namespace
 {
 	const auto nanotests =
-	(	[]{
+	(	[]{	// nanotest for round_ext
 			assert(0.0 == round_ext(0.00, 1));
 
 			assert(1.0 == round_ext(0.95, 1));
@@ -145,7 +142,8 @@ namespace
 			assert(1.0e-16 == round_ext(1.00e-16, 1));
 			assert(1.0e-16 == round_ext(1.40e-16, 1));
 		}(),
-		[]{	const struct
+		[]{	// nanotest for misc::to_string(duration_t d, unsigned char precision, unsigned char dec)
+			const struct
 			{	misc::duration_t v_;
 				std::string_view expected_;
 				unsigned char prec_;
@@ -154,6 +152,10 @@ namespace
 			} vals[] =
 			{	
 				//****************
+				{ -1234.5, "-1.2 ks", 2, 1, __LINE__ },
+				{ -12345.6, "-12.0 ks", 2, 1, __LINE__ },
+				{ -0.0, "0 ps", 1, 0, __LINE__ },
+				{ -11.0, "-10 s ", 1, 0, __LINE__ },
 				{ 11.0, "10 s ", 1, 0, __LINE__ },
 				{ 11.0, "11 s ", 2, 0, __LINE__ },
 				{ 10.0, "10 s ", 1, 0, __LINE__ },
@@ -199,6 +201,6 @@ namespace
 			}
 		}(),
 		0
-	); // const auto nanotests = (
+	);
 }
 #endif // #ifndef NDEBUG
