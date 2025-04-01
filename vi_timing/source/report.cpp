@@ -68,27 +68,27 @@ namespace
 	{	assert(amount >= calls_cnt);
 		assert((0 == calls_cnt) == (0 == amount));
 
-		if (0 == amount)
-		{/**/}
-		else if
-			(	const auto burden = misc::properties_t::props().clock_latency_ * calls_cnt;
-				// Showed the result as a value no less than the resolution divided by 16 or by the cube root of the number of measurements.
-				total_time <= burden + misc::properties_t::props().clock_resolution_ * calls_cnt * std::max(std::pow(calls_cnt, -1./3.), 1./16.)
-			)
-		{	total_txt_ = Insignificant;
-			average_txt_ = Insignificant;
-		}
-		else
-		{	total_ = misc::properties_t::props().seconds_per_tick_ * (total_time - burden);
-			total_txt_ = to_string(total_);
-			average_ = total_ / amount_;
-			average_txt_ = to_string(average_);
+		if (0 != amount)
+		{	const auto burden = misc::properties_t::props().clock_latency_ * calls_cnt;
+			// Showed the result as a value no less than the resolution divided by 10 and by the cube root of the number of measurements.
+			const auto allowance = misc::properties_t::props().clock_resolution_ / std::min(10., std::cbrt(calls_cnt));
+			if (const auto total = static_cast<double>(total_time); total <= burden + allowance)
+			{	total_txt_ = Insignificant;
+				average_txt_ = Insignificant;
+			}
+			else
+			{	total_ = misc::properties_t::props().seconds_per_tick_ * (total - burden);
+				total_txt_ = to_string(total_);
+				average_ = total_ / amount_;
+				average_txt_ = to_string(average_);
+			}
 		}
 	}
 
 	int results_callback(const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *data)
 	{	assert(data);
-		static_cast<std::vector<metering_t> *>(data)->emplace_back(name, total, amount, calls_cnt);
+		const auto self = static_cast<std::vector<metering_t> *>(data);
+		self->emplace_back(name, total, amount, calls_cnt);
 		return 0; // Ok, continue enumerate.
 	}
 
