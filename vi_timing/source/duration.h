@@ -18,7 +18,7 @@ namespace misc
 		constexpr duration_t(T &&v): std::chrono::duration<double>{ std::forward<T>(v) } {}
 		duration_t() = default;
 
-		friend std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
+		friend std::string to_string(duration_t d, unsigned char precision, unsigned char dec);
 
 		[[nodiscard]] friend bool operator<(duration_t l, duration_t r)
 		{	return l.count() < r.count() && to_string(l, PRECISION, DEC) != to_string(r, PRECISION, DEC);
@@ -29,6 +29,7 @@ namespace misc
 		}
     };
 
-//	std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
+	// According to the GCC, a friendly declaration (without a definition) cannot specify default arguments.
+	std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
 }
 #endif // #ifndef VI_TIMING_SOURCE_DURATION_H
