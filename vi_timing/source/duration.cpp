@@ -35,12 +35,22 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <tuple>
 
 namespace ch = std::chrono;
 using namespace std::chrono_literals;
 
 namespace
 {
+	/// <summary>
+	/// rounding a floating-point number to a specified number of significant digits
+	/// </summary>
+	/// <param name="num">The number to be rounded.</param>
+	/// <param name="prec">The number of significant digits to round to.</param>
+	/// <returns>The rounded number.</returns>
+	/// <remarks>
+	/// This function ensures that the number is not NaN, infinity, or zero before rounding.
+	/// </remarks>
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
 	{	assert(0 != prec);
 		if (0 != prec && !std::isnan(num) && !std::isinf(num) && 0.0 != num)
@@ -53,52 +63,89 @@ namespace
 	}
 }
 
+/// <summary>
+/// Converts a duration to a string representation with specified precision and decimal places.
+/// </summary>
+/// <param name="sec">The duration to be converted.</param>
+/// <param name="prec">The number of significant digits to round to.</param>
+/// <param name="dec">The number of decimal places to display.</param>
+/// <returns>A string representation of the duration.</returns>
+/// <remarks>
+/// This function handles special cases such as NaN, infinity, and negative values.
+/// It rounds the duration to the specified precision and formats it with the appropriate unit suffix.
+/// </remarks>
 [[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char prec, unsigned char dec)
-{	auto num = sec.count();
-	assert(.0 <= num && 0 < prec && 0 <= dec && dec < prec);
-	if (std::isnan(num))
-	{	return "NaN";
-	}
-	if (std::isinf(num))
-	{	return (num > .0) ? "INF" : "-INF";
-	}
-	if (.0 > num)
-	{	return "Neg!";
-	}
+{	assert(dec < prec && .0 <= sec.count());
 
-	struct
-	{	std::string_view suffix_;
-		double factor_;
-	} unit = {"ps", 1e12};
-
-	num = round_ext(num, prec);
-
-	if(1e-12 > num)
-	{	num = 0.0;
+	std::string result;
+	
+	if (auto num = sec.count(); std::isnan(num))
+	{	result = "NaN";
+	}
+	else if (std::isinf(num))
+	{	result = (num > .0) ? "INF" : "-INF";
+	}
+	else if (.0 > num)
+	{	result = "Neg!";
 	}
 	else
-	{	constexpr auto GROUP = 3;
-		const auto order = ((prec - dec - 1) / GROUP) * GROUP;
-		const auto magnitude = static_cast<int>(std::floor(std::log10(num))) - order;
+	{	num = round_ext(num, prec);
 
-		if (+6 <= magnitude) { unit = { "Ms", 1e-6 }; }
-		else if (+3 <= magnitude) { unit = { "ks", 1e-3 }; }
-		else if (0 <= magnitude) { unit = { "s ", 1e0 }; }
-		else if (-3 <= magnitude) { unit = { "ms", 1e3 }; }
-		else if (-6 <= magnitude) { unit = { "us", 1e6 }; }
-		else if (-9 <= magnitude) { unit = { "ns", 1e9 }; }
+		struct
+		{	std::string_view suffix_;
+			double factor_;
+		} unit = { "ps", 1e12 };
+
+		if (1e-12 > num)
+		{	num = 0.0;
+		}
+		else
+		{	constexpr auto GROUP = 3;
+			const auto order = ((prec - dec - 1) / GROUP) * GROUP;
+			const auto magnitude = static_cast<int>(std::floor(std::log10(num))) - order;
+
+			if (+6 <= magnitude) { unit = { "Ms", 1e-6 }; }
+			else if (+3 <= magnitude) { unit = { "ks", 1e-3 }; }
+			else if (+0 <= magnitude) { unit = { "s ", 1e+0 }; }
+			else if (-3 <= magnitude) { unit = { "ms", 1e+3 }; }
+			else if (-6 <= magnitude) { unit = { "us", 1e+6 }; }
+			else if (-9 <= magnitude) { unit = { "ns", 1e+9 }; }
+		}
+
+		std::ostringstream ss;
+		ss << std::fixed << std::setprecision(dec) << num * unit.factor_ << ' ' << unit.suffix_;
+		result = ss.str();
 	}
 
-	std::ostringstream ss;
-	ss << std::fixed << std::setprecision(dec) << num * unit.factor_ << ' ' << unit.suffix_;
-	return ss.str();
+	return result;
 }
 
 #ifndef NDEBUG
 namespace
 {
-	const auto nanotest = []
-		{	const struct
+	const auto nanotests =
+	(	[]{
+			assert(0.0 == round_ext(0.00, 1));
+
+			assert(1.0 == round_ext(0.95, 1));
+			assert(1.0 == round_ext(1.00, 1));
+			assert(1.0 == round_ext(1.40, 1));
+			assert(-1.0 == round_ext(-0.95, 1));
+			assert(-1.0 == round_ext(-1.00, 1));
+			assert(-1.0 == round_ext(-1.40, 1));
+
+			assert(0.10 == round_ext(.0995, 2));
+			assert(0.10 == round_ext(.1000, 2));
+			assert(0.10 == round_ext(.1044, 2));
+			assert(-0.10 == round_ext(-.0995, 2));
+			assert(-0.10 == round_ext(-.1000, 2));
+			assert(-0.10 == round_ext(-.1044, 2));
+
+			assert(1.0e-16 == round_ext(0.95e-16, 1));
+			assert(1.0e-16 == round_ext(1.00e-16, 1));
+			assert(1.0e-16 == round_ext(1.40e-16, 1));
+		}(),
+		[]{	const struct
 			{	misc::duration_t v_;
 				std::string_view expected_;
 				unsigned char prec_;
@@ -106,13 +153,13 @@ namespace
 				int line_;
 			} vals[] =
 			{	
+				//****************
 				{ 11.0, "10 s ", 1, 0, __LINE__ },
 				{ 11.0, "11 s ", 2, 0, __LINE__ },
 				{ 10.0, "10 s ", 1, 0, __LINE__ },
 				{ 5.0, "5 s ", 1, 0, __LINE__ },
 				{ 1.1, "1.1 s ", 2, 1, __LINE__ },
 				{ 1.1, "1 s ", 1, 0, __LINE__ },
-				//****************
 				{ 0.0, "0.0 ps", 3, 1, __LINE__ },
 				{ 0.9994e-12, "0.0 ps", 3, 1, __LINE__ },
 				{ 0.9996e-12, "1.0 ps", 3, 1, __LINE__ },
@@ -150,33 +197,8 @@ namespace
 			{	const auto s = misc::to_string(v.v_, v.prec_, v.dec_);
 				assert(s == v.expected_);
 			}
-
-			return 0;
-		}();
-
-	const auto nanotest_2 = []
-		{
-			assert(0.0 == round_ext(0.00, 1));
-
-			assert(1.0 == round_ext(0.95, 1));
-			assert(1.0 == round_ext(1.00, 1));
-			assert(1.0 == round_ext(1.40, 1));
-			assert(-1.0 == round_ext(-0.95, 1));
-			assert(-1.0 == round_ext(-1.00, 1));
-			assert(-1.0 == round_ext(-1.40, 1));
-
-			assert(0.10 == round_ext(.0995, 2));
-			assert(0.10 == round_ext(.1000, 2));
-			assert(0.10 == round_ext(.1044, 2));
-			assert(-0.10 == round_ext(-.0995, 2));
-			assert(-0.10 == round_ext(-.1000, 2));
-			assert(-0.10 == round_ext(-.1044, 2));
-
-			assert(1.0e-16 == round_ext(0.95e-16, 1));
-			assert(1.0e-16 == round_ext(1.00e-16, 1));
-			assert(1.0e-16 == round_ext(1.40e-16, 1));
-
-			return 0;
-		}();
+		}(),
+		0
+	); // const auto nanotests = (
 }
 #endif // #ifndef NDEBUG
