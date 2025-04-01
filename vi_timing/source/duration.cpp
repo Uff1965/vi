@@ -52,14 +52,13 @@ namespace
 	/// This function ensures that the number is not NaN, infinity, or zero before rounding.
 	/// </remarks>
 	[[nodiscard]] double round_ext(double num, unsigned char prec)
-	{	assert(0 != prec);
-		if (0 != prec && !std::isnan(num) && !std::isinf(num) && 0.0 != num)
-		{	const auto exp = std::ceil(std::log10(std::abs(num)));
-			const auto factor = std::pow(10.0, prec - exp);
-			num = std::round(num * factor) / factor;
-		}
+	{	assert(prec > 0);
+		if (0 == prec || std::isnan(num) || std::isinf(num) || 0.0 == num)
+			return num;
 
-		return num;
+		const auto exp = std::ceil(std::log10(std::abs(num)));
+		const auto factor = std::pow(10.0, prec - exp);
+		return std::round(num * factor) / factor;
 	}
 }
 
@@ -93,7 +92,7 @@ namespace
 			double factor_;
 		} unit = { "ps", 1e12 };
 
-		if (1e-12 > std::abs(num))
+		if (std::abs(num) < 1e-12)
 		{	num = 0.0;
 		}
 		else

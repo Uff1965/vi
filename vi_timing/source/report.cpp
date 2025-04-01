@@ -85,13 +85,6 @@ namespace
 		}
 	}
 
-	int results_callback(const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *data)
-	{	assert(data);
-		const auto self = static_cast<std::vector<metering_t> *>(data);
-		self->emplace_back(name, total, amount, calls_cnt);
-		return 0; // Ok, continue enumerate.
-	}
-
 	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);
 
 	template<> auto make_tuple<vi_tmSortByName>(const metering_t &v)
@@ -158,6 +151,21 @@ namespace
 		int print_header(const vi_tmLogSTR_t fn, void *data) const;
 		int print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *data) const;
 	};
+
+	std::vector<metering_t> get_meterings(VI_TM_HJOURNAL journal_handle)
+	{	std::vector<metering_t> result;
+		vi_tmResults
+		(	journal_handle,
+			[](const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *callback_data)
+			{
+				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, total, amount, calls_cnt);
+				return 0; // Ok, continue enumerate.
+			},
+			&result
+		);
+		return result;
+	}
+
 }
 
 formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
@@ -287,7 +295,7 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	return result;
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags, vi_tmLogSTR_t fn, void *data)
+int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL journal_handle, unsigned flags, vi_tmLogSTR_t fn, void *data)
 {	int result = 0;
 
 	if (nullptr == fn)
@@ -300,13 +308,13 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags, vi_tmLogSTR_t fn, v
 	(void) misc::properties_t::props(); // Preventing deadlock in traits_t::results_callback().
 	result += print_props(fn, data, flags);
 
-	std::vector<metering_t> meterings;
-	vi_tmResults(h, &results_callback, &meterings);
-	std::sort(meterings.begin(), meterings.end(), comparator_t{ flags });
+	std::vector<metering_t> metering_entries = get_meterings(journal_handle);
+	std::sort(metering_entries.begin(), metering_entries.end(), comparator_t{ flags });
 
-	const formatter_t formatter{ meterings, flags };
+	const formatter_t formatter{ metering_entries, flags };
 	result += formatter.print_header(fn, data);
-	for (const auto &itm : meterings)
+
+	for (const auto &itm : metering_entries)
 	{	result += formatter.print_metering(itm, fn, data);
 	}
 
