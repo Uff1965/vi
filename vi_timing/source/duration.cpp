@@ -42,22 +42,13 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	/// <summary>
-	/// rounding a floating-point number to a specified number of significant digits
-	/// </summary>
-	/// <param name="num">The number to be rounded.</param>
-	/// <param name="prec">The number of significant digits to round to.</param>
-	/// <returns>The rounded number.</returns>
-	/// <remarks>
-	/// This function ensures that the number is not NaN, infinity, or zero before rounding.
-	/// </remarks>
-	[[nodiscard]] double round_ext(double num, unsigned char prec)
-	{	assert(prec > 0);
-		if (0 == prec || std::isnan(num) || std::isinf(num) || 0.0 == num)
+	[[nodiscard]] double round_ext(double num, unsigned char significant)
+	{	assert(significant > 0);
+		if (0 == significant || std::isnan(num) || std::isinf(num) || 0.0 == num)
 			return num;
 
 		const auto exp = std::ceil(std::log10(std::abs(num)));
-		const auto factor = std::pow(10.0, prec - exp);
+		const auto factor = std::pow(10.0, significant - exp);
 		return std::round(num * factor) / factor;
 	}
 }
@@ -66,8 +57,8 @@ namespace
 /// Converts a duration to a string representation with specified precision and decimal places.
 /// </summary>
 /// <param name="sec">The duration to be converted.</param>
-/// <param name="prec">The number of significant digits to round to.</param>
-/// <param name="dec">The number of decimal places to display.</param>
+/// <param name="significant">The number of significant digits to round to.</param>
+/// <param name="decimal">The number of decimal places to display.</param>
 /// <returns>A string representation of the duration.</returns>
 /// <remarks>
 /// This function handles special cases such as NaN, infinity values.
@@ -97,13 +88,13 @@ namespace
 		}
 		else
 		{	constexpr auto GROUP = 3;
-			const auto supplement = ((significant - decimal - 1) / GROUP) * GROUP - log10(std::abs(num));
-			if (supplement <= -6) { unit = { " Ms", 1e-6 }; }
-			else if (supplement <= -3) { unit = { " ks", 1e-3 }; }
-			else if (supplement <= 0) { unit = { " s ", 1e+0 }; }
-			else if (supplement <= 3) { unit = { " ms", 1e+3 }; }
-			else if (supplement <= 6) { unit = { " us", 1e+6 }; }
-			else if (supplement <= 9) { unit = { " ns", 1e+9 }; }
+			const auto supp = ((significant - decimal - 1) / GROUP) * GROUP - log10(std::abs(num));
+			if (supp <= -6) { unit = { " Ms", 1e-6 }; }
+			else if (supp <= -3) { unit = { " ks", 1e-3 }; }
+			else if (supp <= 0) { unit = { " s ", 1e+0 }; }
+			else if (supp <= 3) { unit = { " ms", 1e+3 }; }
+			else if (supp <= 6) { unit = { " us", 1e+6 }; }
+			else if (supp <= 9) { unit = { " ns", 1e+9 }; }
 		}
 
 		std::ostringstream ss;
@@ -139,65 +130,76 @@ namespace
 			assert(1.0e-16 == round_ext(1.00e-16, 1));
 			assert(1.0e-16 == round_ext(1.40e-16, 1));
 		}(),
+
 		[]{	// nanotest for misc::to_string(duration_t d, unsigned char precision, unsigned char dec)
 			const struct
-			{	misc::duration_t v_;
+			{	int line_;
+				misc::duration_t num_;
 				std::string_view expected_;
-				unsigned char prec_;
-				unsigned char dec_;
-				int line_;
-			} vals[] =
-			{	
-				//****************
-				{ -1234.5, "-1.2 ks", 2, 1, __LINE__ },
-				{ -12345.6, "-12.0 ks", 2, 1, __LINE__ },
-				{ -0.0, "0 ps", 1, 0, __LINE__ },
-				{ -11.0, "-10 s ", 1, 0, __LINE__ },
-				{ 11.0, "10 s ", 1, 0, __LINE__ },
-				{ 11.0, "11 s ", 2, 0, __LINE__ },
-				{ 10.0, "10 s ", 1, 0, __LINE__ },
-				{ 5.0, "5 s ", 1, 0, __LINE__ },
-				{ 1.1, "1.1 s ", 2, 1, __LINE__ },
-				{ 1.1, "1 s ", 1, 0, __LINE__ },
-				{ 0.0, "0.0 ps", 3, 1, __LINE__ },
-				{ 0.9994e-12, "0.0 ps", 3, 1, __LINE__ },
-				{ 0.9996e-12, "1.0 ps", 3, 1, __LINE__ },
-				{ 1e-12, "1.0 ps", 3, 1, __LINE__ },
-				{ 1.2345e12, "1230000.00 Ms", 3, 2, __LINE__ },
-				{ 0.555, "560.0 ms", 2, 1, __LINE__ },
-				{ 5.55, "5.6 s ", 2, 1, __LINE__ },
-				{ 55.5, "56.0 s ", 2, 1, __LINE__ },
-				{ 123.456789,  "123457.0 ms", 6, 1, __LINE__ },
-				{ 12.3456789,   "12345.7 ms", 6, 1, __LINE__ },
-				{ 1.23456789,    "1234.6 ms", 6, 1, __LINE__ },
-				{ 123.456789, "123456.80 ms", 7, 2, __LINE__ },
-				{ 1.23456789,   "1234.57 ms", 7, 2, __LINE__ },
-				{ 12.3456789,  "12345.68 ms", 7, 2, __LINE__ },
-				{ 123.456789, "123456.80 ms", 7, 2, __LINE__ },
-				{ 1234.56789,   "1234.57 s ", 7, 2, __LINE__ },
-				{ 12345.6789,  "12345.68 s ", 7, 2, __LINE__ },
-				{ 123456.789, "123456.80 s ", 7, 2, __LINE__ },
-				{ 1234567.89,   "1234.57 ks", 7, 2, __LINE__ },
-				{ 12345678.9,  "12345.68 ks", 7, 2, __LINE__ },
-				{ 123456789., "123456.80 ks", 7, 2, __LINE__ },
-				{ 1.23456, "1.2 s ", 3, 1, __LINE__ },
-				{ 12.3456, "12.3 s ", 3, 1, __LINE__ },
-				{ 123.456, "123.0 s ", 3, 1, __LINE__ },
-				{ 1234.56, "1.2 ks", 3, 1, __LINE__ },
-				{ 12.3456789e-6, "12345680 ps", 7, 0, __LINE__},
-				{ 12.3456789e-6, "12345.7 ns", 7, 1, __LINE__},
-				{ 12.3456789e-6, "12345.68 ns", 7, 2, __LINE__},
-				{ 12.3456789e-6, "12345.680 ns", 7, 3, __LINE__},
-				{ 12.3456789e-6, "12.3457 us", 7, 4, __LINE__},
-				{ 12.3456789e-6, "12.34568 us", 7, 5, __LINE__},
+				unsigned char significant_;
+				unsigned char decimal_;
+			} tests_set[] =
+			{
+				{__LINE__, 1.23456, "1.2 s ", 2, 1},
+				{__LINE__, 12.3456, "12.0 s ", 2, 1},
+				{__LINE__, 1.23456, "1.2 s ", 3, 1},
+				{__LINE__, 12.3456, "12.3 s ", 3, 1},
+				{__LINE__, 123.456, "123.0 s ", 3, 1},
+				{__LINE__, -1234.5, "-1.2 ks", 2, 1},
+				{__LINE__, -12345.6, "-12.0 ks", 2, 1},
+				{__LINE__, -0.0, "0 ps", 1, 0},
+				{__LINE__, -11.0, "-10 s ", 1, 0},
+				{__LINE__, 11.0, "10 s ", 1, 0},
+				{__LINE__, 11.0, "11 s ", 2, 0},
+				{__LINE__, 10.0, "10 s ", 1, 0},
+				{__LINE__, 5.0, "5 s ", 1, 0},
+				{__LINE__, 1.1, "1.1 s ", 2, 1},
+				{__LINE__, 1.1, "1 s ", 1, 0},
+				{__LINE__, 0.0, "0.0 ps", 3, 1},
+				{__LINE__, 0.9994e-12, "0.0 ps", 3, 1},
+				{__LINE__, 0.9996e-12, "1.0 ps", 3, 1},
+				{__LINE__, 1e-12, "1.0 ps", 3, 1},
+				{__LINE__, 1.2345e12, "1230000.00 Ms", 3, 2},
+				{__LINE__, 0.555, "560.0 ms", 2, 1},
+				{__LINE__, 5.55, "5.6 s ", 2, 1},
+				{__LINE__, 55.5, "56.0 s ", 2, 1},
+				{__LINE__, 123.456789,  "123457.0 ms", 6, 1},
+				{__LINE__, 12.3456789,   "12345.7 ms", 6, 1},
+				{__LINE__, 1.23456789,    "1234.6 ms", 6, 1},
+				{__LINE__, 123.456789, "123456.80 ms", 7, 2},
+				{__LINE__, 1.23456789,   "1234.57 ms", 7, 2},
+				{__LINE__, 12.3456789,  "12345.68 ms", 7, 2},
+				{__LINE__, 123.456789, "123456.80 ms", 7, 2},
+				{__LINE__, 1234.56789,   "1234.57 s ", 7, 2},
+				{__LINE__, 12345.6789,  "12345.68 s ", 7, 2},
+				{__LINE__, 123456.789, "123456.80 s ", 7, 2},
+				{__LINE__, 1234567.89,   "1234.57 ks", 7, 2},
+				{__LINE__, 12345678.9,  "12345.68 ks", 7, 2},
+				{__LINE__, 123456789., "123456.80 ks", 7, 2},
+				{__LINE__, 1.23456, "1.2 s ", 3, 1},
+				{__LINE__, 12.3456, "12.3 s ", 3, 1},
+				{__LINE__, 123.456, "123.0 s ", 3, 1},
+				{__LINE__, 1234.56, "1.2 ks", 3, 1},
+				{__LINE__, 12.3456789e-6, "12345680 ps", 7, 0},
+				{__LINE__, 12.3456789e-6, "12345.7 ns", 7, 1},
+				{__LINE__, 12.3456789e-6, "12345.68 ns", 7, 2},
+				{__LINE__, 12.3456789e-6, "12345.680 ns", 7, 3},
+				{__LINE__, 12.3456789e-6, "12.3457 us", 7, 4},
+				{__LINE__, 12.3456789e-6, "12.34568 us", 7, 5},
+				{__LINE__, 12.3456789e-6, "12346 ns", 5, 0},
+				{__LINE__, 12.3456789e-6, "12346.0 ns", 5, 1},
+				{__LINE__, 12.3456789e-6, "12.35 us", 5, 2},
+				{__LINE__, 12.3456789e-6, "12.346 us", 5, 3},
+				{__LINE__, 12.3456789e-6, "12.3460 us", 5, 4},
 			};
 
-			for (auto &v : vals)
-			{	const auto s = misc::to_string(v.v_, v.prec_, v.dec_);
-				assert(s == v.expected_);
+			for (auto &test : tests_set)
+			{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
+				assert(reality == test.expected_);
 			}
 		}(),
+
 		0
-	);
+	); // const auto nanotests =
 }
 #endif // #ifndef NDEBUG
