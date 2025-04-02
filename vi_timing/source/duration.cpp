@@ -73,8 +73,8 @@ namespace
 /// This function handles special cases such as NaN, infinity values.
 /// It rounds the duration to the specified precision and formats it with the appropriate unit suffix.
 /// </remarks>
-[[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char prec, unsigned char dec)
-{	assert(dec < prec);
+[[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char significant, unsigned char decimal)
+{	assert(decimal < significant);
 
 	std::string result;
 	
@@ -85,31 +85,29 @@ namespace
 	{	result = (num > .0) ? "INF" : "-INF";
 	}
 	else
-	{	num = round_ext(num, prec);
+	{	num = round_ext(num, significant);
 
 		struct
 		{	std::string_view suffix_;
 			double factor_;
-		} unit = { "ps", 1e12 };
+		} unit = { " ps", 1e12 };
 
 		if (std::abs(num) < 1e-12)
 		{	num = 0.0;
 		}
 		else
 		{	constexpr auto GROUP = 3;
-			const auto site_size = ((prec - dec - 1) / GROUP) * GROUP;
-			const auto magnitude = std::floor(std::log10(std::abs(num)));
-			const auto diff = static_cast<int>(magnitude) - site_size;
-			if (+6 <= diff) { unit = { "Ms", 1e-6 }; }
-			else if (+3 <= diff) { unit = { "ks", 1e-3 }; }
-			else if (+0 <= diff) { unit = { "s ", 1e+0 }; }
-			else if (-3 <= diff) { unit = { "ms", 1e+3 }; }
-			else if (-6 <= diff) { unit = { "us", 1e+6 }; }
-			else if (-9 <= diff) { unit = { "ns", 1e+9 }; }
+			const auto supplement = ((significant - decimal - 1) / GROUP) * GROUP - log10(std::abs(num));
+			if (supplement <= -6) { unit = { " Ms", 1e-6 }; }
+			else if (supplement <= -3) { unit = { " ks", 1e-3 }; }
+			else if (supplement <= 0) { unit = { " s ", 1e+0 }; }
+			else if (supplement <= 3) { unit = { " ms", 1e+3 }; }
+			else if (supplement <= 6) { unit = { " us", 1e+6 }; }
+			else if (supplement <= 9) { unit = { " ns", 1e+9 }; }
 		}
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(dec) << num * unit.factor_ << ' ' << unit.suffix_;
+		ss << std::fixed << std::setprecision(decimal) << (num * unit.factor_) << unit.suffix_;
 		result = ss.str();
 	}
 
