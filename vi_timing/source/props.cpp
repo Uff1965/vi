@@ -72,8 +72,8 @@ namespace
 		};
 
 		const auto [tick1, time1] = time_point();
-		// Load the thread at 100% for 256ms.
-		for (auto stop = time1 + 256ms; now() < stop;)
+		// Load the thread at 100% for 64ms.
+		for (auto stop = time1 + 64ms; now() < stop;)
 		{/**/}
 		const auto [tick2, time2] = time_point();
 
@@ -125,7 +125,9 @@ VI_OPTIMIZE_OFF
 
 		return duration(dirty - pure) / (EXT * CNT);
 	}
+VI_OPTIMIZE_ON
 
+VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{	constexpr auto CNT = 500U;
 
@@ -160,7 +162,9 @@ VI_OPTIMIZE_OFF
 
 		return static_cast<double>(dirty - pure) / (EXT * CNT);
 	}
+VI_OPTIMIZE_ON
 
+VI_OPTIMIZE_OFF
 	double resolution()
 	{	for (auto CNT = 8;; CNT *= 8) //-V1044 Loop break conditions do not depend on the number of iterations.
 		{	VI_TM_TICK first = 0;

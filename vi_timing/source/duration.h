@@ -24,12 +24,8 @@ namespace misc
 		{	return to_string(d, P, D);
 		}
 		[[nodiscard]] friend bool operator<(const duration_t &l, const duration_t &r)
-		{	return l.count() < r.count() && to_string(l, P, D) != to_string(r, P, D);
+		{	return l.count() < r.count() && to_string(l) != to_string(r);
 		}
-		template<typename T>
-		friend inline std::basic_ostream<T>& operator<<(std::basic_ostream<T>& os, const duration_t& d)
-		{	return os << to_string(d, P, D);
-		}
-    };
+	};
 }
 #endif // #ifndef VI_TIMING_SOURCE_DURATION_H

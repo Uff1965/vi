@@ -219,18 +219,29 @@ namespace {
 	}
 
 	void test_vi_tmResults()
-	{	std::cout << "\nTest vi_tmResults:";
+	{
+		struct props_t
+		{	double add_;
+			double unit_;
+		} const props =
+		{	*reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)),
+			*reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT))
+		};
+
+		std::cout << "\nTest vi_tmResults:";
 		auto results_callback = [](const char* name, VI_TM_TICK ticks, std::size_t amount, std::size_t calls_cnt, void* data)
-			{	if (0U != calls_cnt)
+			{	const auto props = *static_cast<props_t *>(data);
+				if (0U != calls_cnt)
 				{	std::cout << 
 					"\n"<< std::left << std::setw(48) << name << ":"
 					"\tticks = " << std::setw(16) << std::right << ticks << ","
+					"\t(" << std::setprecision(2) << props.unit_ * (ticks - calls_cnt * props.add_) / calls_cnt << "),"
 					"\tamount = " << std::setw(12) << std::right << amount << ","
 					"\tcalls = " << std::setw(12) << std::right << calls_cnt;
 				}
 				return 0;
 			};
-		vi_tmResults(nullptr, results_callback, nullptr);
+		vi_tmResults(nullptr, results_callback, const_cast<props_t*>(&props));
 		std::cout << "\nTest vi_tmResults - done" << std::endl;
 	}
 
@@ -346,19 +357,20 @@ int main()
 
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
-	{	vi_tmThreadPrepare();
+	{
+		vi_tmThreadPrepare();
 
 		foo_c();
 		test_empty();
 		test_instances();
 		prn_clock_properties();
-		test_vi_tmResults();
 		test();
 
 		vi_tmThreadAffinityRestore();
 	}
 
 	test_multithreaded();
+	test_vi_tmResults();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 

@@ -72,15 +72,16 @@ namespace
 		assert((0 == calls_cnt) == (0 == amount));
 
 		if (0 != amount)
-		{	const auto burden = misc::properties_t::props().clock_latency_ * calls_cnt;
-			// Showed the result as a value no less than the resolution divided by 10 and by the cube root of the number of measurements.
-			const auto allowance = misc::properties_t::props().clock_resolution_ / std::min(10., std::cbrt(calls_cnt));
+		{	auto &props = misc::properties_t::props();
+			const auto burden = props.clock_latency_ * calls_cnt;
+			// Showed the result as a value no less than the resolution divided by 100 and by the square root of the number of measurements.
+			const auto allowance = props.clock_resolution_ / std::min(100., std::sqrt(calls_cnt));
 			if (const auto total = static_cast<double>(total_time); total <= burden + allowance)
 			{	total_txt_ = Insignificant;
 				average_txt_ = Insignificant;
 			}
 			else
-			{	total_ = misc::properties_t::props().seconds_per_tick_ * (total - burden);
+			{	total_ = props.seconds_per_tick_ * (total - burden);
 				total_txt_ = to_string(total_);
 				average_ = total_ / amount_;
 				average_txt_ = to_string(average_);
@@ -277,18 +278,19 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 {	int result = 0;
 	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
 	{	std::ostringstream str;
+		auto &props = misc::properties_t::props();
 
 		if (flags & vi_tmShowResolution)
-		{	str << "Resolution: " << misc::duration_t{ misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_resolution_ } << ". ";
+		{	str << "Resolution: " << misc::to_string( props.seconds_per_tick_ * props.clock_resolution_, DURATION_PREC, DURATION_DEC ) << ". ";
 		}
 		if (flags & vi_tmShowDuration)
-		{	str << "Duration: " << misc::duration_t{ misc::properties_t::props().all_latency_ } << ". ";
+		{	str << "Duration: " << misc::to_string( props.all_latency_, DURATION_PREC, DURATION_DEC ) << ". ";
 		}
 		if (flags & vi_tmShowUnit)
-		{	str << "One tick: " << misc::duration_t{ misc::properties_t::props().seconds_per_tick_ } << ". ";
+		{	str << "One tick: " << misc::to_string( props.seconds_per_tick_, DURATION_PREC, DURATION_DEC ) << ". ";
 		}
 		if (flags & vi_tmShowOverhead)
-		{	str << "Additive: " << misc::duration_t{ misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_latency_ } << ". ";
+		{	str << "Additive: " << misc::to_string( props.seconds_per_tick_ * props.clock_latency_, DURATION_PREC, DURATION_DEC ) << ". ";
 		}
 
 		str << '\n';
