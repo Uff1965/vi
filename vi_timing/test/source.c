@@ -51,8 +51,6 @@ void foo_c(void)
 	const VI_TM_TICK foo_c_start = vi_tmGetTicks();
 	printf("\n%s:\n", __func__); //-V2600
 	
-	vi_tmWarming(0, 2);
-	vi_tmWarming(2, 2);
 	vi_tmWarming(256, 2);
 	
 	printf("Version: \'%s\' [%" PRIdPTR "]\n", (const char*)vi_tmInfo(VI_TM_INFO_VERSION), (intptr_t)vi_tmInfo(VI_TM_INFO_VER));
