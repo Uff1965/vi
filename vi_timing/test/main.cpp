@@ -234,10 +234,10 @@ namespace {
 				if (0U != calls_cnt)
 				{	std::cout << 
 					"\n"<< std::left << std::setw(48) << name << ":"
-					"\tticks = " << std::setw(16) << std::right << ticks << ","
-					"\t(" << std::setprecision(2) << props.unit_ * (ticks - calls_cnt * props.add_) / calls_cnt << "),"
-					"\tamount = " << std::setw(12) << std::right << amount << ","
-					"\tcalls = " << std::setw(12) << std::right << calls_cnt;
+					" ticks = " << std::setw(15) << std::right << ticks << ","
+					" (" << std::setprecision(2) << std::setw(9) << std::scientific << (props.unit_ * (ticks - calls_cnt * props.add_) / calls_cnt) << "),"
+					" amount = " << std::setw(12) << std::right << amount << ","
+					" calls = " << std::setw(12) << std::right << calls_cnt;
 				}
 				return 0;
 			};
