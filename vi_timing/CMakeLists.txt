@@ -26,15 +26,13 @@ list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
   "source/build_number_maker.h"
-  "source/duration.h"
-  "source/internal.h"
+  "source/misc.h"
 )
 source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
   "source/clock.cpp"
-  "source/duration.cpp"
   "source/misc.cpp"
   "source/props.cpp"
   "source/report.cpp"

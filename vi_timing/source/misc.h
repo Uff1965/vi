@@ -4,6 +4,8 @@
 
 #include <chrono>
 #include <locale>
+#include <string>
+#include <utility>
 
 namespace misc
 {
@@ -21,6 +23,8 @@ namespace misc
 	private:
 		properties_t();
 	};
+
+	std::string to_string(const std::chrono::duration<double> &d, unsigned char precision, unsigned char dec);
 }
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H

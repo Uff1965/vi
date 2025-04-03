@@ -28,12 +28,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include "../vi_timing.h"
 #include "build_number_maker.h"
-#include "internal.h"
+#include "misc.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include "duration.h"
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -53,12 +52,27 @@ namespace
 
 	constexpr unsigned char DURATION_PREC = 2;
 	constexpr unsigned char DURATION_DEC = 1;
+	template<unsigned char P = 2, unsigned char D = 1>
+
+	struct duration_t: std::chrono::duration<double> // A new type is defined to be able to overload the 'operator<'.
+	{
+		template<typename T>
+		constexpr duration_t(T &&v): std::chrono::duration<double>{ std::forward<T>(v) } {}
+		duration_t() = default;
+
+		[[nodiscard]] friend std::string to_string(const duration_t &d)
+		{	return misc::to_string(d, P, D);
+		}
+		[[nodiscard]] friend bool operator<(const duration_t &l, const duration_t &r)
+		{	return l.count() < r.count() && to_string(l) != to_string(r);
+		}
+	};
 
 	struct metering_t
 	{	std::string_view name_;
-		misc::duration_t<DURATION_PREC, DURATION_DEC> total_{ .0 }; // seconds
+		duration_t<DURATION_PREC, DURATION_DEC> total_{ .0 }; // seconds
 		std::string total_txt_{ NotAvailable };
-		misc::duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
+		duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
 		std::string average_txt_{ NotAvailable };
 		std::size_t amount_{}; // Number of measured units
 
