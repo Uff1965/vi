@@ -16,9 +16,8 @@ int main(int argn, char* args[])
 	printf("Burden: %d\n\n", cnt1);
 	
 	auto burden = [](int cnt)
-		{	static volatile auto dummy = 0U;
-			for (auto n = cnt; n; --n)
-				++dummy;
+		{	for (volatile auto dummy = cnt; dummy--;)
+			{/**/ }
 		};
 
 	for (int m = 0; m < 100; ++m)
