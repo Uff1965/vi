@@ -58,7 +58,7 @@ namespace
 	{
 		auto time_point = []
 		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the thread between measurements.
-			for(auto n = 0U; n < cache_warmup; ++n) // Preloading a functions into cache
+			for(auto n = cache_warmup + 1; --n;) // Preloading a functions into cache
 			{	[[maybe_unused]] volatile auto dummy_1 = vi_tmGetTicks();
 				[[maybe_unused]] volatile auto dummy_2 = now();
 			}
@@ -84,14 +84,14 @@ VI_OPTIMIZE_OFF
 	duration measurement_duration()
 	{	
 		static auto gauge_zero = []
-			{	static vi_tmMeasPoint_t* const meas_point = vi_tmMeasPoint(nullptr, ""); // Create a service item with empty name "" and cache preload.
+			{	static vi_tmMeasPoint_t* const meas_point = vi_tmMeasPoint(nullptr, ""); // Create a service item with empty name "".
 				const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
 				vi_tmMeasPointAdd(meas_point, finish - start, 1U);
 			};
 		auto time_point = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
-				for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
+				for (auto cnt = cache_warmup + 1; --cnt; )
 				{	gauge_zero(); // Preloading a functions into cache
 				}
 
@@ -105,14 +105,14 @@ VI_OPTIMIZE_OFF
 
 		constexpr auto CNT = 500U;
 		auto s = time_point();
-		for (auto cnt = 0U; cnt < CNT; ++cnt)
+		for (auto cnt = CNT + 1; --cnt; )
 		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); // 5 calls
 		}
 		const auto pure = now() - s;
 
 		constexpr auto EXT = 20U;
 		s = time_point();
-		for (auto cnt = 0U; cnt < CNT; ++cnt)
+		for (auto cnt = CNT + 1; --cnt; )
 		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); // 5 calls
 
 			// EXT calls
@@ -134,29 +134,32 @@ VI_OPTIMIZE_OFF
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		auto e = vi_tmGetTicks(); // Preloading a function into cache
 		auto s = e;
-		for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
+		for (auto cnt = cache_warmup + 1U; --cnt; )
 		{	s = vi_tmGetTicks();
 		}
 
-		for (auto cnt = 0U; cnt < CNT; ++cnt)
-		{	e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+		for (auto cnt = CNT + 1U; --cnt; )
+		{	vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
+			e = vi_tmGetTicks();
 		}
 		const auto pure = e - s;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		for (auto cnt = 0U; cnt < cache_warmup; ++cnt)
+		for (auto cnt = cache_warmup + 1U; --cnt; )
 		{	s = vi_tmGetTicks();
 		}
 
 		constexpr auto EXT = 20U;
-		for (auto cnt = 0U; cnt < CNT; ++cnt)
-		{	e = vi_tmGetTicks(); e = vi_tmGetTicks();  e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+		for (auto cnt = CNT + 1U; --cnt; )
+		{	vi_tmGetTicks(); vi_tmGetTicks();  vi_tmGetTicks(); vi_tmGetTicks();
 
 			// EXT calls
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
+			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
+			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
+			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
+
+			e = vi_tmGetTicks();
 		}
 		const auto dirty = e - s;
 
@@ -172,7 +175,7 @@ VI_OPTIMIZE_OFF
 
 			std::this_thread::yield(); // Reduce the likelihood of interrupting measurements by switching threads.
 			const auto limit = now() + 256us;
-			for (auto n = 0U; n < cache_warmup; ++n)
+			for (auto n = cache_warmup + 1; --n; )
 			{	first = last = vi_tmGetTicks();
 			}
 
