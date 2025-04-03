@@ -64,7 +64,7 @@ namespace
 /// This function handles special cases such as NaN, infinity values.
 /// It rounds the duration to the specified precision and formats it with the appropriate unit suffix.
 /// </remarks>
-[[nodiscard]] std::string misc::to_string(misc::duration_t sec, unsigned char significant, unsigned char decimal)
+[[nodiscard]] std::string misc::to_string(const misc::duration &sec, unsigned char significant, unsigned char decimal)
 {	assert(decimal < significant);
 
 	std::string result;
@@ -132,11 +132,11 @@ namespace
 			assert(1.0e-16 == round_ext(1.40e-16, 1));
 		}
 
-		{	// nanotest for misc::to_string(duration_t d, unsigned char precision, unsigned char dec)
+		{	// nanotest for misc::to_string(misc::duration d, unsigned char precision, unsigned char dec)
 			const struct
 			{
 				int line_;
-				misc::duration_t num_;
+				double num_;
 				std::string_view expected_;
 				unsigned char significant_;
 				unsigned char decimal_;
@@ -227,7 +227,7 @@ namespace
 			};
 
 			for (auto &test : tests_set)
-			{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
+			{	const auto reality = misc::to_string(misc::duration{ test.num_ }, test.significant_, test.decimal_);
 				assert(reality == test.expected_);
 			}
 		}

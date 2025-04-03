@@ -28,16 +28,18 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include "../vi_timing.h"
 #include "build_number_maker.h"
-#include "duration.h"
 #include "internal.h"
 
 #include <thread>
 #include <chrono>
 
 using namespace std::chrono_literals;
+namespace ch = std::chrono;
 
 namespace
 {
+	using duration = ch::duration<double>;
+
 	class thread_affinity_fix_t
 	{
 		thread_affinity_fix_t(const thread_affinity_fix_t &) = delete;
@@ -52,7 +54,7 @@ namespace
 	constexpr auto cache_warmup = 5U;
 	constexpr auto now = std::chrono::steady_clock::now;
 
-	misc::duration_t seconds_per_tick()
+	duration seconds_per_tick()
 	{
 		auto time_point = []
 		{	std::this_thread::yield(); // To minimize the likelihood of interrupting the thread between measurements.
@@ -75,11 +77,11 @@ namespace
 		{/**/}
 		const auto [tick2, time2] = time_point();
 
-		return misc::duration_t(time2 - time1) / (tick2 - tick1);
+		return duration(time2 - time1) / (tick2 - tick1);
 	}
 
 VI_OPTIMIZE_OFF
-	misc::duration_t measurement_duration()
+	duration measurement_duration()
 	{	
 		static auto gauge_zero = []
 			{	static vi_tmMeasPoint_t* const meas_point = vi_tmMeasPoint(nullptr, ""); // Create a service item with empty name "" and cache preload.
@@ -121,7 +123,7 @@ VI_OPTIMIZE_OFF
 		}
 		const auto dirty = now() - s;
 
-		return misc::duration_t(dirty - pure) / (EXT * CNT);
+		return duration(dirty - pure) / (EXT * CNT);
 	}
 
 	double measurement_cost()

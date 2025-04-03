@@ -9,27 +9,27 @@
 
 namespace misc
 {
-	constexpr unsigned char PRECISION = 2;
-	constexpr unsigned char DEC = 1;
+	using duration = std::chrono::duration<double>;
 
-	struct duration_t: std::chrono::duration<double> // A new type is defined to be able to overload the 'operator<'.
+	std::string to_string(const duration &d, unsigned char precision, unsigned char dec);
+
+	template<unsigned char P = 2, unsigned char D = 1>
+	struct duration_t: duration // A new type is defined to be able to overload the 'operator<'.
 	{
 		template<typename T>
-		constexpr duration_t(T &&v): std::chrono::duration<double>{ std::forward<T>(v) } {}
+		constexpr duration_t(T &&v): duration{ std::forward<T>(v) } {}
 		duration_t() = default;
 
-		friend std::string to_string(duration_t d, unsigned char precision, unsigned char dec);
-
-		[[nodiscard]] friend bool operator<(duration_t l, duration_t r)
-		{	return l.count() < r.count() && to_string(l, PRECISION, DEC) != to_string(r, PRECISION, DEC);
+		friend [[nodiscard]] std::string to_string(const duration_t &d)
+		{	return to_string(d, P, D);
+		}
+		friend [[nodiscard]] bool operator<(const duration_t &l, const duration_t &r)
+		{	return l.count() < r.count() && to_string(l, P, D) != to_string(r, P, D);
 		}
 		template<typename T>
 		friend inline std::basic_ostream<T>& operator<<(std::basic_ostream<T>& os, const duration_t& d)
-		{	return os << to_string(d, PRECISION, DEC);
+		{	return os << to_string(d, P, D);
 		}
     };
-
-	// According to the GCC, a friendly declaration (without a definition) cannot specify default arguments.
-	std::string to_string(duration_t d, unsigned char precision = PRECISION, unsigned char dec = DEC);
 }
 #endif // #ifndef VI_TIMING_SOURCE_DURATION_H

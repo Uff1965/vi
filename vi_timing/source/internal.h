@@ -2,8 +2,8 @@
 #	define VI_TIMING_SOURCE_INTERNAL_H
 #	pragma once
 
-#include "build_number_maker.h"
-#include "duration.h"
+#include <chrono>
+#include <locale>
 
 namespace misc
 {
@@ -13,9 +13,9 @@ namespace misc
 	};
 
 	struct properties_t
-	{	misc::duration_t seconds_per_tick_; // [nanoseconds]
+	{	std::chrono::duration<double> seconds_per_tick_; // [nanoseconds]
 		double clock_latency_; // Duration of one clock call [ticks]
-		misc::duration_t all_latency_; // Duration of one measurement with preservation. [nanoseconds]
+		std::chrono::duration<double> all_latency_; // Duration of one measurement with preservation. [nanoseconds]
 		double clock_resolution_; // [ticks]
 		static const properties_t& props();
 	private:

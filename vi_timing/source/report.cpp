@@ -51,11 +51,14 @@ namespace
 	constexpr char Insignificant[] = "<insig>";
 	constexpr char NotAvailable[] = "<n/a>";
 
+	constexpr unsigned char DURATION_PREC = 2;
+	constexpr unsigned char DURATION_DEC = 1;
+
 	struct metering_t
 	{	std::string_view name_;
-		misc::duration_t total_{ .0 }; // seconds
+		misc::duration_t<DURATION_PREC, DURATION_DEC> total_{ .0 }; // seconds
 		std::string total_txt_{ NotAvailable };
-		misc::duration_t average_{ .0 }; // seconds
+		misc::duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
 		std::string average_txt_{ NotAvailable };
 		std::size_t amount_{}; // Number of measured units
 
@@ -276,16 +279,16 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	{	std::ostringstream str;
 
 		if (flags & vi_tmShowResolution)
-		{	str << "Resolution: " << misc::duration_t(misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_resolution_) << ". ";
+		{	str << "Resolution: " << misc::duration_t{ misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_resolution_ } << ". ";
 		}
 		if (flags & vi_tmShowDuration)
-		{	str << "Duration: " << misc::properties_t::props().all_latency_ << ". ";
+		{	str << "Duration: " << misc::duration_t{ misc::properties_t::props().all_latency_ } << ". ";
 		}
 		if (flags & vi_tmShowUnit)
-		{	str << "One tick: " << misc::properties_t::props().seconds_per_tick_ << ". ";
+		{	str << "One tick: " << misc::duration_t{ misc::properties_t::props().seconds_per_tick_ } << ". ";
 		}
 		if (flags & vi_tmShowOverhead)
-		{	str << "Additive: " << misc::duration_t(misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_latency_) << ". ";
+		{	str << "Additive: " << misc::duration_t{ misc::properties_t::props().seconds_per_tick_ * misc::properties_t::props().clock_latency_ } << ". ";
 		}
 
 		str << '\n';
