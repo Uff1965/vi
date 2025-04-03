@@ -20,10 +20,10 @@ namespace misc
 		constexpr duration_t(T &&v): duration{ std::forward<T>(v) } {}
 		duration_t() = default;
 
-		friend [[nodiscard]] std::string to_string(const duration_t &d)
+		[[nodiscard]] friend std::string to_string(const duration_t &d)
 		{	return to_string(d, P, D);
 		}
-		friend [[nodiscard]] bool operator<(const duration_t &l, const duration_t &r)
+		[[nodiscard]] friend bool operator<(const duration_t &l, const duration_t &r)
 		{	return l.count() < r.count() && to_string(l, P, D) != to_string(r, P, D);
 		}
 		template<typename T>
