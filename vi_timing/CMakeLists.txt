@@ -56,11 +56,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD_REQUIRED ON
   CXX_EXTENSIONS OFF
 
-  DEFINE_SYMBOL "VI_TM_EXPORTS"
-
   OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}"
   OUTPUT_NAME_DEBUG "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d"
 
+  # MSVS adds a subdirectorys to RUNTIME_OUTPUT_DIRECTORY, so we set the paths for each configuration manually.
   LIBRARY_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   LIBRARY_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
   ARCHIVE_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
@@ -68,7 +67,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
 
-  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+  POSITION_INDEPENDENT_CODE ON #-fPIC
+  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" #/MT and /MTd
 )
 
 ### Compiler ##################################################################
@@ -79,7 +79,7 @@ PUBLIC
 
 target_compile_definitions(${PROJECT_NAME}
 PRIVATE
-  $<$<CONFIG:Release>: NDEBUG>
+    "VI_TM_EXPORTS"
 )
 
 if(VI_TM_BUILD_SHARED)
@@ -92,59 +92,51 @@ endif()
 if (WIN32)
     target_compile_definitions(${PROJECT_NAME}
     PRIVATE
-      WIN32_LEAN_AND_MEAN # Exclude rarely-used stuff from Windows headers.
-      NOMINMAX # WinAPI
-      $<$<CONFIG:Debug>: _DEBUG> # Microsoft debug RTL
+        NOMINMAX # This will prevent the definition of the min and max Windows-specific preprocessor macros.
+        WIN32_LEAN_AND_MEAN # Exclude rarely-used stuff from Windows headers.
+        VC_EXTRALEAN
+        NOSERVICE
+        NOGDI
+        NOUSER
+        NOMSG
+        NOKERNEL
+        NOCOMM
+        NOMCX
     )
 
     target_compile_options(${PROJECT_NAME}
-        PRIVATE
+    PRIVATE
         /MP /W4 /nologo /EHsc /Zi
+        $<$<CONFIG:Release>: /O2 /Oi /GL /Gy>
+        $<$<CONFIG:Debug>: /Od /RTC1>
     )
-
-    if(VI_TM_BUILD_SHARED)
-        target_compile_options(${PROJECT_NAME}
-        PRIVATE
-        $<$<CONFIG:Release>: /MT  /O2 /Oi /GL /Gy>
-        $<$<CONFIG:Debug>:   /MTd /Od /RTC1>
-        )
-    else()
-        target_compile_options(${PROJECT_NAME}
-        PRIVATE
-        $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
-        $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
-        )
-    endif()
 elseif (UNIX)
-  target_compile_options(${PROJECT_NAME}
-  PRIVATE
-    -fvisibility=hidden
-    -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
-    $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
-    $<$<CONFIG:Release>: -O3 -s>
-  )
+    target_compile_options(${PROJECT_NAME}
+    PRIVATE
+        -fvisibility=hidden
+        -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
+        $<$<CONFIG:Release>: -O3 -s>
+    )
 endif()
 
 ### Linker ####################################################################
 if (WIN32)
-  target_link_options(${PROJECT_NAME}
-  PRIVATE
-    /SUBSYSTEM:WINDOWS /DEBUG
-    $<$<CONFIG:Release>: /INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF>
-    $<$<CONFIG:Debug>:   /INCREMENTAL>
-  )
+    target_link_options(${PROJECT_NAME}
+    PRIVATE
+        $<$<CONFIG:Release>: /LTCG> # INTERPROCEDURAL_OPTIMIZATION ON
+    )
 elseif (UNIX)
-  target_link_options(${PROJECT_NAME}
-  PRIVATE
-    -Wl,--exclude-libs,ALL
-  )
+    target_link_options(${PROJECT_NAME}
+    PRIVATE
+        -Wl,--exclude-libs,ALL
+    )
 
-  target_link_libraries(${PROJECT_NAME}
-  PRIVATE
-    rt
-  PUBLIC
-    atomic
-  )
+    target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        rt
+    PUBLIC
+        atomic
+    )
 endif()
 
 add_subdirectory(test)

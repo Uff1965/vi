@@ -31,24 +31,24 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   C_STANDARD 17
   CXX_STANDARD_REQUIRED ON
   CXX_EXTENSIONS OFF
-  OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}"
-  OUTPUT_NAME_DEBUG   "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d"
 
+  OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}"
+  OUTPUT_NAME_DEBUG "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d"
+
+  LINK_FLAGS "/SUBSYSTEM:CONSOLE"
+
+  # MSVS adds a subdirectorys to RUNTIME_OUTPUT_DIRECTORY, so we set the paths for each configuration manually.
   LIBRARY_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   LIBRARY_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
   ARCHIVE_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   ARCHIVE_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
+
+  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 
 ## Compiler ##################################################################
-target_compile_definitions(${PROJECT_NAME}
-PRIVATE
-  $<$<CONFIG:Debug>: _DEBUG> # Microsoft debug RTL
-  $<$<CONFIG:Release>: NDEBUG>
-)
-
 if (WIN32)
    target_compile_definitions(${PROJECT_NAME}
    PRIVATE
@@ -60,8 +60,8 @@ if (WIN32)
   PRIVATE
     /MP /W3 /nologo /EHsc /Zi
     /experimental:c11atomics # "Atomics are available in Visual Studio 2022 version 17.5 Preview 2 with the /experimental:c11atomics flag, in /std:c11 mode or later."
-    $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
-    $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
+    $<$<CONFIG:Release>: /O2 /Oi /GL /Gy>
+    $<$<CONFIG:Debug>: /Od /RTC1>
   )
 elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
@@ -83,9 +83,7 @@ PRIVATE
 if (WIN32)
   target_link_options(${PROJECT_NAME}
   PRIVATE
-    /SUBSYSTEM:CONSOLE /DEBUG
-    $<$<CONFIG:Release>: /INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF>
-    $<$<CONFIG:Debug>:   /INCREMENTAL>
+    $<$<CONFIG:Release>: /LTCG>
   )
 elseif (UNIX)
   target_link_options(${PROJECT_NAME}
