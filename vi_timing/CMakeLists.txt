@@ -32,6 +32,7 @@ source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
+  "source/build_number_maker.cpp"
   "source/clock.cpp"
   "source/misc.cpp"
   "source/props.cpp"
