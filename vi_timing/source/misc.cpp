@@ -162,29 +162,29 @@ namespace
 		struct
 		{	std::string_view suffix_;
 			double factor_;
-		} unit = { " ps", 1e-12 };
+		} unit = { " ps", 1e12 };
 
 		if (std::isless(std::abs(num), 1e-12))
 		{	num = 0.0;
 		}
 		else
-		{	--significant;
-			const auto exp = static_cast<int>(std::floor(std::log10(std::abs(num))));
-			const auto factor = std::pow(10.0, significant - exp);
+		{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(num))));
+			const auto factor = std::pow(10.0, significant - position - 1);
 			num = std::round(num * factor) / factor;
 
-			constexpr auto GROUP = 3;
-			const auto supp = ((significant - decimal) / GROUP) * GROUP - exp;
-			if (supp <= -6) { unit = { " Ms", 1e+6 }; }
-			else if (supp <= -3) { unit = { " ks", 1e+3 }; }
-			else if (supp <= 0) { unit = { " s ", 1e-0 }; }
-			else if (supp <= 3) { unit = { " ms", 1e-3 }; }
-			else if (supp <= 6) { unit = { " us", 1e-6 }; }
-			else if (supp <= 9) { unit = { " ns", 1e-9 }; }
+			constexpr auto GROUP_SIZE = 3;
+			const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
+			const auto pullup = site_position - position;
+			if (pullup <= -6) { unit = { " Ms", 1e-6 }; }
+			else if (pullup <= -3) { unit = { " ks", 1e-3 }; }
+			else if (pullup <= 0) { unit = { " s ", 1 }; }
+			else if (pullup <= 3) { unit = { " ms", 1e3 }; }
+			else if (pullup <= 6) { unit = { " us", 1e6 }; }
+			else if (pullup <= 9) { unit = { " ns", 1e9 }; }
 		}
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << (num / unit.factor_) << unit.suffix_;
+		ss << std::fixed << std::setprecision(decimal) << (num * unit.factor_) << unit.suffix_;
 		result = ss.str();
 	}
 
