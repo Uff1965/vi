@@ -162,7 +162,7 @@ namespace
 		struct
 		{	std::string_view suffix_;
 			double factor_;
-		} unit = { " ps", 1e12 };
+		} unit = { " ps", 1e-12 };
 
 		if (std::isless(std::abs(num), 1e-12))
 		{	num = 0.0;
@@ -175,16 +175,16 @@ namespace
 
 			constexpr auto GROUP = 3;
 			const auto supp = ((significant - decimal) / GROUP) * GROUP - exp;
-			if (supp <= -6) { unit = { " Ms", 1e-6 }; }
-			else if (supp <= -3) { unit = { " ks", 1e-3 }; }
-			else if (supp <= 0) { unit = { " s ", 1e+0 }; }
-			else if (supp <= 3) { unit = { " ms", 1e+3 }; }
-			else if (supp <= 6) { unit = { " us", 1e+6 }; }
-			else if (supp <= 9) { unit = { " ns", 1e+9 }; }
+			if (supp <= -6) { unit = { " Ms", 1e+6 }; }
+			else if (supp <= -3) { unit = { " ks", 1e+3 }; }
+			else if (supp <= 0) { unit = { " s ", 1e-0 }; }
+			else if (supp <= 3) { unit = { " ms", 1e-3 }; }
+			else if (supp <= 6) { unit = { " us", 1e-6 }; }
+			else if (supp <= 9) { unit = { " ns", 1e-9 }; }
 		}
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << (num * unit.factor_) << unit.suffix_;
+		ss << std::fixed << std::setprecision(decimal) << (num / unit.factor_) << unit.suffix_;
 		result = ss.str();
 	}
 
