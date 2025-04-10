@@ -203,8 +203,8 @@ namespace
 		{	val = 0.0;
 		}
 		else
-		{	{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
-				const auto factor = std::pow(10, significant - position - 1);
+		{	{	const auto position_original = static_cast<int>(std::floor(std::log10(std::abs(val))));
+				const auto factor = std::pow(10, significant - position_original - 1);
 				val = std::round(val * factor) / factor;
 			}
 			const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
