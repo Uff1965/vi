@@ -167,8 +167,7 @@ namespace
 			signed char exp_;
 		};
 		static constexpr unit_t units[] =
-			{
-				{ 1e-30, " q", -30 }, // quecto
+			{	{ 1e-30, " q", -30 }, // quecto
 				{ 1e-27, " r", -27 }, // ronto
 				{ 1e-24, " y", -24 }, // yocto
 				{ 1e-21, " z", -21 }, // zepto
@@ -198,20 +197,20 @@ namespace
 			std::for_each(std::begin(units), std::end(units), pr);
 		}
 #endif
-		auto unit = units[0]; // pico
+		auto unit = units[0];
 
 		if (std::isless(std::abs(val), unit.factor_))
 		{	val = 0.0;
 		}
 		else
-		{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
-			const auto factor = std::pow(10.0, significant - position - 1);
-			val = std::round(val * factor) / factor;
-
+		{	{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
+				const auto factor = std::pow(10, significant - position - 1);
+				val = std::round(val * factor) / factor;
+			}
+			const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
 			const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
-			const auto pullup = site_position - position;
-
-			if (auto it = std::find_if(std::rbegin(units), std::rend(units), [pullup](auto &v) { return pullup <= -v.exp_; }); it != std::rend(units))
+			auto pr = [pullup = position - site_position](auto &v) { return v.exp_ <= pullup; };
+			if (auto it = std::find_if(std::rbegin(units), std::rend(units), pr); it != std::rend(units))
 			{	unit = *it;
 			}
 		}
@@ -345,8 +344,7 @@ namespace
 	const auto nanotests = []
 	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		const struct
-		{
-			int line_;
+		{	int line_;
 			double num_;
 			std::string_view expected_;
 			unsigned char significant_;
@@ -376,6 +374,8 @@ namespace
 			{ __LINE__, -1e33, "-1000 Q", 1, 0 },
 			{ __LINE__, 1e33, "1000 Q", 1, 0 },
 			{ __LINE__, 1e33, "1000.00 Q", 7, 2 },
+
+			{__LINE__, 0.999, "1.0  ", 2, 1 }, // !!!!
 
 			{ __LINE__, .00555555555,        "6 m", 1, 0 },
 			{ __LINE__, .05555555555,       "60 m", 1, 0 },
