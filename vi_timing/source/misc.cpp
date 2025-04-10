@@ -39,6 +39,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <sched.h> // For sched_getcpu.
 #endif
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -158,13 +159,48 @@ namespace
 	{	result = std::signbit(val) ? "-INF" : "INF";
 	}
 	else
-	{
-		struct
-		{	std::string_view suffix_;
-			double factor_;
-		} unit = { " p", 1e12 };
+	{	static constexpr auto GROUP_SIZE = 3;
 
-		if (std::isless(std::abs(val), 1e-12))
+		struct unit_t
+		{	double factor_;
+			char suffix_[3];
+			signed char exp_;
+		};
+		static constexpr unit_t units[] =
+			{
+				{ 1e-30, " q", -30 }, // quecto
+				{ 1e-27, " r", -27 }, // ronto
+				{ 1e-24, " y", -24 }, // yocto
+				{ 1e-21, " z", -21 }, // zepto
+				{ 1e-18, " a", -18 }, // atto
+				{ 1e-15, " f", -15 }, // femto
+				{ 1e-12, " p", -12 }, // pico
+				{ 1e-9, " n", -9 }, // nano
+				{ 1e-6, " u", -6 }, // micro
+				{ 1e-3, " m", -3 }, // milli
+				{ 1.0, "  ", 0 },
+				{ 1e3, " k", 3 }, // kilo
+				{ 1e6, " M", 6 }, // mega
+				{ 1e9, " G", 9 }, // giga
+				{ 1e12, " T", 12 }, // tera
+				{ 1e15, " P", 15 }, // peta
+				{ 1e18, " E", 18 }, // exa
+				{ 1e21, " Z", 21 }, // zetta
+				{ 1e24, " Y", 24 }, // yotta
+				{ 1e27, " R", 27 }, // ronna
+				{ 1e30, " Q", 30 }, // quetta
+			};
+#ifndef NDEBUG
+		{	auto pr = [b = std::begin(units)](auto &v)
+				{	assert(v.exp_ == b->exp_ + GROUP_SIZE * std::distance(b, &v));
+					assert(v.factor_ == std::pow(10, v.exp_));
+				};
+			std::for_each(std::begin(units), std::end(units), pr);
+		}
+#endif
+		auto unit = units[0]; // pico
+
+		if (std::isless(std::abs(val), unit.factor_))
 		{	val = 0.0;
 		}
 		else
@@ -172,19 +208,16 @@ namespace
 			const auto factor = std::pow(10.0, significant - position - 1);
 			val = std::round(val * factor) / factor;
 
-			constexpr auto GROUP_SIZE = 3;
 			const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
 			const auto pullup = site_position - position;
-			if (pullup <= -6) { unit = { " M", 1e-6 }; }
-			else if (pullup <= -3) { unit = { " k", 1e-3 }; }
-			else if (pullup <= 0) { unit = { "  ", 1 }; }
-			else if (pullup <= 3) { unit = { " m", 1e3 }; }
-			else if (pullup <= 6) { unit = { " u", 1e6 }; }
-			else if (pullup <= 9) { unit = { " n", 1e9 }; }
+
+			if (auto it = std::find_if(std::rbegin(units), std::rend(units), [pullup](auto &v) { return pullup <= -v.exp_; }); it != std::rend(units))
+			{	unit = *it;
+			}
 		}
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << (val * unit.factor_) << unit.suffix_ << u;
+		ss << std::fixed << std::setprecision(decimal) << (val / unit.factor_) << unit.suffix_ << u;
 		result = ss.str();
 	}
 
@@ -333,16 +366,16 @@ namespace
 			{ __LINE__, 1.234, "1  ", 1, 0 },
 			{ __LINE__, 1.234, "1.2  ", 2, 1 },
 
-			{ __LINE__, .0, "0 p", 1, 0 },
-			{ __LINE__, .0, "0.00 p", 7, 2 },
-			{ __LINE__, -9e-13, "0.00 p", 7, 2 },
-			{ __LINE__, 9e-13, "0 p", 1, 0 },
-			{ __LINE__, -1e-12, "-1 p", 1, 0 },
-			{ __LINE__, 1e-12, "1 p", 1, 0 },
-			{ __LINE__, 1e-12, "1.00 p", 7, 2 },
-			{ __LINE__, -1e9, "-1000 M", 1, 0 },
-			{ __LINE__, 1e9, "1000 M", 1, 0 },
-			{ __LINE__, 1e9, "1000.00 M", 7, 2 },
+			{ __LINE__, .0, "0 q", 1, 0 },
+			{ __LINE__, .0, "0.00 q", 7, 2 },
+			{ __LINE__, -9e-31, "0.00 q", 7, 2 },
+			{ __LINE__, 9e-31, "0 q", 1, 0 },
+			{ __LINE__, -1e-30, "-1 q", 1, 0 },
+			{ __LINE__, 1e-30, "1 q", 1, 0 },
+			{ __LINE__, 1e-30, "1.00 q", 7, 2 },
+			{ __LINE__, -1e33, "-1000 Q", 1, 0 },
+			{ __LINE__, 1e33, "1000 Q", 1, 0 },
+			{ __LINE__, 1e33, "1000.00 Q", 7, 2 },
 
 			{ __LINE__, .00555555555,        "6 m", 1, 0 },
 			{ __LINE__, .05555555555,       "60 m", 1, 0 },
