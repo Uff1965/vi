@@ -132,7 +132,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
 	{	VI_TM_TICK result = 0;
 
-		if (static volatile std::uint32_t *const timer_base = get_timer_base())
+		static const volatile std::uint32_t *const timer_base = get_timer_base();
+		if (timer_base)
 		{	const std::uint64_t lo = timer_base[1]; // Timer low 32 bits
 			const std::uint64_t hi = timer_base[2]; // Timer high 32 bits
 			result = (hi << 32) | lo;
