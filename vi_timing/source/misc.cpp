@@ -203,13 +203,13 @@ namespace
 		{	val = 0.0;
 		}
 		else
-		{	{	const auto position_original = static_cast<int>(std::floor(std::log10(std::abs(val))));
-				const auto factor = std::pow(10, significant - position_original - 1);
-				val = std::round(val * factor) / factor;
-			}
-			const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
+		{	const auto position_original = static_cast<int>(std::floor(std::log10(std::abs(val))));
+			const auto factor = std::pow(10, significant - position_original - 1);
+			val = std::round(val * factor) / factor;
+
+			const auto position_clarified = static_cast<int>(std::floor(std::log10(std::abs(val))));
 			const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
-			auto pr = [pullup = position - site_position](auto &v) { return v.exp_ <= pullup; };
+			auto pr = [factor = std::pow(10, position_clarified - site_position)](auto &v) { return v.factor_ <= factor; };
 			if (auto it = std::find_if(std::rbegin(units), std::rend(units), pr); it != std::rend(units))
 			{	unit = *it;
 			}
