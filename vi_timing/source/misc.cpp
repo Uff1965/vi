@@ -136,55 +136,55 @@ namespace
 } // namespace
 
 /// <summary>
-/// Converts a duration to a string representation with specified precision and decimal places.
+/// Converts a double to a string representation with specified precision and decimal places.
 /// </summary>
-/// <param name="sec">The duration to be converted.</param>
+/// <param name="val">The value to be converted.</param>
 /// <param name="significant">The number of significant digits to round to.</param>
 /// <param name="decimal">The number of decimal places to display.</param>
-/// <returns>A string representation of the duration.</returns>
+/// <returns>A string representation of the real number.</returns>
 /// <remarks>
 /// This function handles special cases such as NaN, infinity values.
-/// It rounds the duration to the specified precision and formats it with the appropriate unit suffix.
+/// It rounds the number to the specified precision and formats it with the appropriate unit suffix.
 /// </remarks>
-[[nodiscard]] std::string misc::to_string(const ch::duration<double> &sec, unsigned char significant, unsigned char decimal)
+[[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal, std::string_view u)
 {	assert(decimal < significant);
 
 	std::string result;
 	
-	if (auto num = sec.count(); std::isnan(num))
+	if (std::isnan(val))
 	{	result = "NaN";
 	}
-	else if (std::isinf(num))
-	{	result = std::signbit(num) ? "-INF" : "INF";
+	else if (std::isinf(val))
+	{	result = std::signbit(val) ? "-INF" : "INF";
 	}
 	else
 	{
 		struct
 		{	std::string_view suffix_;
 			double factor_;
-		} unit = { " ps", 1e12 };
+		} unit = { " p", 1e12 };
 
-		if (std::isless(std::abs(num), 1e-12))
-		{	num = 0.0;
+		if (std::isless(std::abs(val), 1e-12))
+		{	val = 0.0;
 		}
 		else
-		{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(num))));
+		{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
 			const auto factor = std::pow(10.0, significant - position - 1);
-			num = std::round(num * factor) / factor;
+			val = std::round(val * factor) / factor;
 
 			constexpr auto GROUP_SIZE = 3;
 			const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
 			const auto pullup = site_position - position;
-			if (pullup <= -6) { unit = { " Ms", 1e-6 }; }
-			else if (pullup <= -3) { unit = { " ks", 1e-3 }; }
-			else if (pullup <= 0) { unit = { " s ", 1 }; }
-			else if (pullup <= 3) { unit = { " ms", 1e3 }; }
-			else if (pullup <= 6) { unit = { " us", 1e6 }; }
-			else if (pullup <= 9) { unit = { " ns", 1e9 }; }
+			if (pullup <= -6) { unit = { " M", 1e-6 }; }
+			else if (pullup <= -3) { unit = { " k", 1e-3 }; }
+			else if (pullup <= 0) { unit = { "  ", 1 }; }
+			else if (pullup <= 3) { unit = { " m", 1e3 }; }
+			else if (pullup <= 6) { unit = { " u", 1e6 }; }
+			else if (pullup <= 9) { unit = { " n", 1e9 }; }
 		}
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << (num * unit.factor_) << unit.suffix_;
+		ss << std::fixed << std::setprecision(decimal) << (val * unit.factor_) << unit.suffix_ << u;
 		result = ss.str();
 	}
 
@@ -203,9 +203,9 @@ void VI_TM_CALL vi_tmThreadYield(void)
 {	std::this_thread::yield();
 }
 
-void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
+void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int m)
 {
-	if (0 == ms)
+	if (0 == m)
 	{	return;
 	}
 
@@ -232,7 +232,7 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	{	t = std::thread{ thread_func };
 	}
 
-	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
+	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ m }; ch::steady_clock::now() < stop;)
 	{	load_dummy();
 	}
 
@@ -310,7 +310,7 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 namespace
 {
 	const auto nanotests = []
-	{	// nanotest for misc::to_string(ch::duration<double> d, unsigned char precision, unsigned char dec)
+	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		const struct
 		{
 			int line_;
@@ -320,89 +320,89 @@ namespace
 			unsigned char decimal_;
 		} tests_set[] =
 		{
-			{ __LINE__, 0.1, "100 ms", 1, 0 },
-			{ __LINE__, 1.0, "1 s ", 1, 0 },
-			{ __LINE__, 2.0, "2 s ", 1, 0 },
+			{ __LINE__, 0.1, "100 m", 1, 0 },
+			{ __LINE__, 1.0, "1  ", 1, 0 },
+			{ __LINE__, 2.0, "2  ", 1, 0 },
 
-			{ __LINE__, 0.2111, "200 ms", 1, 0 },
-			{ __LINE__, 2.111, "2 s ", 1, 0 },
-			{ __LINE__, 21.11, "20 s ", 1, 0 },
+			{ __LINE__, 0.2111, "200 m", 1, 0 },
+			{ __LINE__, 2.111, "2  ", 1, 0 },
+			{ __LINE__, 21.11, "20  ", 1, 0 },
 
-			{ __LINE__, 10.0, "10 s ", 1, 0 },
-			{ __LINE__, 1.0, "1.0 s ", 2, 1 },
-			{ __LINE__, 1.234, "1 s ", 1, 0 },
-			{ __LINE__, 1.234, "1.2 s ", 2, 1 },
+			{ __LINE__, 10.0, "10  ", 1, 0 },
+			{ __LINE__, 1.0, "1.0  ", 2, 1 },
+			{ __LINE__, 1.234, "1  ", 1, 0 },
+			{ __LINE__, 1.234, "1.2  ", 2, 1 },
 
-			{ __LINE__, .0, "0 ps", 1, 0 },
-			{ __LINE__, .0, "0.00 ps", 7, 2 },
-			{ __LINE__, -9e-13, "0.00 ps", 7, 2 },
-			{ __LINE__, 9e-13, "0 ps", 1, 0 },
-			{ __LINE__, -1e-12, "-1 ps", 1, 0 },
-			{ __LINE__, 1e-12, "1 ps", 1, 0 },
-			{ __LINE__, 1e-12, "1.00 ps", 7, 2 },
-			{ __LINE__, -1e9, "-1000 Ms", 1, 0 },
-			{ __LINE__, 1e9, "1000 Ms", 1, 0 },
-			{ __LINE__, 1e9, "1000.00 Ms", 7, 2 },
+			{ __LINE__, .0, "0 p", 1, 0 },
+			{ __LINE__, .0, "0.00 p", 7, 2 },
+			{ __LINE__, -9e-13, "0.00 p", 7, 2 },
+			{ __LINE__, 9e-13, "0 p", 1, 0 },
+			{ __LINE__, -1e-12, "-1 p", 1, 0 },
+			{ __LINE__, 1e-12, "1 p", 1, 0 },
+			{ __LINE__, 1e-12, "1.00 p", 7, 2 },
+			{ __LINE__, -1e9, "-1000 M", 1, 0 },
+			{ __LINE__, 1e9, "1000 M", 1, 0 },
+			{ __LINE__, 1e9, "1000.00 M", 7, 2 },
 
-			{ __LINE__, .00555555555,        "6 ms", 1, 0 },
-			{ __LINE__, .05555555555,       "60 ms", 1, 0 },
-			{ __LINE__, .55555555555,      "600 ms", 1, 0 },
-			{ __LINE__, 5.5555555555,        "6 s ", 1, 0 },
-			{ __LINE__, 55.555555555,       "60 s ", 1, 0 },
-			{ __LINE__, 555.55555555,      "600 s ", 1, 0 },
-			{ __LINE__, 5555.5555555,        "6 ks", 1, 0 },
+			{ __LINE__, .00555555555,        "6 m", 1, 0 },
+			{ __LINE__, .05555555555,       "60 m", 1, 0 },
+			{ __LINE__, .55555555555,      "600 m", 1, 0 },
+			{ __LINE__, 5.5555555555,        "6  ", 1, 0 },
+			{ __LINE__, 55.555555555,       "60  ", 1, 0 },
+			{ __LINE__, 555.55555555,      "600  ", 1, 0 },
+			{ __LINE__, 5555.5555555,        "6 k", 1, 0 },
 
-			{ __LINE__, .00555555555,        "6 ms", 3, 0 },
-			{ __LINE__, .05555555555,       "56 ms", 3, 0 },
-			{ __LINE__, .55555555555,      "556 ms", 3, 0 },
-			{ __LINE__, 5.5555555555,        "6 s ", 3, 0 },
-			{ __LINE__, 55.555555555,       "56 s ", 3, 0 },
-			{ __LINE__, 555.55555555,      "556 s ", 3, 0 },
-			{ __LINE__, 5555.5555555,        "6 ks", 3, 0 },
+			{ __LINE__, .00555555555,        "6 m", 3, 0 },
+			{ __LINE__, .05555555555,       "56 m", 3, 0 },
+			{ __LINE__, .55555555555,      "556 m", 3, 0 },
+			{ __LINE__, 5.5555555555,        "6  ", 3, 0 },
+			{ __LINE__, 55.555555555,       "56  ", 3, 0 },
+			{ __LINE__, 555.55555555,      "556  ", 3, 0 },
+			{ __LINE__, 5555.5555555,        "6 k", 3, 0 },
 
-			{ __LINE__, .00555555555,     "5556 us", 4, 0 },
-			{ __LINE__, .05555555555,    "55560 us", 4, 0 },
-			{ __LINE__, .55555555555,   "555600 us", 4, 0 },
-			{ __LINE__, 5.5555555555,     "5556 ms", 4, 0 },
-			{ __LINE__, 55.555555555,    "55560 ms", 4, 0 },
-			{ __LINE__, 555.55555555,   "555600 ms", 4, 0 },
-			{ __LINE__, 5555.5555555,     "5556 s ", 4, 0 },
+			{ __LINE__, .00555555555,     "5556 u", 4, 0 },
+			{ __LINE__, .05555555555,    "55560 u", 4, 0 },
+			{ __LINE__, .55555555555,   "555600 u", 4, 0 },
+			{ __LINE__, 5.5555555555,     "5556 m", 4, 0 },
+			{ __LINE__, 55.555555555,    "55560 m", 4, 0 },
+			{ __LINE__, 555.55555555,   "555600 m", 4, 0 },
+			{ __LINE__, 5555.5555555,     "5556  ", 4, 0 },
 
-			{ __LINE__, .00555555555,      "5.6 ms", 2, 1 },
-			{ __LINE__, .05555555555,     "56.0 ms", 2, 1 },
-			{ __LINE__, .55555555555,    "560.0 ms", 2, 1 },
-			{ __LINE__, 5.5555555555,      "5.6 s ", 2, 1 },
-			{ __LINE__, 55.555555555,     "56.0 s ", 2, 1 },
-			{ __LINE__, 555.55555555,    "560.0 s ", 2, 1 },
-			{ __LINE__, 5555.5555555,      "5.6 ks", 2, 1 },
+			{ __LINE__, .00555555555,      "5.6 m", 2, 1 },
+			{ __LINE__, .05555555555,     "56.0 m", 2, 1 },
+			{ __LINE__, .55555555555,    "560.0 m", 2, 1 },
+			{ __LINE__, 5.5555555555,      "5.6  ", 2, 1 },
+			{ __LINE__, 55.555555555,     "56.0  ", 2, 1 },
+			{ __LINE__, 555.55555555,    "560.0  ", 2, 1 },
+			{ __LINE__, 5555.5555555,      "5.6 k", 2, 1 },
 
-			{ __LINE__, .00555555555,      "5.6 ms", 4, 1 },
-			{ __LINE__, .05555555555,     "55.6 ms", 4, 1 },
-			{ __LINE__, .55555555555,    "555.6 ms", 4, 1 },
-			{ __LINE__, 5.5555555555,      "5.6 s ", 4, 1 },
-			{ __LINE__, 55.555555555,     "55.6 s ", 4, 1 },
-			{ __LINE__, 555.55555555,    "555.6 s ", 4, 1 },
-			{ __LINE__, 5555.5555555,      "5.6 ks", 4, 1 },
+			{ __LINE__, .00555555555,      "5.6 m", 4, 1 },
+			{ __LINE__, .05555555555,     "55.6 m", 4, 1 },
+			{ __LINE__, .55555555555,    "555.6 m", 4, 1 },
+			{ __LINE__, 5.5555555555,      "5.6  ", 4, 1 },
+			{ __LINE__, 55.555555555,     "55.6  ", 4, 1 },
+			{ __LINE__, 555.55555555,    "555.6  ", 4, 1 },
+			{ __LINE__, 5555.5555555,      "5.6 k", 4, 1 },
 
-			{ __LINE__, .00555555555,   "5555.6 us", 5, 1 },
-			{ __LINE__, .05555555555,  "55556.0 us", 5, 1 },
-			{ __LINE__, .55555555555, "555560.0 us", 5, 1 },
-			{ __LINE__, 5.5555555555,   "5555.6 ms", 5, 1 },
-			{ __LINE__, 55.555555555,  "55556.0 ms", 5, 1 },
-			{ __LINE__, 555.55555555, "555560.0 ms", 5, 1 },
-			{ __LINE__, 5555.5555555,   "5555.6 s ", 5, 1 },
+			{ __LINE__, .00555555555,   "5555.6 u", 5, 1 },
+			{ __LINE__, .05555555555,  "55556.0 u", 5, 1 },
+			{ __LINE__, .55555555555, "555560.0 u", 5, 1 },
+			{ __LINE__, 5.5555555555,   "5555.6 m", 5, 1 },
+			{ __LINE__, 55.555555555,  "55556.0 m", 5, 1 },
+			{ __LINE__, 555.55555555, "555560.0 m", 5, 1 },
+			{ __LINE__, 5555.5555555,   "5555.6  ", 5, 1 },
 
-			{ __LINE__, .00555555555,   "5555.56 us", 6, 2 },
-			{ __LINE__, .05555555555,  "55555.60 us", 6, 2 },
-			{ __LINE__, .55555555555, "555556.00 us", 6, 2 },
-			{ __LINE__, 5.5555555555,   "5555.56 ms", 6, 2 },
-			{ __LINE__, 55.555555555,  "55555.60 ms", 6, 2 },
-			{ __LINE__, 555.55555555, "555556.00 ms", 6, 2 },
-			{ __LINE__, 5555.5555555,   "5555.56 s ", 6, 2 },
+			{ __LINE__, .00555555555,   "5555.56 u", 6, 2 },
+			{ __LINE__, .05555555555,  "55555.60 u", 6, 2 },
+			{ __LINE__, .55555555555, "555556.00 u", 6, 2 },
+			{ __LINE__, 5.5555555555,   "5555.56 m", 6, 2 },
+			{ __LINE__, 55.555555555,  "55555.60 m", 6, 2 },
+			{ __LINE__, 555.55555555, "555556.00 m", 6, 2 },
+			{ __LINE__, 5555.5555555,   "5555.56  ", 6, 2 },
 		};
 
 		for (auto &test : tests_set)
-		{	const auto reality = misc::to_string(ch::duration<double>{ test.num_ }, test.significant_, test.decimal_);
+		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_, "");
 			assert(reality == test.expected_);
 		}
 

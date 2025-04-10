@@ -5,6 +5,7 @@
 #include <chrono>
 #include <locale>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace misc
@@ -24,7 +25,7 @@ namespace misc
 		properties_t();
 	};
 
-	std::string to_string(const std::chrono::duration<double> &d, unsigned char precision, unsigned char dec);
+	std::string to_string(double d, unsigned char precision, unsigned char dec, std::string_view unit);
 }
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H
