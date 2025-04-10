@@ -95,6 +95,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 	static volatile std::uint32_t* get_timer_base()
 	{	volatile std::uint32_t *result = nullptr;
 
+		errno = 0;
+
 		if (const off_t peripheral_base = get_peripheral_base())
 		{	constexpr auto TIMER_OFFSET = 0x3000;
 			const auto timer_base = peripheral_base + TIMER_OFFSET;
@@ -122,7 +124,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 				"\x1B""[0m"
 				"Error";
 			perror(msg);
-			errno = 0;
 		}
 
 		return result;
