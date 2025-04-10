@@ -124,6 +124,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 				"\x1B""[0m"
 				"Error";
 			perror(msg);
+			errno = 0;
 		}
 
 		return result;
