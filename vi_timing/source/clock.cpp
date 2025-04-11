@@ -92,8 +92,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		return result;
 	}
 
-	static volatile std::uint32_t* get_timer_base()
-	{	volatile std::uint32_t *result = nullptr;
+	static const volatile std::uint32_t* get_timer_base()
+	{	const volatile std::uint32_t *result = nullptr;
 
 		if (const off_t peripheral_base = get_peripheral_base())
 		{	constexpr auto TIMER_OFFSET = 0x3000;
@@ -133,9 +133,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 		static const volatile std::uint32_t *const timer_base = get_timer_base();
 		if (timer_base)
-		{	const std::uint64_t lo = timer_base[1]; // Timer low 32 bits
-			const std::uint64_t hi = timer_base[2]; // Timer high 32 bits
-			result = (hi << 32) | lo;
+		{	//const std::uint64_t lo = timer_base[1]; // Timer low 32 bits
+			//const std::uint64_t hi = timer_base[2]; // Timer high 32 bits
+			//result = (hi << 32) | lo;
+			result = *reinterpret_cast<const volatile std::uint64*>(timer_base);
 		}
 		else
 		{	struct timespec ts;
