@@ -134,6 +134,53 @@ namespace
 #endif
 		}
 	}
+
+	constexpr auto GROUP_SIZE = 3;
+
+	double round(double val, unsigned char significant)
+	{	const auto position_original = static_cast<int>(std::floor(std::log10(std::abs(val))));
+		const auto factor = std::pow(10, significant - position_original - 1);
+		return std::round(val * factor) / factor;
+	}
+
+	struct unit_t
+	{	double factor_;
+		char suffix_[3];
+		signed char exp_;
+		friend bool operator <(const unit_t &l, const unit_t &r)
+		{	return l.exp_ < r.exp_;
+		}
+	} static constexpr factors[] =
+		{	{ 1e-30, " q", -30 }, // quecto
+			{ 1e-27, " r", -27 }, // ronto
+			{ 1e-24, " y", -24 }, // yocto
+			{ 1e-21, " z", -21 }, // zepto
+			{ 1e-18, " a", -18 }, // atto
+			{ 1e-15, " f", -15 }, // femto
+			{ 1e-12, " p", -12 }, // pico
+			{ 1e-9, " n", -9 }, // nano
+			{ 1e-6, " u", -6 }, // micro
+			{ 1e-3, " m", -3 }, // milli
+			{ 1.0, "  ", 0 },
+			{ 1e3, " k", 3 }, // kilo
+			{ 1e6, " M", 6 }, // mega
+			{ 1e9, " G", 9 }, // giga
+			{ 1e12, " T", 12 }, // tera
+			{ 1e15, " P", 15 }, // peta
+			{ 1e18, " E", 18 }, // exa
+			{ 1e21, " Z", 21 }, // zetta
+			{ 1e24, " Y", 24 }, // yotta
+			{ 1e27, " R", 27 }, // ronna
+			{ 1e30, " Q", 30 }, // quetta
+		};
+
+	unit_t factor_sellect(double val, unsigned char significant, unsigned char decimal)
+	{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
+		const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
+		auto pr = [pullup = position - site_position](auto &v) { return v.exp_ <= pullup; };
+		const auto it = std::find_if(std::rbegin(factors), std::rend(factors), pr);
+		return it == std::rend(factors)? factors[0]: *it;
+	}
 } // namespace
 
 /// <summary>
@@ -152,71 +199,30 @@ namespace
 
 	std::string result;
 	
-	if (std::isnan(val))
+	if (decimal >= significant)
+	{	result = "ERR";
+	}
+	else if (std::isnan(val))
 	{	result = "NaN";
 	}
 	else if (std::isinf(val))
 	{	result = std::signbit(val) ? "-INF" : "INF";
 	}
 	else
-	{	static constexpr auto GROUP_SIZE = 3;
+	{	auto factor = factors[0];
 
-		struct unit_t
-		{	double factor_;
-			char suffix_[3];
-			signed char exp_;
-		};
-		static constexpr unit_t units[] =
-			{	{ 1e-30, " q", -30 }, // quecto
-				{ 1e-27, " r", -27 }, // ronto
-				{ 1e-24, " y", -24 }, // yocto
-				{ 1e-21, " z", -21 }, // zepto
-				{ 1e-18, " a", -18 }, // atto
-				{ 1e-15, " f", -15 }, // femto
-				{ 1e-12, " p", -12 }, // pico
-				{ 1e-9, " n", -9 }, // nano
-				{ 1e-6, " u", -6 }, // micro
-				{ 1e-3, " m", -3 }, // milli
-				{ 1.0, "  ", 0 },
-				{ 1e3, " k", 3 }, // kilo
-				{ 1e6, " M", 6 }, // mega
-				{ 1e9, " G", 9 }, // giga
-				{ 1e12, " T", 12 }, // tera
-				{ 1e15, " P", 15 }, // peta
-				{ 1e18, " E", 18 }, // exa
-				{ 1e21, " Z", 21 }, // zetta
-				{ 1e24, " Y", 24 }, // yotta
-				{ 1e27, " R", 27 }, // ronna
-				{ 1e30, " Q", 30 }, // quetta
-			};
-#ifndef NDEBUG
-		{	auto pr = [b = std::begin(units)](auto &v)
-				{	assert(v.exp_ == b->exp_ + GROUP_SIZE * std::distance(b, &v));
-					assert(v.factor_ == std::pow(10, v.exp_));
-				};
-			std::for_each(std::begin(units), std::end(units), pr);
-		}
-#endif
-		auto unit = units[0];
-
-		if (std::isless(std::abs(val), unit.factor_))
-		{	val = 0.0;
+		if (auto lim = factor.factor_ / std::pow(10, decimal); std::isless(std::abs(val), lim))
+		{	val = std::round(val / lim) * lim;
+			if (std::isless(std::abs(val), lim))
+				val = 0.0;
 		}
 		else
-		{	{	const auto position_original = static_cast<int>(std::floor(std::log10(std::abs(val))));
-				const auto factor = std::pow(10, significant - position_original - 1);
-				val = std::round(val * factor) / factor;
-			}
-			const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
-			const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
-			auto pr = [pullup = position - site_position](auto &v) { return v.exp_ <= pullup; };
-			if (auto it = std::find_if(std::rbegin(units), std::rend(units), pr); it != std::rend(units))
-			{	unit = *it;
-			}
+		{	val = round(val, significant);
+			factor = factor_sellect(val, significant, decimal);
 		}
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << (val / unit.factor_) << unit.suffix_ << u;
+		ss << std::fixed << std::setprecision(decimal) << (val / factor.factor_) << factor.suffix_ << u;
 		result = ss.str();
 	}
 
@@ -341,7 +347,17 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 #ifndef NDEBUG
 namespace
 {
-	const auto nanotests = []
+	auto nanotest_units = []
+	{	auto pr = [b = std::begin(factors)](auto &v)
+			{	assert(v.exp_ == b->exp_ + GROUP_SIZE * std::distance(b, &v));
+				assert(v.factor_ == std::pow(10, v.exp_));
+			};
+		std::for_each(std::begin(factors), std::end(factors), pr);
+		assert(std::is_sorted(std::begin(factors), std::end(factors)));
+		return 0;
+	}();
+
+	const auto nanotest_to_string = []
 	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		const struct
 		{	int line_;
@@ -351,6 +367,12 @@ namespace
 			unsigned char decimal_;
 		} tests_set[] =
 		{
+			{ __LINE__, 1e-30, "1 q", 1, 0 },
+			{ __LINE__, 1e-30, "1.0 q", 2, 1 },
+			{ __LINE__, 0.51e-30, "1 q", 1, 0 },
+			{ __LINE__, 0.49e-30, "0 q", 1, 0 },
+			{ __LINE__, 0.91e-30, "0.9 q", 2, 1 },
+
 			{ __LINE__, 0.1, "100 m", 1, 0 },
 			{ __LINE__, 1.0, "1  ", 1, 0 },
 			{ __LINE__, 2.0, "2  ", 1, 0 },
@@ -365,9 +387,13 @@ namespace
 			{ __LINE__, 1.234, "1.2  ", 2, 1 },
 
 			{ __LINE__, .0, "0 q", 1, 0 },
-			{ __LINE__, .0, "0.00 q", 7, 2 },
-			{ __LINE__, -9e-31, "0.00 q", 7, 2 },
-			{ __LINE__, 9e-31, "0 q", 1, 0 },
+			{ __LINE__, -0.0009123e-30, "0.00 q", 7, 2 },
+			{ __LINE__, -0.009123e-30, "-0.01 q", 7, 2 },
+			{ __LINE__, -0.09123e-30, "-0.09 q", 7, 2 },
+			{ __LINE__, -0.9123e-30, "-0.91 q", 7, 2 },
+			{ __LINE__, -91.2345e30, "-91234.50 R", 7, 2 },
+			{ __LINE__, -91'234.5e30, "-91234.50 Q", 7, 2 },
+			{ __LINE__, 9e-31, "1 q", 1, 0 },
 			{ __LINE__, -1e-30, "-1 q", 1, 0 },
 			{ __LINE__, 1e-30, "1 q", 1, 0 },
 			{ __LINE__, 1e-30, "1.00 q", 7, 2 },
