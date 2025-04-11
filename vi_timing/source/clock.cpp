@@ -136,7 +136,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		{	//const std::uint64_t lo = timer_base[1]; // Timer low 32 bits
 			//const std::uint64_t hi = timer_base[2]; // Timer high 32 bits
 			//result = (hi << 32) | lo;
-			result = *reinterpret_cast<const volatile std::uint64*>(timer_base);
+			result = *reinterpret_cast<const volatile std::uint64_t*>(timer_base);
 		}
 		else
 		{	struct timespec ts;
