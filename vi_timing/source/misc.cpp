@@ -214,21 +214,19 @@ namespace
 /// <returns>A string representation of the real number.</returns>
 /// <remarks>
 /// This function handles special cases such as NaN, infinity values.
-/// It rounds the number to the specified precision and formats it with the appropriate unit suffix.
+/// It rounds the number to the specified precision and formats it with the appropriate suffix.
 /// </remarks>
 [[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
 {	assert(significant > decimal);
-
 	if (0 == significant || decimal >= significant)
 	{	return "ERR";
 	}
-	else if (std::isnan(val))
+	if (std::isnan(val))
 	{	return "NaN";
 	}
-	else if (std::isinf(val))
+	if (std::isinf(val))
 	{	return std::signbit(val) ? "-INF" : "INF";
 	}
-
 	return to_string_aux(val, significant, decimal);
 }
 
@@ -351,14 +349,10 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 namespace
 {
 	const auto nanotest_factors = []
-	{	assert(std::is_sorted(std::begin(factors), std::end(factors)));
-		auto const b = std::begin(factors);
-		assert(0 == b->exp_ % GROUP_SIZE);
-		auto pr = [b](const auto &v)
-			{	assert(v.exp_ - b->exp_ == std::distance(b, &v) * GROUP_SIZE);
-				(void)v;
-			};
-		std::for_each(std::begin(factors), std::end(factors), pr);
+	{	static constexpr auto const begin = std::begin(factors);
+		static_assert(0 == begin->exp_ % GROUP_SIZE);
+		auto pr = [](const auto &v) { assert(v.exp_ - begin->exp_ == std::distance(begin, &v) * GROUP_SIZE); };
+		std::for_each(begin, std::end(factors), pr);
 		return 0;
 	}();
 
@@ -471,8 +465,7 @@ namespace
 		};
 
 		for (auto &test : tests_set)
-		{	VI_TM("to_string");
-			const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
+		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
 			assert(reality == test.expected_);
 		}
 
