@@ -143,7 +143,7 @@ namespace
 		friend bool operator <(unit_t l, unit_t r)
 		{	return l.exp_ < r.exp_;
 		}
-	} static constexpr factors[] =
+	} constexpr factors[] =
 		{	{ -30, " q" }, // quecto
 			{ -27, " r" }, // ronto
 			{ -24, " y" }, // yocto
@@ -166,8 +166,10 @@ namespace
 			{ 27, " R" }, // ronna
 			{ 30, " Q" }, // quetta
 		};
+		static_assert(0 == factors[0].exp_ % GROUP_SIZE);
+		static_assert(GROUP_SIZE * (std::size(factors) - 1) == std::rbegin(factors)->exp_ - std::begin(factors)->exp_);
 
-	[[nodiscard]]std::string to_string_aux(double val, unsigned char significant, unsigned char decimal)
+	[[nodiscard]]std::string to_string_aux(double val, unsigned char sig, unsigned char decimal)
 	{	char buff[6] = "??";
 		const auto *suffix = buff;
 
@@ -176,17 +178,16 @@ namespace
 			val = +0.0;
 		}
 		else
-		{	const auto sig = significant - 1;
-			int exp = 0;
+		{	int exp = 0;
 			auto position_val = static_cast<int>(std::floor(std::log10(v)));
 			exp = position_val - sig;
 			v = std::round(v * std::pow(10, -exp));
 			if (const auto e = static_cast<int>(std::floor(std::log10(v))); e != sig)
 			{	++position_val;
 			}
-				
-			const auto correction = (position_val < 0 && position_val % GROUP_SIZE != 0) ? -1 : 0; // For round to down.
-			const auto shift = (correction + position_val / GROUP_SIZE - (sig - decimal) / GROUP_SIZE) * GROUP_SIZE;
+
+			const auto round_to_down = (position_val < 0 && position_val % GROUP_SIZE != 0) ? -1 : 0;
+			const auto shift = (round_to_down + position_val / GROUP_SIZE - (sig - decimal) / GROUP_SIZE) * GROUP_SIZE;
 
 			if (const auto idx = (shift - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
 			{	suffix = factors[idx].suffix_;
@@ -227,7 +228,7 @@ namespace
 	if (std::isinf(val))
 	{	return std::signbit(val) ? "-INF" : "INF";
 	}
-	return to_string_aux(val, significant, decimal);
+	return to_string_aux(val, significant - 1, decimal);
 }
 
 void VI_TM_CALL vi_tmThreadAffinityFixate()
@@ -349,10 +350,8 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 namespace
 {
 	const auto nanotest_factors = []
-	{	static constexpr auto const begin = std::begin(factors);
-		static_assert(0 == begin->exp_ % GROUP_SIZE);
-		auto pr = [](const auto &v) { assert(v.exp_ - begin->exp_ == std::distance(begin, &v) * GROUP_SIZE); };
-		std::for_each(begin, std::end(factors), pr);
+	{	auto pr = [](auto &v) { assert(v.exp_ - factors[0].exp_ == GROUP_SIZE * std::distance(factors, &v)); };
+		std::for_each(factors, factors + std::size(factors), pr);
 		return 0;
 	}();
 
@@ -366,6 +365,11 @@ namespace
 			unsigned char decimal_;
 		} tests_set[] =
 		{
+//			{__LINE__, DBL_MIN, "22251.0e-312", 5, 1}, // 2.2250738585072014e-308
+
+			{__LINE__, -0.0123, "-12.0 m", 2, 1},
+			{__LINE__, -0.0123, "-12300.0 u", 5, 1},
+
 			{ __LINE__, 123.456789, "120.0  ", 2, 1 },
 			{ __LINE__, 1.23456789, "1234.6 m", 5, 1 },
 			{ __LINE__, -0.00123456, "-1234.6 u", 5, 1 },
