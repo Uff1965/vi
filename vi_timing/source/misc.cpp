@@ -194,7 +194,7 @@ namespace
 /// This function handles special cases such as NaN, infinity values.
 /// It rounds the number to the specified precision and formats it with the appropriate unit suffix.
 /// </remarks>
-[[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal, std::string_view u)
+[[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
 {	assert(decimal < significant);
 
 	std::string result;
@@ -222,7 +222,7 @@ namespace
 		}
 
 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << (val / factor.factor_) << factor.suffix_ << u;
+		ss << std::fixed << std::setprecision(decimal) << (val / factor.factor_) << factor.suffix_;
 		result = ss.str();
 	}
 
@@ -367,6 +367,11 @@ namespace
 			unsigned char decimal_;
 		} tests_set[] =
 		{
+			{ __LINE__, 123.456789, "120.0  ", 2, 1 },
+			{ __LINE__, 1.23456789, "1234.6 m", 5, 1 },
+			{ __LINE__, -0.00123456, "-1234.6 u", 5, 1 },
+			{ __LINE__, -0.00999999, "-10000.0 u", 5, 1 },
+
 			{ __LINE__, 1e-30, "1 q", 1, 0 },
 			{ __LINE__, 1e-30, "1.0 q", 2, 1 },
 			{ __LINE__, 0.51e-30, "1 q", 1, 0 },
@@ -461,7 +466,7 @@ namespace
 		};
 
 		for (auto &test : tests_set)
-		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_, "");
+		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
 			assert(reality == test.expected_);
 		}
 

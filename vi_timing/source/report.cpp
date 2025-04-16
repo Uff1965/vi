@@ -61,7 +61,7 @@ namespace
 		duration_t() = default;
 
 		[[nodiscard]] friend std::string to_string(const duration_t &d)
-		{	return misc::to_string(d.count(), P, D, "s");
+		{	return misc::to_string(d.count(), P, D) + "s";
 		}
 		[[nodiscard]] friend bool operator<(const duration_t &l, const duration_t &r)
 		{	return l.count() < r.count() && to_string(l) != to_string(r);
@@ -294,17 +294,18 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 	{	std::ostringstream str;
 		auto &props = misc::properties_t::props();
 
+		auto to_string = [](auto d) { return misc::to_string(d, DURATION_PREC, DURATION_DEC) + "s. "; };
 		if (flags & vi_tmShowResolution)
-		{	str << "Resolution: " << misc::to_string( props.seconds_per_tick_.count() * props.clock_resolution_, DURATION_PREC, DURATION_DEC, "s" ) << ". ";
+		{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_);
 		}
 		if (flags & vi_tmShowDuration)
-		{	str << "Duration: " << misc::to_string( props.all_latency_.count(), DURATION_PREC, DURATION_DEC, "s") << ". ";
+		{	str << "Duration: " << to_string(props.all_latency_.count());
 		}
 		if (flags & vi_tmShowUnit)
-		{	str << "One tick: " << misc::to_string( props.seconds_per_tick_.count(), DURATION_PREC, DURATION_DEC, "s" ) << ". ";
+		{	str << "One tick: " << to_string(props.seconds_per_tick_.count());
 		}
 		if (flags & vi_tmShowOverhead)
-		{	str << "Additive: " << misc::to_string( props.seconds_per_tick_.count() * props.clock_latency_, DURATION_PREC, DURATION_DEC, "s" ) << ". ";
+		{	str << "Additive: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_);
 		}
 
 		str << '\n';

@@ -25,7 +25,7 @@ namespace misc
 		properties_t();
 	};
 
-	std::string to_string(double d, unsigned char precision, unsigned char dec, std::string_view unit);
+	std::string to_string(double d, unsigned char precision, unsigned char dec);
 }
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H
