@@ -137,49 +137,71 @@ namespace
 
 	constexpr auto GROUP_SIZE = 3;
 
-	double round(double val, unsigned char significant)
-	{	const auto position_original = static_cast<int>(std::floor(std::log10(std::abs(val))));
-		const auto factor = std::pow(10, significant - position_original - 1);
-		return std::round(val * factor) / factor;
-	}
-
 	struct unit_t
-	{	double factor_;
+	{	int exp_;
 		char suffix_[3];
-		signed char exp_;
-		friend bool operator <(const unit_t &l, const unit_t &r)
+		friend bool operator <(unit_t l, unit_t r)
 		{	return l.exp_ < r.exp_;
 		}
 	} static constexpr factors[] =
-		{	{ 1e-30, " q", -30 }, // quecto
-			{ 1e-27, " r", -27 }, // ronto
-			{ 1e-24, " y", -24 }, // yocto
-			{ 1e-21, " z", -21 }, // zepto
-			{ 1e-18, " a", -18 }, // atto
-			{ 1e-15, " f", -15 }, // femto
-			{ 1e-12, " p", -12 }, // pico
-			{ 1e-9, " n", -9 }, // nano
-			{ 1e-6, " u", -6 }, // micro
-			{ 1e-3, " m", -3 }, // milli
-			{ 1.0, "  ", 0 },
-			{ 1e3, " k", 3 }, // kilo
-			{ 1e6, " M", 6 }, // mega
-			{ 1e9, " G", 9 }, // giga
-			{ 1e12, " T", 12 }, // tera
-			{ 1e15, " P", 15 }, // peta
-			{ 1e18, " E", 18 }, // exa
-			{ 1e21, " Z", 21 }, // zetta
-			{ 1e24, " Y", 24 }, // yotta
-			{ 1e27, " R", 27 }, // ronna
-			{ 1e30, " Q", 30 }, // quetta
+		{	{ -30, " q" }, // quecto
+			{ -27, " r" }, // ronto
+			{ -24, " y" }, // yocto
+			{ -21, " z" }, // zepto
+			{ -18, " a" }, // atto
+			{ -15, " f" }, // femto
+			{ -12, " p" }, // pico
+			{ -9, " n" }, // nano
+			{ -6, " u" }, // micro
+			{ -3, " m" }, // milli
+			{ 0, "  " },
+			{ 3, " k" }, // kilo
+			{ 6, " M" }, // mega
+			{ 9, " G" }, // giga
+			{ 12, " T" }, // tera
+			{ 15, " P" }, // peta
+			{ 18, " E" }, // exa
+			{ 21, " Z" }, // zetta
+			{ 24, " Y" }, // yotta
+			{ 27, " R" }, // ronna
+			{ 30, " Q" }, // quetta
 		};
 
-	unit_t factor_sellect(double val, unsigned char significant, unsigned char decimal)
-	{	const auto position = static_cast<int>(std::floor(std::log10(std::abs(val))));
-		const auto site_position = ((significant - decimal - 1) / GROUP_SIZE) * GROUP_SIZE;
-		auto pr = [pullup = position - site_position](auto &v) { return v.exp_ <= pullup; };
-		const auto it = std::find_if(std::rbegin(factors), std::rend(factors), pr);
-		return it == std::rend(factors)? factors[0]: *it;
+	[[nodiscard]]std::string to_string_aux(double val, unsigned char significant, unsigned char decimal)
+	{	char buff[6] = "??";
+		const auto *suffix = buff;
+
+		if (auto v = std::abs(val); std::isless(v, std::numeric_limits<double>::min()))
+		{	suffix = factors[0].suffix_; // minimum
+			val = +0.0;
+		}
+		else
+		{	const auto sig = significant - 1;
+			int exp = 0;
+			auto position_val = static_cast<int>(std::floor(std::log10(v)));
+			exp = position_val - sig;
+			v = std::round(v * std::pow(10, -exp));
+			if (const auto e = static_cast<int>(std::floor(std::log10(v))); e != sig)
+			{	++position_val;
+			}
+				
+			const auto correction = (position_val < 0 && position_val % GROUP_SIZE != 0) ? -1 : 0; // For round to down.
+			const auto shift = (correction + position_val / GROUP_SIZE - (sig - decimal) / GROUP_SIZE) * GROUP_SIZE;
+
+			if (const auto idx = (shift - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
+			{	suffix = factors[idx].suffix_;
+			}
+			else
+			{	[[maybe_unused]] auto len = std::snprintf(buff, std::size(buff), "e%d", shift);
+				assert(len < std::size(buff));
+			}
+
+			val = std::copysign(v * std::pow(10, exp - shift), val);
+		}
+
+ 		std::ostringstream ss;
+		ss << std::fixed << std::setprecision(decimal) << val << suffix;
+		return ss.str();
 	}
 } // namespace
 
@@ -195,38 +217,19 @@ namespace
 /// It rounds the number to the specified precision and formats it with the appropriate unit suffix.
 /// </remarks>
 [[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
-{	assert(decimal < significant);
+{	assert(significant > decimal);
 
-	std::string result;
-	
-	if (decimal >= significant)
-	{	result = "ERR";
+	if (0 == significant || decimal >= significant)
+	{	return "ERR";
 	}
 	else if (std::isnan(val))
-	{	result = "NaN";
+	{	return "NaN";
 	}
 	else if (std::isinf(val))
-	{	result = std::signbit(val) ? "-INF" : "INF";
-	}
-	else
-	{	auto factor = factors[0];
-
-		if (auto lim = factor.factor_ / std::pow(10, decimal); std::isless(std::abs(val), lim))
-		{	val = std::round(val / lim) * lim;
-			if (std::isless(std::abs(val), lim))
-				val = 0.0;
-		}
-		else
-		{	val = round(val, significant);
-			factor = factor_sellect(val, significant, decimal);
-		}
-
-		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << (val / factor.factor_) << factor.suffix_;
-		result = ss.str();
+	{	return std::signbit(val) ? "-INF" : "INF";
 	}
 
-	return result;
+	return to_string_aux(val, significant, decimal);
 }
 
 void VI_TM_CALL vi_tmThreadAffinityFixate()
@@ -347,20 +350,22 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 #ifndef NDEBUG
 namespace
 {
-	auto nanotest_units = []
-	{	auto pr = [b = std::begin(factors)](auto &v)
-			{	assert(v.exp_ == b->exp_ + GROUP_SIZE * std::distance(b, &v));
-				assert(v.factor_ == std::pow(10, v.exp_));
+	const auto nanotest_factors = []
+	{	assert(std::is_sorted(std::begin(factors), std::end(factors)));
+		auto const b = std::begin(factors);
+		assert(0 == b->exp_ % GROUP_SIZE);
+		auto pr = [b](const auto &v)
+			{	assert(v.exp_ - b->exp_ == std::distance(b, &v) * GROUP_SIZE);
+				(void)v;
 			};
 		std::for_each(std::begin(factors), std::end(factors), pr);
-		assert(std::is_sorted(std::begin(factors), std::end(factors)));
 		return 0;
 	}();
 
 	const auto nanotest_to_string = []
 	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		const struct
-		{	int line_;
+		{	int line_; //-V802
 			double num_;
 			std::string_view expected_;
 			unsigned char significant_;
@@ -374,9 +379,9 @@ namespace
 
 			{ __LINE__, 1e-30, "1 q", 1, 0 },
 			{ __LINE__, 1e-30, "1.0 q", 2, 1 },
-			{ __LINE__, 0.51e-30, "1 q", 1, 0 },
-			{ __LINE__, 0.49e-30, "0 q", 1, 0 },
-			{ __LINE__, 0.91e-30, "0.9 q", 2, 1 },
+			{ __LINE__, 0.51e-30, "500e-33", 1, 0 },
+			{ __LINE__, 0.49e-30, "500e-33", 1, 0 },
+			{ __LINE__, 0.91e-30, "910.0e-33", 2, 1 },
 
 			{ __LINE__, 0.1, "100 m", 1, 0 },
 			{ __LINE__, 1.0, "1  ", 1, 0 },
@@ -392,18 +397,18 @@ namespace
 			{ __LINE__, 1.234, "1.2  ", 2, 1 },
 
 			{ __LINE__, .0, "0 q", 1, 0 },
-			{ __LINE__, -0.0009123e-30, "0.00 q", 7, 2 },
-			{ __LINE__, -0.009123e-30, "-0.01 q", 7, 2 },
-			{ __LINE__, -0.09123e-30, "-0.09 q", 7, 2 },
-			{ __LINE__, -0.9123e-30, "-0.91 q", 7, 2 },
+			{ __LINE__, -0.0009123e-30, "-912300.00e-39", 7, 2 },
+			{ __LINE__, -0.009123e-30, "-9123.00e-36", 7, 2 },
+			{ __LINE__, -0.09123e-30, "-91230.00e-36", 7, 2 },
+			{ __LINE__, -0.9123e-30, "-912300.00e-36", 7, 2 },
 			{ __LINE__, -91.2345e30, "-91234.50 R", 7, 2 },
 			{ __LINE__, -91'234.5e30, "-91234.50 Q", 7, 2 },
-			{ __LINE__, 9e-31, "1 q", 1, 0 },
+			{ __LINE__, 9e-31, "900e-33", 1, 0 },
 			{ __LINE__, -1e-30, "-1 q", 1, 0 },
 			{ __LINE__, 1e-30, "1 q", 1, 0 },
-			{ __LINE__, 1e-30, "1.00 q", 7, 2 },
-			{ __LINE__, -1e33, "-1000 Q", 1, 0 },
-			{ __LINE__, 1e33, "1000 Q", 1, 0 },
+			{ __LINE__, 1e-30, "1000.00e-33", 7, 2 },
+			{ __LINE__, -1e33, "-1e33", 1, 0 },
+			{ __LINE__, 1e33, "1e33", 1, 0 },
 			{ __LINE__, 1e33, "1000.00 Q", 7, 2 },
 
 			{__LINE__, 0.999, "1.0  ", 2, 1 }, // !!!!
@@ -466,7 +471,8 @@ namespace
 		};
 
 		for (auto &test : tests_set)
-		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
+		{	VI_TM("to_string");
+			const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
 			assert(reality == test.expected_);
 		}
 
