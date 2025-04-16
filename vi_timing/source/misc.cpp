@@ -173,7 +173,7 @@ namespace
 	{	char buff[6] = "??";
 		const auto *suffix = buff;
 
-		if (auto v = std::abs(val); std::isless(v, std::numeric_limits<double>::min()))
+		if (auto v = std::abs(val); std::isless(v * std::pow(10, -sig), std::numeric_limits<double>::min()))
 		{	suffix = factors[0].suffix_; // minimum
 			val = +0.0;
 		}
@@ -197,7 +197,8 @@ namespace
 				assert(len < std::size(buff));
 			}
 
-			val = std::copysign(v * std::pow(10, exp - shift), val);
+			val = std::copysign(v * std::pow(10, exp - shift + decimal), val);
+			val = std::round(val) * std::pow(10, -decimal); // The stream rounds the number to an even number.
 		}
 
  		std::ostringstream ss;
@@ -365,7 +366,22 @@ namespace
 			unsigned char decimal_;
 		} tests_set[] =
 		{
-//			{__LINE__, DBL_MIN, "22251.0e-312", 5, 1}, // 2.2250738585072014e-308
+			{__LINE__, DBL_MIN, "0.0 q", 5, 1}, // 2.2250738585072014e-308
+			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
+			{__LINE__, DBL_MIN * 100, "2.2e-306", 3, 1}, // 2.2250738585072014e-306
+			{__LINE__, DBL_MIN * 100, "0.0 q", 4, 1}, // 2225.0738585072014e-309
+			{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.2500738585072014e-306
+
+			{__LINE__, 1e30, "1 Q", 1, 0},
+			{__LINE__, 900e30, "900 Q", 1, 0},
+			{__LINE__, 900e30, "900.0 Q", 2, 1},
+			{__LINE__, 999e30, "1.0e33", 2, 1},
+			{__LINE__, 999.9e30, "999.9 Q", 4, 1},
+			{__LINE__, 999.9e30, "999900.0 R", 5, 1},
+			{__LINE__, 999.99e30, "999990.0 R", 5, 1},
+
+			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
+			{__LINE__, DBL_MAX, "179770.0e303", 5, 1}, // 179769.31348623158e+303
 
 			{__LINE__, -0.0123, "-12.0 m", 2, 1},
 			{__LINE__, -0.0123, "-12300.0 u", 5, 1},
