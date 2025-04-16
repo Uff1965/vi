@@ -43,8 +43,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <cfloat>
 #include <chrono>
-#include <climits>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
