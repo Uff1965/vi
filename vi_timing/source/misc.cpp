@@ -385,13 +385,13 @@ namespace
 	{	assert(0 == errno);
 
 		// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
-		const struct
+		struct
 		{	int line_; //-V802
 			double num_;
 			std::string_view expected_;
 			unsigned char significant_;
 			unsigned char decimal_;
-		} tests_set[] =
+		} static constexpr tests_set[] =
 		{
 //****************
 			{__LINE__, DBL_MAX + 1e300, "INF", 3, 1},
