@@ -192,28 +192,30 @@ namespace
 		char buff[6] = "??";
 		const auto *suffix = buff;
 
-		--sig;
+		auto sig_pos = sig - 1;
 		auto value_v = std::abs(val);
 
-		if (std::isless(value_v, DBL_TRUE_MIN * std::pow(10, sig)))
+		if (std::isless(value_v, DBL_MIN * std::pow(10, sig_pos)))
 		{	suffix = factors[0].suffix_; // minimum
 			value_v = +0.0;
 		}
 		else
 		{	
 			auto value_f = static_cast<int>(std::floor(std::log10(value_v)));
-			if (auto d = floor_mod(value_f) - floor_mod(sig - dec); d < 0)
-			{	sig += static_cast<unsigned char>(d);
+			if (auto d = floor_mod(value_f) - floor_mod(sig_pos - dec); d < 0)
+			{	sig_pos += d;
 			}
 
-			const auto rounded_f = value_f - sig;
+			const auto rounded_f = value_f - sig_pos;
 			const auto rounded_v = std::round(value_v * std::pow(10, -rounded_f));
-			if (auto f = static_cast<int>(std::floor(std::log10(rounded_v))); f != sig)
-			{	assert(f == sig + 1);
+			if (auto f = static_cast<int>(std::floor(std::log10(rounded_v))); f != sig_pos)
+			{	assert(f == sig_pos + 1);
 				++value_f;
 			}
 
-			const auto group_pos = (group(value_f) - group(sig - dec)) * GROUP_SIZE;
+			const auto group_pos = (group(value_f) - group(sig_pos - dec)) * GROUP_SIZE;
+			value_v = std::copysign(rounded_v * std::pow(10, rounded_f - group_pos), val);
+
 			if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
 			{	assert(factors[idx].exp_ == group_pos);
 				suffix = factors[idx].suffix_;
@@ -221,9 +223,6 @@ namespace
 			else
 			{	std::snprintf(buff, std::size(buff), "e%d", group_pos);
 			}
-
-			value_v = rounded_v * std::pow(10, rounded_f - GROUP_SIZE * (group(value_f) - group(sig - dec)));
-			value_v = std::copysign(value_v, val);
 		}
 
 		assert(0 == errno);
@@ -395,18 +394,20 @@ namespace
 			unsigned char decimal_;
 		} tests_set[] =
 		{
-			{ __LINE__, .0, "0 q", 1, 0 },
-			{ __LINE__, -0.0009123e-30, "-912300.00e-39", 7, 2 },
-//			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
 //****************
-			//{__LINE__, DBL_MIN, "0.0 q", 5, 1}, // 2.2250738585072014e-308
-			//{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
-			//{__LINE__, DBL_MIN * 100, "2.2e-306", 3, 1}, // 2.2250738585072014e-306
-			//{__LINE__, DBL_MIN * 100, "0.0 q", 4, 1}, // 2225.0738585072014e-309
-			//{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.2500738585072014e-306
-			//{__LINE__, DBL_MIN / 10, "0 q", 1, 0}, // 2.2250738585072014e-309
-			//{__LINE__, DBL_MIN / 10, "0.0 q", 5, 1}, // 2.2250738585072014e-309
-			//{__LINE__, DBL_MIN / 100, "0 q", 1, 0}, // 2.2250738585072014e-310
+			{__LINE__, DBL_MAX + 1e300, "INF", 3, 1},
+			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
+			{__LINE__, -DBL_MAX, "-180.0e306", 3, 1}, // 1.7976931348623158e+308
+
+			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
+			{__LINE__, DBL_MIN, "0.0 q", 5, 1}, // 2.2250738585072014e-308
+			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
+			{__LINE__, DBL_MIN * 100, "2.2e-306", 3, 1}, // 2.2250738585072014e-306
+			{__LINE__, DBL_MIN * 100, "0.0 q", 4, 1}, // 2225.0738585072014e-309
+			{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.2500738585072014e-306
+			{__LINE__, DBL_MIN / 10, "0 q", 1, 0}, // 2.2250738585072014e-309
+			{__LINE__, DBL_MIN / 10, "0.0 q", 5, 1}, // 2.2250738585072014e-309
+			{__LINE__, DBL_MIN / 100, "0 q", 1, 0}, // 2.2250738585072014e-310
 
 			{__LINE__, 1e30, "1 Q", 1, 0},
 			{__LINE__, 900e30, "900 Q", 1, 0},
