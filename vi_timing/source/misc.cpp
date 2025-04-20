@@ -138,35 +138,34 @@ namespace
 
 	constexpr auto GROUP_SIZE = 3;
 
-	struct unit_t
+	struct
 	{	int exp_;
 		char suffix_[3];
-		friend bool operator <(unit_t l, unit_t r) noexcept { return l.exp_ < r.exp_; }
-	} constexpr factors[] =
-		{	{ -30, " q" }, // quecto
-			{ -27, " r" }, // ronto
-			{ -24, " y" }, // yocto
-			{ -21, " z" }, // zepto
-			{ -18, " a" }, // atto
-			{ -15, " f" }, // femto
-			{ -12, " p" }, // pico
-			{ -9, " n" }, // nano
-			{ -6, " u" }, // micro
-			{ -3, " m" }, // milli
-			{ 0, "  " },
-			{ 3, " k" }, // kilo
-			{ 6, " M" }, // mega
-			{ 9, " G" }, // giga
-			{ 12, " T" }, // tera
-			{ 15, " P" }, // peta
-			{ 18, " E" }, // exa
-			{ 21, " Z" }, // zetta
-			{ 24, " Y" }, // yotta
-			{ 27, " R" }, // ronna
-			{ 30, " Q" }, // quetta
-		};
-		static_assert(0 == factors[0].exp_ % GROUP_SIZE);
-		static_assert(GROUP_SIZE * (std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
+	} constexpr factors[]
+	{	{ -30, " q" }, // quecto
+		{ -27, " r" }, // ronto
+		{ -24, " y" }, // yocto
+		{ -21, " z" }, // zepto
+		{ -18, " a" }, // atto
+		{ -15, " f" }, // femto
+		{ -12, " p" }, // pico
+		{ -9, " n" }, // nano
+		{ -6, " u" }, // micro
+		{ -3, " m" }, // milli
+		{ 0, "  " },
+		{ 3, " k" }, // kilo
+		{ 6, " M" }, // mega
+		{ 9, " G" }, // giga
+		{ 12, " T" }, // tera
+		{ 15, " P" }, // peta
+		{ 18, " E" }, // exa
+		{ 21, " Z" }, // zetta
+		{ 24, " Y" }, // yotta
+		{ 27, " R" }, // ronna
+		{ 30, " Q" }, // quetta
+	};
+	static_assert(0 == factors[0].exp_ % GROUP_SIZE);
+	static_assert(GROUP_SIZE * (std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
 
 	template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 	constexpr T group(T v) noexcept
