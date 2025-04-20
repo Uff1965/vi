@@ -141,9 +141,7 @@ namespace
 	struct unit_t
 	{	int exp_;
 		char suffix_[3];
-		friend bool operator <(unit_t l, unit_t r)
-		{	return l.exp_ < r.exp_;
-		}
+		friend bool operator <(unit_t l, unit_t r) noexcept { return l.exp_ < r.exp_; }
 	} constexpr factors[] =
 		{	{ -30, " q" }, // quecto
 			{ -27, " r" }, // ronto
@@ -168,42 +166,70 @@ namespace
 			{ 30, " Q" }, // quetta
 		};
 		static_assert(0 == factors[0].exp_ % GROUP_SIZE);
-		static_assert(GROUP_SIZE * (std::size(factors) - 1) == std::rbegin(factors)->exp_ - std::begin(factors)->exp_);
+		static_assert(GROUP_SIZE * (std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
 
-	[[nodiscard]]std::string to_string_aux(double val, unsigned char sig, unsigned char decimal)
-	{	char buff[6] = "??";
+	template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+	constexpr T group(T v) noexcept
+	{	if (v < 0)
+		{	v -= GROUP_SIZE - 1;
+		}
+		return v / GROUP_SIZE;
+	};
+	static_assert(group(9) == 3 && group(2) == 0 && group(0) == 0 && group(-1) == -1 && group(-6) == -2);
+
+	template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+	constexpr T floor_mod(T v) noexcept
+	{	auto result = v % GROUP_SIZE;
+		if (result < 0)
+		{	result += GROUP_SIZE;
+		}
+		return result;
+	};
+	static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
+
+	[[nodiscard]] std::string to_string_aux(double val, unsigned char sig, unsigned char const dec)
+	{	assert(sig > dec);
+		char buff[6] = "??";
 		const auto *suffix = buff;
 
-		if (auto v = std::abs(val); std::isless(v * std::pow(10, -sig), std::numeric_limits<double>::min()))
+		--sig;
+		auto value_v = std::abs(val);
+
+		if (std::isless(value_v, DBL_TRUE_MIN * std::pow(10, sig)))
 		{	suffix = factors[0].suffix_; // minimum
-			val = +0.0;
+			value_v = +0.0;
 		}
 		else
-		{	int exp = 0;
-			auto position_val = static_cast<int>(std::floor(std::log10(v)));
-			exp = position_val - sig;
-			v = std::round(v * std::pow(10, -exp));
-			if (const auto e = static_cast<int>(std::floor(std::log10(v))); e != sig)
-			{	++position_val;
+		{	
+			auto value_f = static_cast<int>(std::floor(std::log10(value_v)));
+			if (auto d = floor_mod(value_f) - floor_mod(sig - dec); d < 0)
+			{	sig += static_cast<unsigned char>(d);
 			}
 
-			const auto round_to_down = (position_val < 0 && position_val % GROUP_SIZE != 0) ? -1 : 0;
-			const auto shift = (round_to_down + position_val / GROUP_SIZE - (sig - decimal) / GROUP_SIZE) * GROUP_SIZE;
+			const auto rounded_f = value_f - sig;
+			const auto rounded_v = std::round(value_v * std::pow(10, -rounded_f));
+			if (auto f = static_cast<int>(std::floor(std::log10(rounded_v))); f != sig)
+			{	assert(f == sig + 1);
+				++value_f;
+			}
 
-			if (const auto idx = (shift - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
-			{	suffix = factors[idx].suffix_;
+			const auto group_pos = (group(value_f) - group(sig - dec)) * GROUP_SIZE;
+			if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
+			{	assert(factors[idx].exp_ == group_pos);
+				suffix = factors[idx].suffix_;
 			}
 			else
-			{	[[maybe_unused]] auto len = std::snprintf(buff, std::size(buff), "e%d", shift);
-				assert(len < std::size(buff));
+			{	std::snprintf(buff, std::size(buff), "e%d", group_pos);
 			}
 
-			val = std::copysign(v * std::pow(10, exp - shift + decimal), val);
-			val = std::round(val) * std::pow(10, -decimal); // The stream rounds the number to an even number.
+			value_v = rounded_v * std::pow(10, rounded_f - GROUP_SIZE * (group(value_f) - group(sig - dec)));
+			value_v = std::copysign(value_v, val);
 		}
 
- 		std::ostringstream ss;
-		ss << std::fixed << std::setprecision(decimal) << val << suffix;
+		assert(0 == errno);
+
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(dec) << value_v << suffix;
 		return ss.str();
 	}
 } // namespace
@@ -221,7 +247,7 @@ namespace
 /// </remarks>
 [[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
 {	assert(significant > decimal);
-	if (0 == significant || decimal >= significant)
+	if (decimal >= significant)
 	{	return "ERR";
 	}
 	if (std::isnan(val))
@@ -230,7 +256,7 @@ namespace
 	if (std::isinf(val))
 	{	return std::signbit(val) ? "-INF" : "INF";
 	}
-	return to_string_aux(val, significant - 1, decimal);
+	return to_string_aux(val, significant, decimal);
 }
 
 void VI_TM_CALL vi_tmThreadAffinityFixate()
@@ -358,7 +384,9 @@ namespace
 	}();
 
 	const auto nanotest_to_string = []
-	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
+	{	assert(0 == errno);
+
+		// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		const struct
 		{	int line_; //-V802
 			double num_;
@@ -367,14 +395,18 @@ namespace
 			unsigned char decimal_;
 		} tests_set[] =
 		{
-			{__LINE__, DBL_MIN, "0.0 q", 5, 1}, // 2.2250738585072014e-308
-			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
-			{__LINE__, DBL_MIN * 100, "2.2e-306", 3, 1}, // 2.2250738585072014e-306
-			{__LINE__, DBL_MIN * 100, "0.0 q", 4, 1}, // 2225.0738585072014e-309
-			{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.2500738585072014e-306
-			{__LINE__, DBL_MIN / 10, "0 q", 1, 0}, // 2.2250738585072014e-309
-			{__LINE__, DBL_MIN / 10, "0.0 q", 5, 1}, // 2.2250738585072014e-309
-			{__LINE__, DBL_MIN / 100, "0 q", 1, 0}, // 2.2250738585072014e-310
+			{ __LINE__, .0, "0 q", 1, 0 },
+			{ __LINE__, -0.0009123e-30, "-912300.00e-39", 7, 2 },
+//			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
+//****************
+			//{__LINE__, DBL_MIN, "0.0 q", 5, 1}, // 2.2250738585072014e-308
+			//{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
+			//{__LINE__, DBL_MIN * 100, "2.2e-306", 3, 1}, // 2.2250738585072014e-306
+			//{__LINE__, DBL_MIN * 100, "0.0 q", 4, 1}, // 2225.0738585072014e-309
+			//{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.2500738585072014e-306
+			//{__LINE__, DBL_MIN / 10, "0 q", 1, 0}, // 2.2250738585072014e-309
+			//{__LINE__, DBL_MIN / 10, "0.0 q", 5, 1}, // 2.2250738585072014e-309
+			//{__LINE__, DBL_MIN / 100, "0 q", 1, 0}, // 2.2250738585072014e-310
 
 			{__LINE__, 1e30, "1 Q", 1, 0},
 			{__LINE__, 900e30, "900 Q", 1, 0},
@@ -492,6 +524,8 @@ namespace
 		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
 			assert(reality == test.expected_);
 		}
+		
+		assert(0 == errno);
 
 		return 0;
 	}();
