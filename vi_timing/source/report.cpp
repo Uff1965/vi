@@ -52,8 +52,8 @@ namespace
 
 	constexpr unsigned char DURATION_PREC = 2;
 	constexpr unsigned char DURATION_DEC = 1;
-	template<unsigned char P = 2, unsigned char D = 1>
 
+	template<unsigned char P, unsigned char D>
 	struct duration_t: std::chrono::duration<double> // A new type is defined to be able to overload the 'operator<'.
 	{
 		template<typename T>
