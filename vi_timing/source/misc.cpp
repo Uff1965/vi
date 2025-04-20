@@ -391,7 +391,7 @@ namespace
 			std::string_view expected_;
 			unsigned char significant_;
 			unsigned char decimal_;
-		} static constexpr tests_set[] =
+		} static const tests_set[] =
 		{
 //****************
 			{__LINE__, DBL_MAX + 1e300, "INF", 3, 1},
