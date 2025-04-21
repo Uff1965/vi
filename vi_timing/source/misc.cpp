@@ -224,16 +224,16 @@ namespace
 				static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
 				value_v *= MAX10;
 			}
-			const auto rounded_v = std::round(value_v);
 
-			if (auto f = static_cast<int>(std::floor(std::log10(rounded_v))); f != sig_pos)
+			value_v = std::round(value_v);
+			if (auto f = static_cast<int>(std::floor(std::log10(value_v))); f != sig_pos)
 			{	assert(f == sig_pos + 1);
 				++value_f;
 			}
 			
 			const auto group_pos = (group(value_f) - group(sig_pos - dec)) * GROUP_SIZE;
-			value_v = std::copysign(rounded_v * std::pow(10, rounded_f - group_pos), val);
 			suffix = get_suffix(group_pos, buff);
+			value_v = std::copysign(value_v * std::pow(10, rounded_f - group_pos), val);
 		}
 
 		std::stringstream ss;
@@ -405,6 +405,7 @@ namespace
 //****************
 			{__LINE__, NAN, "NaN", 1, 0},
 			{__LINE__, -NAN, "NaN", 1, 0},
+			{__LINE__, DBL_MAX * 1.1, "INF", 7, 2},
 			{__LINE__, DBL_MAX + 1e300, "INF", 3, 1},
 			{__LINE__, -DBL_MAX - 1e300, "-INF", 1, 0},
 			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
@@ -436,8 +437,12 @@ namespace
 			{__LINE__, 999.9e30, "999900.0 R", 5, 1},
 			{__LINE__, 999.99e30, "999990.0 R", 5, 1},
 
-			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
-			{__LINE__, DBL_MAX, "179770.0e303", 5, 1}, // 179769.31348623158e+303
+			{__LINE__, DBL_MAX, "200e306", 1, 0}, // 1.7976931348623158e+308
+			{__LINE__, -DBL_MAX, "-200e306", 1, 0},
+			{__LINE__, DBL_MAX, "179769.30e303", 7, 2},
+			{__LINE__, -DBL_MAX, "-179769.30e303", 7, 2},
+			{__LINE__, DBL_MAX, "180.0e306", 3, 1},
+			{__LINE__, DBL_MAX, "179770.0e303", 5, 1},
 
 			{__LINE__, -0.0123, "-12.0 m", 2, 1},
 			{__LINE__, -0.0123, "-12300.0 u", 5, 1},
