@@ -95,7 +95,7 @@ namespace
 		const auto core_id = GetCurrentProcessorNumber();
 		const auto affinity = static_cast<DWORD_PTR>(1U) << core_id;
 		const auto thread = GetCurrentThread();
-		if( (s_affinity.previous_affinity_ = SetThreadAffinityMask(thread, affinity)) != 0)
+		if ((s_affinity.previous_affinity_ = SetThreadAffinityMask(thread, affinity)) != 0)
 		{	return; // Ok!
 		}
 #elif defined(__linux__)
@@ -167,6 +167,15 @@ namespace
 	static_assert(0 == factors[0].exp_ % GROUP_SIZE);
 	static_assert(GROUP_SIZE * (std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
 
+	const char* get_suffix(int group_pos, char (&buff)[6])
+	{	if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
+		{	assert(factors[idx].exp_ == group_pos);
+			return factors[idx].suffix_;
+		}
+		std::snprintf(buff, std::size(buff), "e%d", group_pos);
+		return buff;
+	}
+
 	template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 	constexpr T group(T v) noexcept
 	{	if (v < 0)
@@ -215,14 +224,7 @@ namespace
 			
 			const auto group_pos = (group(value_f) - group(sig_pos - dec)) * GROUP_SIZE;
 			value_v = std::copysign(rounded_v * std::pow(10, rounded_f - group_pos), val);
-			
-			if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
-			{	assert(factors[idx].exp_ == group_pos);
-				suffix = factors[idx].suffix_;
-			}
-			else
-			{	std::snprintf(buff, std::size(buff), "e%d", group_pos);
-			}
+			suffix = get_suffix(group_pos, buff);
 		}
 
 		std::stringstream ss;
@@ -288,7 +290,7 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int m)
 
 	std::atomic_bool done = false;
 	auto thread_func = [&done]
-		{	while (!done) //-V776 "Potentially infinite loop."
+		{	while (!done)
 			{	load_dummy();
 			}
 		};
@@ -320,13 +322,13 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_BUILDNUMBER:
-		{	result = misc::build_number_get(); //-V101 "Implicit assignment type conversion to memsize type."
+		{	result = misc::build_number_get();
 		} break;
 
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
-				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999); //-V590 "Possible excessive expression or typo."
-					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res; //-V1065
+				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
+					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res;
 					[[maybe_unused]] const auto sz = snprintf
 						(	res.data(),
 							res.size(),
@@ -384,8 +386,8 @@ namespace
 	const auto nanotest_to_string = []
 	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		struct
-		{	int line_; //-V802
-			double num_;
+		{	int line_;
+			double value_;
 			std::string_view expected_;
 			unsigned char significant_;
 			unsigned char decimal_;
@@ -533,7 +535,7 @@ namespace
 		errno = 0;
 
 		for (auto &test : tests_set)
-		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
+		{	const auto reality = misc::to_string(test.value_, test.significant_, test.decimal_);
 			assert(reality == test.expected_);
 		}
 		
