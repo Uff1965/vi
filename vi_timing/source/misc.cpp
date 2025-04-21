@@ -392,8 +392,8 @@ namespace
 		} static const tests_set[] =
 		{
 //****************
-			{__LINE__, std::numeric_limits<double>::quiet_NaN(), "NaN", 1, 0},
-			{__LINE__, -std::numeric_limits<double>::quiet_NaN(), "NaN", 1, 0},
+			{__LINE__, NAN, "NaN", 1, 0},
+			{__LINE__, -NAN, "NaN", 1, 0},
 			{__LINE__, DBL_MAX + 1e300, "INF", 3, 1},
 			{__LINE__, -DBL_MAX - 1e300, "-INF", 1, 0},
 			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
