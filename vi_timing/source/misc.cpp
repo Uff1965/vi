@@ -191,6 +191,8 @@ namespace
 		char buff[6] = "??";
 		const auto *suffix = buff;
 
+		assert(0 == errno);
+
 		auto sig_pos = sig - 1;
 		auto value_v = std::abs(val);
 
@@ -199,8 +201,7 @@ namespace
 			value_v = +0.0;
 		}
 		else
-		{	
-			auto value_f = static_cast<int>(std::floor(std::log10(value_v)));
+		{	auto value_f = static_cast<int>(std::floor(std::log10(value_v)));
 			if (auto d = floor_mod(value_f) - floor_mod(sig_pos - dec); d < 0)
 			{	sig_pos += d;
 			}
@@ -211,10 +212,10 @@ namespace
 			{	assert(f == sig_pos + 1);
 				++value_f;
 			}
-
+			
 			const auto group_pos = (group(value_f) - group(sig_pos - dec)) * GROUP_SIZE;
 			value_v = std::copysign(rounded_v * std::pow(10, rounded_f - group_pos), val);
-
+			
 			if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
 			{	assert(factors[idx].exp_ == group_pos);
 				suffix = factors[idx].suffix_;
@@ -224,10 +225,9 @@ namespace
 			}
 		}
 
-		assert(0 == errno);
-
 		std::stringstream ss;
 		ss << std::fixed << std::setprecision(dec) << value_v << suffix;
+		assert(0 == errno);
 		return ss.str();
 	}
 } // namespace
@@ -382,9 +382,7 @@ namespace
 	}();
 
 	const auto nanotest_to_string = []
-	{	assert(0 == errno);
-
-		// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
+	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		struct
 		{	int line_; //-V802
 			double num_;
@@ -394,10 +392,22 @@ namespace
 		} static const tests_set[] =
 		{
 //****************
+			{__LINE__, std::numeric_limits<double>::quiet_NaN(), "NaN", 1, 0},
+			{__LINE__, -std::numeric_limits<double>::quiet_NaN(), "NaN", 1, 0},
 			{__LINE__, DBL_MAX + 1e300, "INF", 3, 1},
+			{__LINE__, -DBL_MAX - 1e300, "-INF", 1, 0},
 			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
 			{__LINE__, -DBL_MAX, "-180.0e306", 3, 1}, // 1.7976931348623158e+308
 
+			{__LINE__, std::nextafter(0.0, 1), "0.0 q", 3, 1},
+			{__LINE__, std::nextafter(DBL_TRUE_MIN, 0), "0.0 q", 3, 1},
+			{__LINE__, DBL_TRUE_MIN, "0.0 q", 3, 1},
+			{__LINE__, std::nextafter(DBL_TRUE_MIN, 1), "0.0 q", 3, 1},
+			{__LINE__, DBL_TRUE_MIN * 1'000, "0.0 q", 3, 1},
+			{__LINE__, DBL_MIN / 1'000, "0 q", 1, 0},
+			{__LINE__, std::nextafter(DBL_MIN, 0), "0 q", 1, 0},
+			{__LINE__, DBL_MIN, "20e-309", 1, 0}, // 2.2250738585072014e-308
+			{__LINE__, std::nextafter(DBL_MIN, 1), "20e-309", 1, 0},
 			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
 			{__LINE__, DBL_MIN, "0.0 q", 5, 1}, // 2.2250738585072014e-308
 			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
@@ -519,6 +529,8 @@ namespace
 			{ __LINE__, 555.55555555, "555556.00 m", 6, 2 },
 			{ __LINE__, 5555.5555555,   "5555.56  ", 6, 2 },
 		};
+
+		errno = 0;
 
 		for (auto &test : tests_set)
 		{	const auto reality = misc::to_string(test.num_, test.significant_, test.decimal_);
