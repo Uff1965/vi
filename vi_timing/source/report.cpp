@@ -89,8 +89,8 @@ namespace
 		{	auto &props = misc::properties_t::props();
 			const auto burden = props.clock_latency_ * calls_cnt;
 			// Showed the result as a value no less than the resolution divided by 1000 and by the square root of the number of measurements.
-			const auto allowance = props.clock_resolution_ / std::min(100., std::sqrt(calls_cnt));
-			if (const auto total = static_cast<double>(total_time); total <= burden + allowance)
+			const auto allowance = props.clock_resolution_ / std::min(1000., std::sqrt(calls_cnt));
+			if (const auto total = static_cast<double>(total_time); total <= burden + calls_cnt * allowance)
 			{	total_txt_ = Insignificant;
 				average_txt_ = Insignificant;
 			}
