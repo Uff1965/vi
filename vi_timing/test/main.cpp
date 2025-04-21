@@ -262,9 +262,9 @@ namespace {
 				VI_TM("TestA");
 				nothing();
 			}
-			{	for (auto n = 0; n < CNT; ++n)
-				{	VI_TM("TestA Other");
-					VI_TM("TestA");
+			{	VI_TM("TestA Other", CNT);
+				for (auto n = 0; n < CNT; ++n)
+				{	VI_TM("TestA");
 					nothing();
 				}
 			}
