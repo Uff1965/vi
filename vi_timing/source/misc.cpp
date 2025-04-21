@@ -205,7 +205,7 @@ namespace
 		auto sig_pos = sig - 1;
 		auto value_v = std::abs(val);
 
-		if (std::isless(value_v, DBL_MIN * std::pow(10, sig_pos)))
+		if (std::isless(value_v, DBL_MIN))
 		{	suffix = factors[0].suffix_; // minimum
 			value_v = +0.0;
 		}
@@ -216,7 +216,16 @@ namespace
 			}
 
 			const auto rounded_f = value_f - sig_pos;
-			const auto rounded_v = std::round(value_v * std::pow(10, -rounded_f));
+			for (auto e = rounded_f; ; e += DBL_MAX_10_EXP)
+			{	if (-DBL_MAX_10_EXP <= e)
+				{	value_v *= std::pow(10, -e);
+					break;
+				}
+				static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
+				value_v *= MAX10;
+			}
+			const auto rounded_v = std::round(value_v);
+
 			if (auto f = static_cast<int>(std::floor(std::log10(rounded_v))); f != sig_pos)
 			{	assert(f == sig_pos + 1);
 				++value_f;
@@ -401,7 +410,7 @@ namespace
 			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
 			{__LINE__, -DBL_MAX, "-180.0e306", 3, 1}, // 1.7976931348623158e+308
 
-			{__LINE__, std::nextafter(0.0, 1), "0.0 q", 3, 1},
+			{__LINE__, std::nextafter(0.0, 1), "0.0 q", 3, 1}, // 4.9406564584124654e-324
 			{__LINE__, std::nextafter(DBL_TRUE_MIN, 0), "0.0 q", 3, 1},
 			{__LINE__, DBL_TRUE_MIN, "0.0 q", 3, 1},
 			{__LINE__, std::nextafter(DBL_TRUE_MIN, 1), "0.0 q", 3, 1},
@@ -410,12 +419,11 @@ namespace
 			{__LINE__, std::nextafter(DBL_MIN, 0), "0 q", 1, 0},
 			{__LINE__, DBL_MIN, "20e-309", 1, 0}, // 2.2250738585072014e-308
 			{__LINE__, std::nextafter(DBL_MIN, 1), "20e-309", 1, 0},
-			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
-			{__LINE__, DBL_MIN, "0.0 q", 5, 1}, // 2.2250738585072014e-308
-			{__LINE__, DBL_MIN * 10, "0.0 q", 3, 1},
+			{__LINE__, DBL_MIN, "22251.0e-312", 5, 1}, // 2.2250738585072014e-308
+			{__LINE__, DBL_MIN * 10, "223.0e-309", 3, 1}, // 2.2250738585072014e-308
 			{__LINE__, DBL_MIN * 100, "2.2e-306", 3, 1}, // 2.2250738585072014e-306
-			{__LINE__, DBL_MIN * 100, "0.0 q", 4, 1}, // 2225.0738585072014e-309
-			{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.2500738585072014e-306
+			{__LINE__, DBL_MIN * 100, "2.2e-306", 4, 1}, // 2225.0738585072014e-309
+			{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.250738585072014e-306
 			{__LINE__, DBL_MIN / 10, "0 q", 1, 0}, // 2.2250738585072014e-309
 			{__LINE__, DBL_MIN / 10, "0.0 q", 5, 1}, // 2.2250738585072014e-309
 			{__LINE__, DBL_MIN / 100, "0 q", 1, 0}, // 2.2250738585072014e-310
