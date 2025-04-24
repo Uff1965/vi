@@ -225,7 +225,7 @@ namespace
 	std::string to_string_aux(double val_org, unsigned char sig, unsigned char const dec)
 	{	assert(sig > dec && 0 == errno);
 		std::array<char, 6> buff{ "ERR" };
-		auto [val, suffix] = std::isless(std::abs(val_org), DBL_MIN) ?
+		const auto [val, suffix] = std::isless(std::abs(val_org), DBL_MIN) ?
 			std::make_tuple(+0.0, "  ") :
 			to_string_aux2(val_org, sig - 1, dec, buff);
 
