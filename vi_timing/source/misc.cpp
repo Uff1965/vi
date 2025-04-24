@@ -39,15 +39,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <sched.h> // For sched_getcpu.
 #endif
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cassert>
 #include <cfloat>
 #include <chrono>
 #include <cmath>
-#include <iomanip>
-#include <sstream>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -167,13 +164,13 @@ namespace
 	static_assert(0 == factors[0].exp_ % GROUP_SIZE);
 	static_assert(GROUP_SIZE * (std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
 
-	const char* get_suffix(int group_pos, char (&buff)[6])
+	const char* get_suffix(int group_pos, std::array<char, 6> &buff)
 	{	if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
 		{	assert(factors[idx].exp_ == group_pos);
 			return factors[idx].suffix_;
 		}
-		std::snprintf(buff, std::size(buff), "e%d", group_pos);
-		return buff;
+		std::snprintf(buff.data(), buff.size(), "e%d", group_pos);
+		return buff.data();
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
@@ -195,51 +192,55 @@ namespace
 	};
 	static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
 
-	[[nodiscard]] std::string to_string_aux(double val, unsigned char sig, unsigned char const dec)
-	{	assert(sig > dec);
-		char buff[6] = "??";
-		const auto *suffix = buff;
-
-		assert(0 == errno);
-
-		auto sig_pos = sig - 1;
+	std::tuple<double, const char*> to_string_aux2(double &val, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
+	{	assert(std::isgreaterequal(std::abs(val), DBL_MIN) && sig_pos >= dec);
 		auto value_v = std::abs(val);
+		auto value_f = static_cast<int>(std::floor(std::log10(value_v)));
+		if (auto d = floor_mod(value_f) - floor_mod(sig_pos - dec); d < 0)
+		{	sig_pos += d;
+		}
 
-		if (std::isless(value_v, DBL_MIN))
-		{	suffix = factors[0].suffix_; // minimum
-			value_v = +0.0;
+		const auto rounded_f = value_f - sig_pos;
+		{	auto e = -rounded_f;
+			while (e >= DBL_MAX_10_EXP)
+			{	static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
+				value_v *= MAX10;
+				e -= DBL_MAX_10_EXP;
+			}
+			value_v *= std::pow(10, e);
+		}
+
+		value_v = std::round(value_v);
+		if (auto f = static_cast<int>(std::floor(std::log10(value_v))); f != sig_pos)
+		{	assert(f == sig_pos + 1);
+			++value_f;
+		}
+
+		const auto group_pos = (group(value_f) - group(sig_pos - dec)) * GROUP_SIZE;
+		value_v *= std::pow(10, rounded_f - group_pos);
+		assert(0 == errno);
+		return { std::copysign(value_v, val), get_suffix(group_pos, buff) };
+	}
+
+	std::string to_string_aux(double val, unsigned char sig, unsigned char const dec)
+	{	assert(sig > dec && 0 == errno);
+		std::array<char, 6> buff{ "ERR" };
+		const char *suffix = buff.data();
+
+		std::tie(val, suffix) = std::isless(std::abs(val), DBL_MIN) ?
+			std::make_tuple(+0.0, "  ") :
+			to_string_aux2(val, sig - 1, dec, buff);
+
+		std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "  -6666.66e-308" -> 9 + 6;
+		if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); len >= 0)
+		{	assert(result.size() > len);
+			result.resize(len);
 		}
 		else
-		{	auto value_f = static_cast<int>(std::floor(std::log10(value_v)));
-			if (auto d = floor_mod(value_f) - floor_mod(sig_pos - dec); d < 0)
-			{	sig_pos += d;
-			}
-
-			const auto rounded_f = value_f - sig_pos;
-			for (auto e = rounded_f; ; e += DBL_MAX_10_EXP)
-			{	if (-DBL_MAX_10_EXP <= e)
-				{	value_v *= std::pow(10, -e);
-					break;
-				}
-				static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
-				value_v *= MAX10;
-			}
-
-			value_v = std::round(value_v);
-			if (auto f = static_cast<int>(std::floor(std::log10(value_v))); f != sig_pos)
-			{	assert(f == sig_pos + 1);
-				++value_f;
-			}
-			
-			const auto group_pos = (group(value_f) - group(sig_pos - dec)) * GROUP_SIZE;
-			suffix = get_suffix(group_pos, buff);
-			value_v = std::copysign(value_v * std::pow(10, rounded_f - group_pos), val);
+		{	assert(false);
+			result = "ERR";
 		}
-
-		std::stringstream ss;
-		ss << std::fixed << std::setprecision(dec) << value_v << suffix;
-		assert(0 == errno);
-		return ss.str();
+		return result;
 	}
 } // namespace
 
@@ -280,9 +281,9 @@ void VI_TM_CALL vi_tmThreadYield(void)
 {	std::this_thread::yield();
 }
 
-void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int m)
+void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 {
-	if (0 == m)
+	if (0 == ms)
 	{	return;
 	}
 
@@ -309,7 +310,7 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int m)
 	{	t = std::thread{ thread_func };
 	}
 
-	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ m }; ch::steady_clock::now() < stop;)
+	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
 	{	load_dummy();
 	}
 
@@ -387,8 +388,9 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 namespace
 {
 	const auto nanotest_factors = []
-	{	auto pr = [](auto &v) { assert(v.exp_ - factors[0].exp_ == GROUP_SIZE * std::distance(factors, &v)); };
-		std::for_each(factors, factors + std::size(factors), pr);
+	{	for (auto &v: factors)
+		{	assert(v.exp_ == factors[0].exp_ + GROUP_SIZE * std::distance(factors, &v));
+		}
 		return 0;
 	}();
 
@@ -411,13 +413,13 @@ namespace
 			{__LINE__, DBL_MAX, "180.0e306", 3, 1}, // 1.7976931348623158e+308
 			{__LINE__, -DBL_MAX, "-180.0e306", 3, 1}, // 1.7976931348623158e+308
 
-			{__LINE__, std::nextafter(0.0, 1), "0.0 q", 3, 1}, // 4.9406564584124654e-324
-			{__LINE__, std::nextafter(DBL_TRUE_MIN, 0), "0.0 q", 3, 1},
-			{__LINE__, DBL_TRUE_MIN, "0.0 q", 3, 1},
-			{__LINE__, std::nextafter(DBL_TRUE_MIN, 1), "0.0 q", 3, 1},
-			{__LINE__, DBL_TRUE_MIN * 1'000, "0.0 q", 3, 1},
-			{__LINE__, DBL_MIN / 1'000, "0 q", 1, 0},
-			{__LINE__, std::nextafter(DBL_MIN, 0), "0 q", 1, 0},
+			{__LINE__, std::nextafter(0.0, 1), "0.0  ", 3, 1}, // 4.9406564584124654e-324
+			{__LINE__, std::nextafter(DBL_TRUE_MIN, 0), "0.0  ", 3, 1},
+			{__LINE__, DBL_TRUE_MIN, "0.0  ", 3, 1},
+			{__LINE__, std::nextafter(DBL_TRUE_MIN, 1), "0.0  ", 3, 1},
+			{__LINE__, DBL_TRUE_MIN * 1'000, "0.0  ", 3, 1},
+			{__LINE__, DBL_MIN / 1'000, "0  ", 1, 0},
+			{__LINE__, std::nextafter(DBL_MIN, 0), "0  ", 1, 0},
 			{__LINE__, DBL_MIN, "20e-309", 1, 0}, // 2.2250738585072014e-308
 			{__LINE__, std::nextafter(DBL_MIN, 1), "20e-309", 1, 0},
 			{__LINE__, DBL_MIN, "22251.0e-312", 5, 1}, // 2.2250738585072014e-308
@@ -425,9 +427,9 @@ namespace
 			{__LINE__, DBL_MIN * 100, "2.2e-306", 3, 1}, // 2.2250738585072014e-306
 			{__LINE__, DBL_MIN * 100, "2.2e-306", 4, 1}, // 2225.0738585072014e-309
 			{__LINE__, DBL_MIN * 1000, "22.3e-306", 4, 1}, // 22.250738585072014e-306
-			{__LINE__, DBL_MIN / 10, "0 q", 1, 0}, // 2.2250738585072014e-309
-			{__LINE__, DBL_MIN / 10, "0.0 q", 5, 1}, // 2.2250738585072014e-309
-			{__LINE__, DBL_MIN / 100, "0 q", 1, 0}, // 2.2250738585072014e-310
+			{__LINE__, DBL_MIN / 10, "0  ", 1, 0}, // 2.2250738585072014e-309
+			{__LINE__, DBL_MIN / 10, "0.0  ", 5, 1}, // 2.2250738585072014e-309
+			{__LINE__, DBL_MIN / 100, "0  ", 1, 0}, // 2.2250738585072014e-310
 
 			{__LINE__, 1e30, "1 Q", 1, 0},
 			{__LINE__, 900e30, "900 Q", 1, 0},
@@ -471,7 +473,7 @@ namespace
 			{ __LINE__, 1.234, "1  ", 1, 0 },
 			{ __LINE__, 1.234, "1.2  ", 2, 1 },
 
-			{ __LINE__, .0, "0 q", 1, 0 },
+			{ __LINE__, .0, "0  ", 1, 0 },
 			{ __LINE__, -0.0009123e-30, "-912300.00e-39", 7, 2 },
 			{ __LINE__, -0.009123e-30, "-9123.00e-36", 7, 2 },
 			{ __LINE__, -0.09123e-30, "-91230.00e-36", 7, 2 },
@@ -577,16 +579,13 @@ namespace
 			{ __LINE__, 555.55555555, "555556.00 m", 6, 2 },
 			{ __LINE__, 5555.5555555,   "5555.56  ", 6, 2 },
 		};
-
 		errno = 0;
 
 		for (auto &test : tests_set)
 		{	const auto reality = misc::to_string(test.value_, test.significant_, test.decimal_);
 			assert(reality == test.expected_);
 		}
-		
 		assert(0 == errno);
-
 		return 0;
 	}();
 }
