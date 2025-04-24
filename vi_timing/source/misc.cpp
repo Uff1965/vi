@@ -222,14 +222,12 @@ namespace
 		return { std::copysign(val, val_org), get_suffix(group_pos, buff) };
 	}
 
-	std::string to_string_aux(double val, unsigned char sig, unsigned char const dec)
+	std::string to_string_aux(double val_org, unsigned char sig, unsigned char const dec)
 	{	assert(sig > dec && 0 == errno);
 		std::array<char, 6> buff{ "ERR" };
-		const char *suffix = buff.data();
-
-		std::tie(val, suffix) = std::isless(std::abs(val), DBL_MIN) ?
+		auto [val, suffix] = std::isless(std::abs(val_org), DBL_MIN) ?
 			std::make_tuple(+0.0, "  ") :
-			to_string_aux2(val, sig - 1, dec, buff);
+			to_string_aux2(val_org, sig - 1, dec, buff);
 
 		std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "  -6666.66e-308" -> 9 + 6;
 		if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); len >= 0)
