@@ -194,10 +194,11 @@ namespace
 
 	std::tuple<double, const char*> to_string_aux2(double val_org, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
 	{	assert(std::isgreaterequal(std::abs(val_org), DBL_MIN) && sig_pos >= dec);
+
 		auto val = std::abs(val_org);
 		auto fact = static_cast<int>(std::floor(std::log10(val)));
-		if (auto d = floor_mod(fact) - floor_mod(sig_pos - dec); d < 0)
-		{	sig_pos += d;
+		if (auto d = floor_mod(sig_pos - dec) - floor_mod(fact); d > 0)
+		{	sig_pos -= d;
 		}
 
 		const auto rounded_f = fact - sig_pos;
@@ -211,8 +212,8 @@ namespace
 		}
 
 		val = std::round(val);
-		if (auto f = static_cast<int>(std::floor(std::log10(val))); f != sig_pos)
-		{	assert(f == sig_pos + 1);
+		if (auto fact_rounded = static_cast<int>(std::floor(std::log10(val))); fact_rounded != sig_pos)
+		{	assert(fact_rounded == sig_pos + 1);
 			++fact;
 		}
 
