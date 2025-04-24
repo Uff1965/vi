@@ -192,34 +192,34 @@ namespace
 	};
 	static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
 
-	std::tuple<double, const char*> to_string_aux2(double &val, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
-	{	assert(std::isgreaterequal(std::abs(val), DBL_MIN) && sig_pos >= dec);
-		auto value_v = std::abs(val);
-		auto value_f = static_cast<int>(std::floor(std::log10(value_v)));
-		if (auto d = floor_mod(value_f) - floor_mod(sig_pos - dec); d < 0)
+	std::tuple<double, const char*> to_string_aux2(double val_org, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
+	{	assert(std::isgreaterequal(std::abs(val_org), DBL_MIN) && sig_pos >= dec);
+		auto val = std::abs(val_org);
+		auto fact = static_cast<int>(std::floor(std::log10(val)));
+		if (auto d = floor_mod(fact) - floor_mod(sig_pos - dec); d < 0)
 		{	sig_pos += d;
 		}
 
-		const auto rounded_f = value_f - sig_pos;
-		{	auto e = -rounded_f;
-			while (e >= DBL_MAX_10_EXP)
+		const auto rounded_f = fact - sig_pos;
+		{	auto exp = -rounded_f;
+			while (exp >= DBL_MAX_10_EXP)
 			{	static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
-				value_v *= MAX10;
-				e -= DBL_MAX_10_EXP;
+				val *= MAX10;
+				exp -= DBL_MAX_10_EXP;
 			}
-			value_v *= std::pow(10, e);
+			val *= std::pow(10, exp);
 		}
 
-		value_v = std::round(value_v);
-		if (auto f = static_cast<int>(std::floor(std::log10(value_v))); f != sig_pos)
+		val = std::round(val);
+		if (auto f = static_cast<int>(std::floor(std::log10(val))); f != sig_pos)
 		{	assert(f == sig_pos + 1);
-			++value_f;
+			++fact;
 		}
 
-		const auto group_pos = (group(value_f) - group(sig_pos - dec)) * GROUP_SIZE;
-		value_v *= std::pow(10, rounded_f - group_pos);
+		const auto group_pos = (group(fact) - group(sig_pos - dec)) * GROUP_SIZE;
+		val *= std::pow(10, rounded_f - group_pos);
 		assert(0 == errno);
-		return { std::copysign(value_v, val), get_suffix(group_pos, buff) };
+		return { std::copysign(val, val_org), get_suffix(group_pos, buff) };
 	}
 
 	std::string to_string_aux(double val, unsigned char sig, unsigned char const dec)
