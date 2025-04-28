@@ -203,9 +203,9 @@ misc::properties_t::properties_t()
 
 	vi_tmJournalClear(nullptr, "");
 	seconds_per_tick_ = seconds_per_tick();
-	clock_latency_ = measurement_cost();
+	clock_latency_ticks_ = measurement_cost();
 	all_latency_ = measurement_duration();
-	clock_resolution_ = resolution();
+	clock_resolution_ticks_ = resolution();
 }
 
 const misc::properties_t& misc::properties_t::props()

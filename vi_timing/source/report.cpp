@@ -79,21 +79,22 @@ namespace
 		metering_t(const char *name, VI_TM_TICK total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
 	};
 
-	metering_t::metering_t(const char *name, VI_TM_TICK total_time, std::size_t amount, std::size_t calls_cnt) noexcept
+	metering_t::metering_t(const char *name, VI_TM_TICK total_ticks, std::size_t amount, std::size_t calls_cnt) noexcept
 	:	name_{ name },
 		amount_{ amount }
 	{	assert(amount >= calls_cnt);
-		assert((0 == calls_cnt) == (0 == amount));
+		assert(!!calls_cnt == !!amount);
 
 		if (0 != amount)
 		{	auto &props = misc::properties_t::props();
-			const auto burden = props.clock_latency_ * calls_cnt;
-			if (const auto total = static_cast<double>(total_time); total <= burden + props.clock_resolution_ * std::sqrt(calls_cnt))
+			if (const auto ticks = static_cast<double>(total_ticks) - props.clock_latency_ticks_ * static_cast<double>(calls_cnt);
+				ticks <= props.clock_resolution_ticks_ * std::sqrt(calls_cnt)
+			)
 			{	total_txt_ = Insignificant;
 				average_txt_ = Insignificant;
 			}
 			else
-			{	total_ = props.seconds_per_tick_ * (total - burden);
+			{	total_ = props.seconds_per_tick_ * ticks;
 				total_txt_ = to_string(total_);
 				average_ = total_ / amount_;
 				average_txt_ = to_string(average_);
@@ -154,7 +155,6 @@ namespace
 	struct formatter_t
 	{	static constexpr auto fill_symbol = '.';
 		const std::size_t number_len_{ 1 }; // '#'
-		mutable std::size_t n_{ 0 };
 		const unsigned flags_;
 		const unsigned guideline_interval_;
 
@@ -162,6 +162,7 @@ namespace
 		std::size_t max_len_total_{ std::size(TitleTotal) - 1 };
 		std::size_t max_len_average_{ std::size(TitleAverage) - 1 };
 		std::size_t max_len_amount_{ std::size(TitleAmount) - 1 };
+		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
 		int print_header(const vi_tmLogSTR_t fn, void *data) const;
@@ -173,8 +174,7 @@ namespace
 		vi_tmResults
 		(	journal_handle,
 			[](const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *callback_data)
-			{
-				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, total, amount, calls_cnt);
+			{	static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, total, amount, calls_cnt);
 				return 0; // Ok, continue enumerate.
 			},
 			&result
@@ -188,26 +188,25 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 :	number_len_{ itms.empty() ? 1U : 1U + static_cast<std::size_t>(std::floor(std::log10(itms.size()))) },
 	flags_{ flags },
 	guideline_interval_{ itms.size() > 4U ? 3U : 0U }
-{	std::size_t *ptr = nullptr;
+{	const auto mark = ((flags & vi_tmSortAscending) ? std::size(Ascending) : std::size(Descending)) - 1U;
 	switch (flags_ & vi_tmSortMask)
 	{
 	default:
 		assert(false);
 		[[fallthrough]];
 	case vi_tmSortByName:
-		ptr = &max_len_name_;
+		max_len_name_ += mark;
 		break;
 	case vi_tmSortByAmount:
-		ptr = &max_len_amount_;
+		max_len_amount_ += mark;
 		break;
 	case vi_tmSortByTime:
-		ptr = &max_len_total_;
+		max_len_total_ += mark;
 		break;
 	case vi_tmSortBySpeed:
-		ptr = &max_len_average_;
+		max_len_average_ += mark;
 		break;
 	}
-	*ptr += ((flags & vi_tmSortAscending) ? std::size(Ascending): std::size(Descending)) - 1;
 
 	std::size_t max_amount = 0U;
 	for (auto &itm : itms)
@@ -215,10 +214,9 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
 		max_len_name_ = std::max(max_len_name_, itm.name_.length());
 		if (itm.amount_ > max_amount)
-		{
-			max_amount = itm.amount_;
+		{	max_amount = itm.amount_;
 			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount)));
-			len += len / 3; // for thousand separators
+			len += len / 3U; // for thousand separators
 			len += 1U;
 			max_len_amount_ = std::max(max_len_amount_, len);
 		}
@@ -287,14 +285,15 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, voi
 }
 
 int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
-{	int result = 0;
+{	assert(!!fn);
+	int result = 0;
 	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
 	{	std::ostringstream str;
 		auto &props = misc::properties_t::props();
 
 		auto to_string = [](auto d) { return misc::to_string(d, DURATION_PREC, DURATION_DEC) + "s. "; };
 		if (flags & vi_tmShowResolution)
-		{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_);
+		{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_ticks_);
 		}
 		if (flags & vi_tmShowDuration)
 		{	str << "Duration: " << to_string(props.all_latency_.count());
@@ -303,7 +302,7 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 		{	str << "One tick: " << to_string(props.seconds_per_tick_.count());
 		}
 		if (flags & vi_tmShowOverhead)
-		{	str << "Additive: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_);
+		{	str << "Additive: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_ticks_);
 		}
 
 		str << '\n';
@@ -314,8 +313,7 @@ int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
 }
 
 int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL journal_handle, unsigned flags, vi_tmLogSTR_t fn, void *data)
-{	int result = 0;
-
+{	
 	if (nullptr == fn)
 	{	fn = [](const char *str, void *data) { return std::fputs(str, static_cast<std::FILE *>(data)); };
 		if (nullptr == data)
@@ -324,14 +322,13 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL journal_handle, unsigned flags, vi_tmL
 	}
 
 	(void) misc::properties_t::props(); // Preventing deadlock in traits_t::results_callback().
-	result += print_props(fn, data, flags);
+	int result = print_props(fn, data, flags);
 
 	std::vector<metering_t> metering_entries = get_meterings(journal_handle);
-	std::sort(metering_entries.begin(), metering_entries.end(), comparator_t{ flags });
-
 	const formatter_t formatter{ metering_entries, flags };
 	result += formatter.print_header(fn, data);
 
+	std::sort(metering_entries.begin(), metering_entries.end(), comparator_t{ flags });
 	for (const auto &itm : metering_entries)
 	{	result += formatter.print_metering(itm, fn, data);
 	}

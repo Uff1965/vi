@@ -17,9 +17,9 @@ namespace misc
 
 	struct properties_t
 	{	std::chrono::duration<double> seconds_per_tick_; // [nanoseconds]
-		double clock_latency_; // Duration of one clock call [ticks]
+		double clock_latency_ticks_; // Duration of one clock call [ticks]
 		std::chrono::duration<double> all_latency_; // Duration of one measurement with preservation. [nanoseconds]
-		double clock_resolution_; // [ticks]
+		double clock_resolution_ticks_; // [ticks]
 		static const properties_t& props();
 	private:
 		properties_t();

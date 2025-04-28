@@ -358,7 +358,7 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_RESOLUTION: // double - Clock resolution [ticks]
-		{	static const double resolution = misc::properties_t::props().clock_resolution_;
+		{	static const double resolution = misc::properties_t::props().clock_resolution_ticks_;
 			result = reinterpret_cast<std::uintptr_t>(&resolution);
 		} break;
 
@@ -368,7 +368,7 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 		} break;
 
 		case VI_TM_INFO_OVERHEAD: // double - Clock duration [ticks]
-		{	static const double overhead = misc::properties_t::props().clock_latency_;
+		{	static const double overhead = misc::properties_t::props().clock_latency_ticks_;
 			result = reinterpret_cast<std::uintptr_t>(&overhead);
 		} break;
 
