@@ -182,7 +182,34 @@ namespace
 		return result;
 	}
 
-}
+	int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
+	{	assert(!!fn);
+		int result = 0;
+		if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
+		{	std::ostringstream str;
+			auto &props = misc::properties_t::props();
+
+			auto to_string = [](auto d) { return misc::to_string(d, DURATION_PREC, DURATION_DEC) + "s. "; };
+			if (flags & vi_tmShowResolution)
+			{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_ticks_);
+			}
+			if (flags & vi_tmShowDuration)
+			{	str << "Duration: " << to_string(props.all_latency_.count());
+			}
+			if (flags & vi_tmShowUnit)
+			{	str << "One tick: " << to_string(props.seconds_per_tick_.count());
+			}
+			if (flags & vi_tmShowOverhead)
+			{	str << "Additive: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_ticks_);
+			}
+
+			str << '\n';
+			result += fn(str.str().c_str(), data);
+		}
+
+		return result;
+	}
+} // namespace
 
 formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 :	number_len_{ itms.empty() ? 1U : 1U + static_cast<std::size_t>(std::floor(std::log10(itms.size()))) },
@@ -282,34 +309,6 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, voi
 	assert(number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1 == result.size());
 
 	return fn(result.c_str(), data);
-}
-
-int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
-{	assert(!!fn);
-	int result = 0;
-	if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
-	{	std::ostringstream str;
-		auto &props = misc::properties_t::props();
-
-		auto to_string = [](auto d) { return misc::to_string(d, DURATION_PREC, DURATION_DEC) + "s. "; };
-		if (flags & vi_tmShowResolution)
-		{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_ticks_);
-		}
-		if (flags & vi_tmShowDuration)
-		{	str << "Duration: " << to_string(props.all_latency_.count());
-		}
-		if (flags & vi_tmShowUnit)
-		{	str << "One tick: " << to_string(props.seconds_per_tick_.count());
-		}
-		if (flags & vi_tmShowOverhead)
-		{	str << "Additive: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_ticks_);
-		}
-
-		str << '\n';
-		result += fn(str.str().c_str(), data);
-	}
-
-	return result;
 }
 
 int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL journal_handle, unsigned flags, vi_tmLogSTR_t fn, void *data)
