@@ -212,10 +212,10 @@ namespace
 		}
 
 		val = std::round(val);
-		if (auto fact_rounded = static_cast<int>(std::floor(std::log10(val))); fact_rounded != sig_pos)
-		{	assert(fact_rounded == sig_pos + 1);
-			++fact;
-		}
+			if (auto fact_rounded = static_cast<int>(std::floor(std::log10(val))); fact_rounded != sig_pos)
+			{	assert(fact_rounded == sig_pos + 1);
+				++fact;
+			}
 
 		const auto group_pos = (group(fact) - group(sig_pos - dec)) * GROUP_SIZE;
 		val *= std::pow(10, rounded_f - group_pos);

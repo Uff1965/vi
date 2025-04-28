@@ -42,17 +42,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 
 #ifdef __cplusplus
-#	define VI_CAST_C(T, s) const_cast<T>(s)
-#	define VI_CAST_R(T, s) reinterpret_cast<T>(s)
-#	define VI_CAST_S(T, s) static_cast<T>(s)
 #	define VI_DEF(v) = (v)
 #	define VI_NODISCARD [[nodiscard]]
 #	define VI_NOEXCEPT noexcept
 #	define VI_STD(s) std::s
 #else
-#	define VI_CAST_C(T, s) (T)(s)
-#	define VI_CAST_R(T, s) (T)(s)
-#	define VI_CAST_S(T, s) (T)(s)
 #	define VI_DEF(v)
 #	define VI_NODISCARD
 #	define VI_NOEXCEPT
@@ -107,7 +101,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef struct vi_tmJournal_t* VI_TM_HJOURNAL;
+typedef struct vi_tmJournal_t *VI_TM_HJOURNAL;
 typedef struct vi_tmMeasPoint_t *VI_TM_HMEASPOINT;
 typedef VI_STD(uint64_t) VI_TM_TICK;
 typedef int (VI_TM_CALL *vi_tmLogRAW_t)(const char* name, VI_TM_TICK total, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
@@ -160,7 +154,7 @@ extern "C"
 	};
 
 	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
-	{	return VI_STD(fputs)(str, VI_CAST_R(VI_STD(FILE)*, data));
+	{	return VI_STD(fputs)(str, (VI_STD(FILE)*)data);
 	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
