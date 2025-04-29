@@ -20,6 +20,11 @@
 #include <thread>
 #include <vector>
 
+//#undef VI_OPTIMIZE_ON
+//#define VI_OPTIMIZE_ON
+//#undef VI_OPTIMIZE_OFF
+//#define VI_OPTIMIZE_OFF
+
 using namespace std::literals;
 namespace ch = std::chrono;
 
@@ -55,7 +60,7 @@ namespace
 }
 
 namespace {
-//	VI_OPTIMIZE_OFF
+VI_OPTIMIZE_OFF
 	void test_multithreaded()
 	{	VI_TM_FUNC;
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
@@ -101,7 +106,7 @@ namespace {
 		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		std::cout << "nTest multithreaded - done" << std::endl;
 	}
-//	VI_OPTIMIZE_ON
+VI_OPTIMIZE_ON
 
 	void test_instances()
 	{	VI_TM("Test additional timers");
@@ -127,6 +132,7 @@ namespace {
 		std::cout << "nTest additional timers - done" << std::endl;
 	}
 
+VI_OPTIMIZE_OFF
 	void test_empty()
 	{	VI_TM_FUNC;
 		std::cout << "\nTest test_empty:\n";
@@ -172,6 +178,7 @@ namespace {
 
 		std::cout << "Test test_empty - Done" << std::endl;
 	}
+VI_OPTIMIZE_ON
 
 	void prn_header()
 	{	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
@@ -245,6 +252,7 @@ namespace {
 		std::cout << "\nTest vi_tmResults - done" << std::endl;
 	}
 
+VI_OPTIMIZE_OFF
 	void test()
 	{	std::cout << "\nTest test:";
 		
@@ -349,6 +357,8 @@ namespace {
 
 		std::cout << "\nTest test - done" << std::endl;
 	}
+VI_OPTIMIZE_ON
+
 } // namespace
 
 int main()

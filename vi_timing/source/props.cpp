@@ -34,6 +34,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <thread>
 #include <chrono>
 
+#undef VI_OPTIMIZE_ON
+#define VI_OPTIMIZE_ON
+#undef VI_OPTIMIZE_OFF
+#define VI_OPTIMIZE_OFF
+
 using namespace std::chrono_literals;
 namespace ch = std::chrono;
 
@@ -133,12 +138,12 @@ VI_OPTIMIZE_OFF
 	{	constexpr auto CNT = 500U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		auto e = vi_tmGetTicks(); // Preloading a function into cache
-		auto s = e;
+		VI_TM_TICK s;
 		for (auto cnt = cache_warmup + 1U; --cnt; )
-		{	s = vi_tmGetTicks();
+		{	s = vi_tmGetTicks(); // Preloading a function into cache
 		}
 
+		VI_TM_TICK e;
 		for (auto cnt = CNT + 1U; --cnt; )
 		{	vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
 			e = vi_tmGetTicks();
@@ -154,11 +159,11 @@ VI_OPTIMIZE_OFF
 		for (auto cnt = CNT + 1U; --cnt; )
 		{	vi_tmGetTicks(); vi_tmGetTicks();  vi_tmGetTicks(); vi_tmGetTicks();
 
-			// EXT calls
-			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
-			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
-			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
-			vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
+			// EXT calls (Unless optimization is disabled, redundant assignments will be removed, and the function vi_tmGetTicks will be inlined.)
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
+			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 
 			e = vi_tmGetTicks();
 		}

@@ -29,6 +29,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "../vi_timing.h"
 #include "build_number_maker.h"
 
+VI_OPTIMIZE_OFF
 #if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__) // MSC or GCC on Intel
 #	if _MSC_VER >= 1800
 #		include <intrin.h>
@@ -38,7 +39,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	else
 #		error "Undefined compiler"
 #	endif
-	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
+	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	std::uint32_t _; // Will be removed by the optimizer.
 		const std::uint64_t result = __rdtscp(&_);
 		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
@@ -49,7 +50,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		return result;
 	}
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
-	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
+	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	std::uint64_t result;
         asm volatile
         (   "DSB SY\n\t"
@@ -128,7 +129,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		return result;
 	}
 
-	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
+	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	VI_TM_TICK result = 0;
 
 		static const volatile std::uint32_t *const timer_base = get_timer_base();
@@ -148,14 +149,14 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 	}
 #elif defined(_WIN32) // Windows
 #	include <Windows.h>
-	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
+	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	LARGE_INTEGER cnt;
 		QueryPerformanceCounter(&cnt);
 		return cnt.QuadPart;
 	}
 #elif defined(__linux__)
 #	include <time.h>
-	static inline VI_TM_TICK vi_tmGetTicks_impl(void) noexcept
+	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 		return 1'000'000'000U * ts.tv_sec + ts.tv_nsec;
@@ -163,9 +164,4 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #else
 #	error "You need to define function(s) for your OS and CPU"
 #endif
-
-//vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
-{	return vi_tmGetTicks_impl();
-}
-//^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+VI_OPTIMIZE_ON
