@@ -145,7 +145,7 @@ VI_OPTIMIZE_OFF
 
 		VI_TM_TICK e;
 		for (auto cnt = CNT + 1U; --cnt; )
-		{	vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks(); vi_tmGetTicks();
+		{	e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 			e = vi_tmGetTicks();
 		}
 		const auto pure = e - s;
@@ -157,7 +157,7 @@ VI_OPTIMIZE_OFF
 
 		constexpr auto EXT = 20U;
 		for (auto cnt = CNT + 1U; --cnt; )
-		{	vi_tmGetTicks(); vi_tmGetTicks();  vi_tmGetTicks(); vi_tmGetTicks();
+		{	e = vi_tmGetTicks(); e = vi_tmGetTicks();  e = vi_tmGetTicks(); e = vi_tmGetTicks();
 
 			// EXT calls (Unless optimization is disabled, redundant assignments will be removed, and the function vi_tmGetTicks will be inlined.)
 			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();

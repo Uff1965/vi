@@ -123,13 +123,13 @@ extern "C"
 
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
-	VI_TM_API VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
+	VI_TM_API VI_NODISCARD VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
 	VI_TM_API VI_NODISCARD VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate(void);
 	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h);
-	VI_TM_API VI_TM_HMEASPOINT VI_TM_CALL vi_tmMeasPoint(VI_TM_HJOURNAL h, const char* name);
+	VI_TM_API VI_NODISCARD VI_TM_HMEASPOINT VI_TM_CALL vi_tmMeasPoint(VI_TM_HJOURNAL h, const char* name);
 	VI_TM_API void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT j, VI_TM_TICK duration, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HJOURNAL h, const char* name, VI_TM_TICK *total, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
 	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void* data);
