@@ -55,7 +55,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
 #	if defined(_MSC_VER)
-#		ifdef __i386__
+#		ifdef _M_IX86
 #			define VI_SYS_CALL __cdecl
 #			define VI_TM_CALL __fastcall
 #		else
