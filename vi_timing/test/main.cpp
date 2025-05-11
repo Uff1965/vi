@@ -54,7 +54,7 @@ namespace
 #endif
 	const auto init_common = []
 		{	VI_TM("INITIALIZE COMMON");
-//			vi_tmThreadAffinityFixate();
+//			vi_tmCurrentThreadAffinityFixate();
 			return 0;
 		}();
 }
@@ -359,7 +359,7 @@ VI_OPTIMIZE_OFF
 				}
 			}
 		}
-		vi_tmThreadAffinityRestore();
+		vi_tmCurrentThreadAffinityRestore();
 
 		std::cout << "\nTest test - done" << std::endl;
 	}
@@ -382,7 +382,7 @@ int main()
 		prn_clock_properties();
 		test();
 
-		vi_tmThreadAffinityRestore();
+		vi_tmCurrentThreadAffinityRestore();
 	}
 
 	test_multithreaded();

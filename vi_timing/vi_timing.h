@@ -161,11 +161,11 @@ extern "C"
 	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmRptCb_t VI_DEF(vi_tmRptCb), void* VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
-	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityFixate(void);
-	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityRestore(void);
+	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityFixate(void);
+	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityRestore(void);
 	VI_TM_API void VI_TM_CALL vi_tmThreadYield(void);
 	static inline void vi_tmThreadPrepare(void)
-	{	vi_tmThreadAffinityFixate();
+	{	vi_tmCurrentThreadAffinityFixate();
 		vi_tmWarming(1, 500);
 		vi_tmThreadYield();
 	}

@@ -53,8 +53,8 @@ namespace
 		void operator=(const thread_affinity_fix_t &) = delete;
 		void operator=(thread_affinity_fix_t &&) = delete;
 	public:
-		thread_affinity_fix_t() { vi_tmThreadAffinityFixate(); }
-		~thread_affinity_fix_t() { vi_tmThreadAffinityRestore(); }
+		thread_affinity_fix_t() { vi_tmCurrentThreadAffinityFixate(); }
+		~thread_affinity_fix_t() { vi_tmCurrentThreadAffinityRestore(); }
 	};
 
 	constexpr auto cache_warmup = 5U;

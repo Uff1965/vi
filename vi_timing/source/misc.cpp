@@ -269,11 +269,11 @@ namespace
 	return to_string_aux(val, significant, decimal);
 }
 
-void VI_TM_CALL vi_tmThreadAffinityFixate()
+void VI_TM_CALL vi_tmCurrentThreadAffinityFixate()
 {	affinity_fix_t::fixate();
 }
 
-void VI_TM_CALL vi_tmThreadAffinityRestore()
+void VI_TM_CALL vi_tmCurrentThreadAffinityRestore()
 {	affinity_fix_t::restore();
 }
 
