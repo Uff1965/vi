@@ -54,7 +54,9 @@ namespace
 #endif
 	const auto init_common = []
 		{	VI_TM("INITIALIZE COMMON");
-//			vi_tmCurrentThreadAffinityFixate();
+			vi_tmCurrentThreadAffinityFixate();
+			vi_tmWarming(1, 500);
+			vi_tmThreadYield();
 			return 0;
 		}();
 }
@@ -76,7 +78,7 @@ VI_OPTIMIZE_OFF
 
 		auto load = [h = h.get()]
 		{	static auto j_load = vi_tmMeasuring(h, "load");
-			vi_tm::meter_t tm{ j_load };
+			vi_tm::measurer_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
 			{	const auto s = vi_tmGetTicks();
@@ -114,16 +116,16 @@ VI_OPTIMIZE_ON
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
 			{	static auto j1 = vi_tmMeasuring(h, "long, long, long, very long name");
-				vi_tm::meter_t tm1{ j1 };
+				vi_tm::measurer_t tm1{ j1 };
 				{	static auto j2 = vi_tmMeasuring(h, "100ms * 10");
-					vi_tm::meter_t tm2{ j2, 10 };
+					vi_tm::measurer_t tm2{ j2, 10 };
 					for (int n = 0; n < 10; ++n)
 					{	std::this_thread::sleep_for(100ms);
 
 						static auto j3 = vi_tmMeasuring(h, "tm");
-						vi_tm::meter_t tm3{ j3 };
+						vi_tm::measurer_t tm3{ j3 };
 						static auto j4 = vi_tmMeasuring(h, "tm_empty");
-						vi_tm::meter_t tm4{ j4 };
+						vi_tm::measurer_t tm4{ j4 };
 					}
 				}
 			}
@@ -254,7 +256,7 @@ VI_OPTIMIZE_ON
 				}
 				return 0;
 			};
-		vi_tmMeasuringEnum(nullptr, results_callback, const_cast<props_t*>(&props));
+		vi_tmMeasuringEnumerate(nullptr, results_callback, const_cast<props_t*>(&props));
 		std::cout << "\nTest vi_tmResults - done" << std::endl;
 	}
 
@@ -265,7 +267,9 @@ VI_OPTIMIZE_OFF
 		auto nothing = [] {/**/};
 		constexpr auto CNT = 10'000;
 
-		vi_tmThreadPrepare();
+		vi_tmWarming(1, 500);
+		vi_tmThreadYield();
+;
 		{	VI_TM("Test");
 
 			for (auto n = 0; n < 100; ++n)
@@ -359,7 +363,6 @@ VI_OPTIMIZE_OFF
 				}
 			}
 		}
-		vi_tmCurrentThreadAffinityRestore();
 
 		std::cout << "\nTest test - done" << std::endl;
 	}
@@ -374,19 +377,19 @@ int main()
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
 	{
-		vi_tmThreadPrepare();
+		vi_tmWarming(1, 500);
+		vi_tmThreadYield();
 
 		foo_c();
 		test_empty();
 		test_instances();
 		prn_clock_properties();
 		test();
-
-		vi_tmCurrentThreadAffinityRestore();
 	}
 
 	test_multithreaded();
 	test_vi_tmResults();
+	vi_tmCurrentThreadAffinityRestore();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 

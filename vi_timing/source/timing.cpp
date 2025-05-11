@@ -54,15 +54,14 @@ namespace
 			counter_.fetch_add(amount, std::memory_order_relaxed);
 			calls_cnt_.fetch_add(1, std::memory_order_relaxed);
 		}
-		void get(VI_TM_TDIFF &total, VI_TM_CNT &amount, VI_TM_CNT &calls_cnt)
+		void get(VI_TM_TDIFF &total, VI_TM_CNT &amount, VI_TM_CNT &calls_cnt) const
 		{	total = total_.load();
 			amount = counter_.load();
 			calls_cnt = calls_cnt_.load();
 		}
 		void clear() noexcept
 		{	total_ = 0U;
-			counter_ = 0U;
-			calls_cnt_ = 0U;
+			counter_ = calls_cnt_ = 0U;
 		}
 	};
 
@@ -83,47 +82,21 @@ struct vi_tmJournal_t
 	}
 
 	static vi_tmJournal_t& global()
-	{	static vi_tmJournal_t inst;
-		return inst;
+	{	static vi_tmJournal_t instance;
+		return instance;
 	}
 
 	int init()
 	{	return 0;
 	}
 
-	storage_t::value_type& get_item(const char *name)
+	auto& at(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
 		return *storage_.try_emplace(name).first;
 	}
 
-	int result(const char *name, VI_TM_TDIFF &time, std::size_t &amount, std::size_t &calls_cnt)
-	{	assert(name);
-		if (nullptr == name)
-		{	return -1;
-		}
-
-		{	std::lock_guard lock{ storage_guard_ };
-
-			if (auto it = storage_.find(name); it != storage_.end())
-			{	assert(it->first == name);
-				time = it->second.total_.load(std::memory_order_relaxed);
-				amount = it->second.counter_.load(std::memory_order_relaxed);
-				calls_cnt = it->second.calls_cnt_.load(std::memory_order_relaxed);
-
-				return 0;
-			}
-		}
-
-		time = 0U;
-		amount = 0U;
-		calls_cnt = 0U;
-
-		return 1;
-	}
-
-	int enumerate(vi_tmMeasuringEnumCallback_t fn, void *data)
+	int for_each_measurement(vi_tmMeasuringEnumCallback_t fn, void *data)
 	{	std::lock_guard lock{ storage_guard_ };
-
 		for (auto &it : storage_)
 		{	assert(it.second.counter_ >= it.second.calls_cnt_ && ((0 == it.second.total_) == (0 == it.second.calls_cnt_)));
 			if (!it.first.empty())
@@ -138,7 +111,6 @@ struct vi_tmJournal_t
 	
 	void clear(const char *name = nullptr)
 	{	std::lock_guard lock{ storage_guard_ };
-
 		if (!name)
 		{	for (auto &[_, item] : storage_)
 			{	item.clear();
@@ -149,8 +121,8 @@ struct vi_tmJournal_t
 		}
 	}
 
-	friend vi_tmJournal_t& from_handle(VI_TM_HJOUR h)
-	{	return h? *h: global();
+	friend vi_tmJournal_t& from_handle(VI_TM_HJOUR journal)
+	{	return journal? *journal: global();
 	}
 }; // struct vi_tmJournal_t
 
@@ -169,17 +141,25 @@ VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate()
 	{	return new vi_tmJournal_t{};
 	}
 	catch (const std::bad_alloc &)
-	{	return nullptr;
+	{	assert(false);
+		return nullptr;
 	}
 }
 
-void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR h)
-{	delete h;
+void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR journal)
+{	delete journal;
 }
 
-VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR h, const char *name)
-{	auto& itm = from_handle(h).get_item(name);
-	return static_cast<VI_TM_HMEAS>(&itm);
+void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR journal, const char* name) noexcept
+{	from_handle(journal).clear(name);
+}
+
+int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasuringEnumCallback_t fn, void *data)
+{	return from_handle(journal).for_each_measurement(fn, data);
+}
+
+VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR journal, const char *name)
+{	return static_cast<VI_TM_HMEAS>(&from_handle(journal).at(name));
 }
 
 void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
@@ -189,13 +169,13 @@ void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std::
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, VI_TM_TDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
 {	assert(meas);
 	if (meas)
 	{	if (name)
 		{	*name = meas->first.c_str();
 		}
-	VI_TM_TDIFF dummy = 0U;
+		VI_TM_TDIFF dummy = 0U;
 		VI_TM_CNT _ = 0U;
 		meas->second.get(total ? *total : dummy, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
 	}
@@ -206,14 +186,6 @@ void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS meas)
 	if (meas)
 	{	meas->second.clear();
 	}
-}
-
-void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR journal, const char* name) noexcept
-{	from_handle(journal).clear(name);
-}
-
-int VI_TM_CALL vi_tmMeasuringEnum(VI_TM_HJOUR h, vi_tmMeasuringEnumCallback_t fn, void *data)
-{	return from_handle(h).enumerate(fn, data);
 }
 
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

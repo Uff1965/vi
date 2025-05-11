@@ -130,10 +130,10 @@ extern "C"
 	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(void);
 	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR j, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR j);
-	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnum(VI_TM_HJOUR j, vi_tmMeasuringEnumCallback_t fn, void* data);
 	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR j, const char* name);
+	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR j, vi_tmMeasuringEnumCallback_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, VI_TM_CNT amount VI_DEF(1)) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amt, VI_TM_CNT *cnt);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amt, VI_TM_CNT *calls);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS m);
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -164,11 +164,6 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityFixate(void);
 	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityRestore(void);
 	VI_TM_API void VI_TM_CALL vi_tmThreadYield(void);
-	static inline void vi_tmThreadPrepare(void)
-	{	vi_tmCurrentThreadAffinityFixate();
-		vi_tmWarming(1, 500);
-		vi_tmThreadYield();
-	}
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus
@@ -263,15 +258,15 @@ namespace vi_tm
 		}
 	}; // class init_t
 
-	class meter_t
-	{	VI_TM_HMEAS h_;
+	class measurer_t
+	{	VI_TM_HMEAS meas_;
 		VI_TM_CNT amt_;
 		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
-		meter_t(const meter_t &) = delete;
-		void operator=(const meter_t &) = delete;
+		measurer_t(const measurer_t &) = delete;
+		void operator=(const measurer_t &) = delete;
 	public:
-		meter_t(VI_TM_HMEAS h, VI_TM_CNT amt = 1): h_{h}, amt_{amt} {/**/}
-		~meter_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasuringAdd(h_, finish - start_, amt_); }
+		measurer_t(VI_TM_HMEAS m, VI_TM_CNT amt = 1): meas_{m}, amt_{amt} {/**/}
+		~measurer_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasuringAdd(meas_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
 
@@ -287,7 +282,7 @@ namespace vi_tm
 #			define VI_TM(...)\
 				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, VI_TM_CNT amount = 1)\
 					{	static auto const h = vi_tmMeasuring(nullptr, name);\
-						return vi_tm::meter_t{h, amount};\
+						return vi_tm::measurer_t{h, amount};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)

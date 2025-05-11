@@ -171,7 +171,7 @@ namespace
 
 	std::vector<metering_t> get_meterings(VI_TM_HJOUR journal_handle)
 	{	std::vector<metering_t> result;
-		vi_tmMeasuringEnum
+		vi_tmMeasuringEnumerate
 		(	journal_handle,
 			[](VI_TM_HMEAS h, void *callback_data)
 			{	
