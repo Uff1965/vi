@@ -75,14 +75,14 @@ VI_OPTIMIZE_OFF
 		std::cout << "\nTest multithreaded():" << std::endl;
 
 		auto load = [h = h.get()]
-		{	static auto j_load = vi_tmMeasPoint(h, "load");
+		{	static auto j_load = vi_tmMeasuring(h, "load");
 			vi_tm::meter_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
 			{	const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				vi_tmMeasPointAdd(vi_tmMeasPoint(h, name.c_str()), f - s, 1);
+				vi_tmMeasuringAdd(vi_tmMeasuring(h, name.c_str()), f - s, 1);
 				v++;
 			}
 		};
@@ -113,16 +113,16 @@ VI_OPTIMIZE_ON
 		std::cout << "\nAdditional timers:\n";
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
-			{	static auto j1 = vi_tmMeasPoint(h, "long, long, long, very long name");
+			{	static auto j1 = vi_tmMeasuring(h, "long, long, long, very long name");
 				vi_tm::meter_t tm1{ j1 };
-				{	static auto j2 = vi_tmMeasPoint(h, "100ms * 10");
+				{	static auto j2 = vi_tmMeasuring(h, "100ms * 10");
 					vi_tm::meter_t tm2{ j2, 10 };
 					for (int n = 0; n < 10; ++n)
 					{	std::this_thread::sleep_for(100ms);
 
-						static auto j3 = vi_tmMeasPoint(h, "tm");
+						static auto j3 = vi_tmMeasuring(h, "tm");
 						vi_tm::meter_t tm3{ j3 };
-						static auto j4 = vi_tmMeasPoint(h, "tm_empty");
+						static auto j4 = vi_tmMeasuring(h, "tm_empty");
 						vi_tm::meter_t tm4{ j4 };
 					}
 				}
@@ -145,8 +145,8 @@ VI_OPTIMIZE_OFF
 			VI_TM_CLEAR("VI_TM");
 			VI_TM_CLEAR("EMPTY");
 
-			static auto const jTm = vi_tmMeasPoint(h, "vi_tm");
-			static auto const jEmpty = vi_tmMeasPoint(h, "empty");
+			static auto const jTm = vi_tmMeasuring(h, "vi_tm");
+			static auto const jEmpty = vi_tmMeasuring(h, "empty");
 
 			for (int n = 0; n < 1'000'000; ++n)
 			{
@@ -155,9 +155,9 @@ VI_OPTIMIZE_OFF
 					const auto sEmpty = vi_tmGetTicks(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
 					/**/
 					const auto fEmpty = vi_tmGetTicks();
-					vi_tmMeasPointAdd(jEmpty, fEmpty - sEmpty, 1);
+					vi_tmMeasuringAdd(jEmpty, fEmpty - sEmpty, 1);
 					const auto fTm = vi_tmGetTicks();
-					vi_tmMeasPointAdd(jTm, fTm - sTm, 1);
+					vi_tmMeasuringAdd(jTm, fTm - sTm, 1);
 				}
 
 				{	VI_TM("VI_TM");
@@ -169,9 +169,9 @@ VI_OPTIMIZE_OFF
 			VI_TM_TICKDIFF ticks = 0U;
 			std::size_t amount = 0U;
 			std::size_t calls_cnt = 0U;
-			vi_tmMeasPointGet(vi_tmMeasPoint(h, "vi_tm"), &name, &ticks, &amount, &calls_cnt);
+			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &ticks, &amount, &calls_cnt);
 			std::cout << "vi_tm:\tticks = " << std::setw(16) << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
-			vi_tmMeasPointGet(vi_tmMeasPoint(h, "empty"), &name, &ticks, &amount, &calls_cnt);
+			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &ticks, &amount, &calls_cnt);
 			std::cout << "empty:\tticks = " << std::setw(16)  << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
 			endl(std::cout);
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
@@ -237,12 +237,12 @@ VI_OPTIMIZE_ON
 		};
 
 		std::cout << "\nTest vi_tmResults:";
-		auto results_callback = [](VI_TM_HMEASPOINT m, void* data)
+		auto results_callback = [](VI_TM_HMEASURING m, void* data)
 			{	const char *name;
 				VI_TM_TICKDIFF ticks = 0U;
 				VI_TM_CNT amount = 0U;
 				VI_TM_CNT calls_cnt = 0U;
-				vi_tmMeasPointGet(m, &name, &ticks, &amount, &calls_cnt);
+				vi_tmMeasuringGet(m, &name, &ticks, &amount, &calls_cnt);
 				if (0U != calls_cnt)
 				{	const auto props = *static_cast<props_t *>(data);
 					std::cout << 
@@ -254,7 +254,7 @@ VI_OPTIMIZE_ON
 				}
 				return 0;
 			};
-		vi_tmMeasPointEnum(nullptr, results_callback, const_cast<props_t*>(&props));
+		vi_tmMeasuringEnum(nullptr, results_callback, const_cast<props_t*>(&props));
 		std::cout << "\nTest vi_tmResults - done" << std::endl;
 	}
 
@@ -287,31 +287,31 @@ VI_OPTIMIZE_OFF
 				const auto start = vi_tmGetTicks();
 				nothing();
 				const auto finish = vi_tmGetTicks();
-				vi_tmMeasPointAdd(vi_tmMeasPoint(nullptr, "TestB"), finish - start);
+				vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestB"), finish - start);
 			}
 			{	VI_TM("TestB Other", CNT);
 				for (auto n = 0; n < CNT; ++n)
 				{	const auto start = vi_tmGetTicks();
 					nothing();
 					const auto finish = vi_tmGetTicks();
-					vi_tmMeasPointAdd(vi_tmMeasPoint(nullptr, "TestB"), finish - start);
+					vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestB"), finish - start);
 				}
 			}
 
 			{	VI_TM("TestC First");
-				static auto const h = vi_tmMeasPoint(nullptr, "TestC");
+				static auto const h = vi_tmMeasuring(nullptr, "TestC");
 				const auto start = vi_tmGetTicks();
 				nothing();
 				const auto finish = vi_tmGetTicks();
-				vi_tmMeasPointAdd(h, finish - start);
+				vi_tmMeasuringAdd(h, finish - start);
 			}
 			{	VI_TM("TestC Other", CNT);
 				for (auto n = 0; n < CNT; ++n)
-				{	static auto const h = vi_tmMeasPoint(nullptr, "TestC");
+				{	static auto const h = vi_tmMeasuring(nullptr, "TestC");
 					const auto start = vi_tmGetTicks();
 					nothing();
 					const auto finish = vi_tmGetTicks();
-					vi_tmMeasPointAdd(h, finish - start);
+					vi_tmMeasuringAdd(h, finish - start);
 				}
 			}
 
@@ -319,16 +319,16 @@ VI_OPTIMIZE_OFF
 				const auto start = vi_tmGetTicks();
 				nothing();
 				const auto finish = vi_tmGetTicks();
-				static auto const h = vi_tmMeasPoint(nullptr, "TestD");
-				vi_tmMeasPointAdd(h, finish - start);
+				static auto const h = vi_tmMeasuring(nullptr, "TestD");
+				vi_tmMeasuringAdd(h, finish - start);
 			}
 			{	VI_TM("TestD Other", CNT);
 				for (auto n = 0; n < CNT; ++n)
 				{	const auto start = vi_tmGetTicks();
 					nothing();
 					const auto finish = vi_tmGetTicks();
-					static auto const h = vi_tmMeasPoint(nullptr, "TestD");
-					vi_tmMeasPointAdd(h, finish - start);
+					static auto const h = vi_tmMeasuring(nullptr, "TestD");
+					vi_tmMeasuringAdd(h, finish - start);
 				}
 			}
 
@@ -347,15 +347,15 @@ VI_OPTIMIZE_OFF
 				const auto start = vi_tmGetTicks();
 				nothing();
 				const auto finish = vi_tmGetTicks();
-				vi_tmMeasPointAdd(vi_tmMeasPoint(nullptr, "TestF"), finish - start);
+				vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestF"), finish - start);
 			}
 			{	VI_TM("TestF Other", CNT);
-				const auto h = vi_tmMeasPoint(nullptr, "TestF");
+				const auto h = vi_tmMeasuring(nullptr, "TestF");
 				for (auto n = 0; n < CNT; ++n)
 				{	const auto start = vi_tmGetTicks();
 					nothing();
 					const auto finish = vi_tmGetTicks();
-					vi_tmMeasPointAdd(h, finish - start);
+					vi_tmMeasuringAdd(h, finish - start);
 				}
 			}
 		}

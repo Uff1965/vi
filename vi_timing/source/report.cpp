@@ -171,15 +171,15 @@ namespace
 
 	std::vector<metering_t> get_meterings(VI_TM_HJOURNAL journal_handle)
 	{	std::vector<metering_t> result;
-		vi_tmMeasPointEnum
+		vi_tmMeasuringEnum
 		(	journal_handle,
-			[](VI_TM_HMEASPOINT h, void *callback_data)
+			[](VI_TM_HMEASURING h, void *callback_data)
 			{	
 				const char *name;
 				VI_TM_TICKDIFF total;
 				std::size_t amount;
 				std::size_t calls_cnt;
-				vi_tmMeasPointGet(h, &name, &total, &amount, &calls_cnt);
+				vi_tmMeasuringGet(h, &name, &total, &amount, &calls_cnt);
 				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, total, amount, calls_cnt);
 				return 0; // Ok, continue enumerate.
 			},

@@ -45,7 +45,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
-	struct MeasPoint_t
+	struct measuring_t
 	{	std::atomic<VI_TM_TICKDIFF> total_ = 0U;
 		std::atomic<std::size_t> counter_ = 0U;
 		std::atomic<std::size_t> calls_cnt_ = 0U;
@@ -68,10 +68,10 @@ namespace
 
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	constexpr std::size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	using storage_t = std::unordered_map<std::string, MeasPoint_t>;
+	using storage_t = std::unordered_map<std::string, measuring_t>;
 }
 
-struct vi_tmMeasPoint_t: storage_t::value_type {/**/};
+struct vi_tmMeasuring_t: storage_t::value_type {/**/};
 
 struct vi_tmJournal_t
 {	std::mutex storage_guard_;
@@ -121,13 +121,13 @@ struct vi_tmJournal_t
 		return 1;
 	}
 
-	int enumerate(vi_tmMeasPointEnumCallback_t fn, void *data)
+	int enumerate(vi_tmMeasuringEnumCallback_t fn, void *data)
 	{	std::lock_guard lock{ storage_guard_ };
 
 		for (auto &it : storage_)
 		{	assert(it.second.counter_ >= it.second.calls_cnt_ && ((0 == it.second.total_) == (0 == it.second.calls_cnt_)));
 			if (!it.first.empty())
-			{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEASPOINT>(&it), data); 0 != interrupt)
+			{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEASURING>(&it), data); 0 != interrupt)
 				{	return interrupt;
 				}
 			}
@@ -177,34 +177,41 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h)
 {	delete h;
 }
 
-VI_TM_HMEASPOINT VI_TM_CALL vi_tmMeasPoint(VI_TM_HJOURNAL h, const char *name)
+VI_TM_HMEASURING VI_TM_CALL vi_tmMeasuring(VI_TM_HJOURNAL h, const char *name)
 {	auto& itm = from_handle(h).get_item(name);
-	return static_cast<VI_TM_HMEASPOINT>(&itm);
+	return static_cast<VI_TM_HMEASURING>(&itm);
 }
 
-void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT m, VI_TM_TICKDIFF tick_diff, std::size_t amount) noexcept
-{	assert(m);
-	if (m)
-	{	m->second.add(tick_diff, amount);
+void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEASURING measuring, VI_TM_TICKDIFF tick_diff, std::size_t amount) noexcept
+{	assert(measuring);
+	if (measuring)
+	{	measuring->second.add(tick_diff, amount);
 	}
 }
 
-void VI_TM_CALL vi_tmMeasPointGet(VI_TM_HMEASPOINT m, const char **name, VI_TM_TICKDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
-{	assert(m);
-	if (m)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEASURING measuring, const char **name, VI_TM_TICKDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
+{	assert(measuring);
+	if (measuring)
 	{	if (name)
-		{	*name = m->first.c_str();
+		{	*name = measuring->first.c_str();
 		}
 		VI_TM_CNT _ = 0U;
-		m->second.get(total ? *total : _, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
+		measuring->second.get(total ? *total : _, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
 	}
 }
 
-void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name) noexcept
-{	from_handle(h).clear(name);
+void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEASURING measuring)
+{	assert(measuring);
+	if (measuring)
+	{	measuring->second.clear();
+	}
 }
 
-int VI_TM_CALL vi_tmMeasPointEnum(VI_TM_HJOURNAL h, vi_tmMeasPointEnumCallback_t fn, void *data)
+void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL journal, const char* name) noexcept
+{	from_handle(journal).clear(name);
+}
+
+int VI_TM_CALL vi_tmMeasuringEnum(VI_TM_HJOURNAL h, vi_tmMeasuringEnumCallback_t fn, void *data)
 {	return from_handle(h).enumerate(fn, data);
 }
 

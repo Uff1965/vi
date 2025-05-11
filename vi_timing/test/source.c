@@ -9,13 +9,13 @@
 #include <stdint.h>
 #include <threads.h>
 
-static inline void vi_tmFinish(VI_TM_HMEASPOINT h, VI_TM_TICK start, size_t amount)
+static inline void vi_tmFinish(VI_TM_HMEASURING h, VI_TM_TICK start, size_t amount)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
-	vi_tmMeasPointAdd(h, finish - start, amount);
+	vi_tmMeasuringAdd(h, finish - start, amount);
 }
 
 void bar_c(void)
-{	VI_TM_HMEASPOINT const bar_c_journal = vi_tmMeasPoint(NULL, "bar_c");
+{	VI_TM_HMEASURING const bar_c_journal = vi_tmMeasuring(NULL, "bar_c");
 	const VI_TM_TICK bar_c_start = vi_tmGetTicks();
 
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
@@ -23,8 +23,8 @@ void bar_c(void)
 
 	{	VI_TM_HJOURNAL htimer = vi_tmJournalCreate();
 
-		VI_TM_HMEASPOINT const j1 = vi_tmMeasPoint(htimer, "xxx");
-		VI_TM_HMEASPOINT const j2 = vi_tmMeasPoint(htimer, "yyy");
+		VI_TM_HMEASURING const j1 = vi_tmMeasuring(htimer, "xxx");
+		VI_TM_HMEASURING const j2 = vi_tmMeasuring(htimer, "yyy");
 		VI_TM_TICK s = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 250000 }, NULL);
 		vi_tmFinish(j2, s, 1);
@@ -47,7 +47,7 @@ void bar_c(void)
 }
 
 void foo_c(void)
-{	VI_TM_HMEASPOINT const foo_c_journal = vi_tmMeasPoint(NULL, "foo_c");
+{	VI_TM_HMEASURING const foo_c_journal = vi_tmMeasuring(NULL, "foo_c");
 	const VI_TM_TICK foo_c_start = vi_tmGetTicks();
 	printf("\n%s:\n", __func__); //-V2600
 	
@@ -60,56 +60,56 @@ void foo_c(void)
 
 	bar_c();
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 10us");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 10us");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 10000 }, NULL);
 		vi_tmFinish(j, start, 1);
 	}
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 100us");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 100us");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 100000 }, NULL);
 		vi_tmFinish(j, start, 1);
 	}
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 1ms");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 1ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 1000000 }, NULL);
 		vi_tmFinish(j, start, 1);
 	}
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 10ms");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 10ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 10000000 }, NULL);
 		vi_tmFinish(j, start, 1);
 	}
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 14ms");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 14ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 14000000 }, NULL);
 		vi_tmFinish(j, start, 1);
 	}
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 20ms");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 20ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 20000000 }, NULL);
 		vi_tmFinish(j, start, 1);
 	}
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 30ms");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 30ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 30000000 }, NULL);
 		vi_tmFinish(j, start, 1);
 	}
 
-	{	VI_TM_HMEASPOINT const j = vi_tmMeasPoint(NULL, "thrd_sleep 1s");
+	{	VI_TM_HMEASURING const j = vi_tmMeasuring(NULL, "thrd_sleep 1s");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_sec = 1 }, NULL);
