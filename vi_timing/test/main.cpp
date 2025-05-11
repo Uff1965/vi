@@ -370,6 +370,13 @@ VI_OPTIMIZE_ON
 
 } // namespace
 
+namespace long_namespace_name
+{	struct long_class_name
+	{	static int long_function_name(int long_argument_name) { VI_TM_FUNC; return long_argument_name; }
+		static const char *long_function_name(const char *long_argument_name) { VI_TM_FUNC; return long_argument_name; }
+	};
+}
+
 int main()
 {	VI_TM_FUNC;
 	prn_header();
@@ -390,6 +397,8 @@ int main()
 	test_multithreaded();
 	test_vi_tmResults();
 	vi_tmCurrentThreadAffinityRestore();
+	long_namespace_name::long_class_name::long_function_name(0);
+	long_namespace_name::long_class_name::long_function_name("");
 
 	std::cout << "\nHello, World!\n" << std::endl;
 

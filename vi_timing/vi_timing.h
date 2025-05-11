@@ -55,6 +55,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
 #	if defined(_MSC_VER)
+#		define VI_FUNCNAME __FUNCSIG__
+
 #		ifdef _M_IX86
 #			define VI_SYS_CALL __cdecl
 #			define VI_TM_CALL __fastcall
@@ -83,6 +85,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #			endif
 #		endif
 #	elif defined (__GNUC__) || defined(__clang__)
+#		define VI_FUNCNAME __PRETTY_FUNCTION__
+
 #		ifdef __i386__
 #			define VI_SYS_CALL __attribute__((cdecl))
 #			define VI_TM_CALL __attribute__((fastcall))
@@ -97,6 +101,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #			define VI_TM_API
 #		endif
 #	else
+#		define VI_FUNCNAME __func__
 #		define VI_TM_DISABLE "Unknown compiler!"
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
@@ -176,14 +181,6 @@ extern "C"
 #define VI_STR_GUM_AUX( a, b ) a##b
 #define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
 #define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
-
-#ifdef _MSC_VER
-#	define VI_FUNCNAME __FUNCTION__
-#elif defined(__GNUC__)
-#	define VI_FUNCNAME __PRETTY_FUNCTION__
-#else
-#	define VI_FUNCNAME __func__
-#endif
 
 #if defined(_MSC_VER)
 #	define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
