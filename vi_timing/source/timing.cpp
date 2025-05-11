@@ -46,15 +46,15 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 namespace
 {
 	struct measuring_t
-	{	std::atomic<VI_TM_TICKDIFF> total_ = 0U;
+	{	std::atomic<VI_TM_TDIFF> total_ = 0U;
 		std::atomic<std::size_t> counter_ = 0U;
 		std::atomic<std::size_t> calls_cnt_ = 0U;
-		void add(VI_TM_TICKDIFF tick_diff, std::size_t amount) noexcept
+		void add(VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
 		{	total_.fetch_add(tick_diff, std::memory_order_relaxed);
 			counter_.fetch_add(amount, std::memory_order_relaxed);
 			calls_cnt_.fetch_add(1, std::memory_order_relaxed);
 		}
-		void get(VI_TM_TICKDIFF &total, VI_TM_CNT &amount, VI_TM_CNT &calls_cnt)
+		void get(VI_TM_TDIFF &total, VI_TM_CNT &amount, VI_TM_CNT &calls_cnt)
 		{	total = total_.load();
 			amount = counter_.load();
 			calls_cnt = calls_cnt_.load();
@@ -96,7 +96,7 @@ struct vi_tmJournal_t
 		return *storage_.try_emplace(name).first;
 	}
 
-	int result(const char *name, VI_TM_TICKDIFF &time, std::size_t &amount, std::size_t &calls_cnt)
+	int result(const char *name, VI_TM_TDIFF &time, std::size_t &amount, std::size_t &calls_cnt)
 	{	assert(name);
 		if (nullptr == name)
 		{	return -1;
@@ -127,7 +127,7 @@ struct vi_tmJournal_t
 		for (auto &it : storage_)
 		{	assert(it.second.counter_ >= it.second.calls_cnt_ && ((0 == it.second.total_) == (0 == it.second.calls_cnt_)));
 			if (!it.first.empty())
-			{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEASURING>(&it), data); 0 != interrupt)
+			{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data); 0 != interrupt)
 				{	return interrupt;
 				}
 			}
@@ -149,7 +149,7 @@ struct vi_tmJournal_t
 		}
 	}
 
-	friend vi_tmJournal_t& from_handle(VI_TM_HJOURNAL h)
+	friend vi_tmJournal_t& from_handle(VI_TM_HJOUR h)
 	{	return h? *h: global();
 	}
 }; // struct vi_tmJournal_t
@@ -164,7 +164,7 @@ void VI_TM_CALL vi_tmFinit(void)
 {	vi_tmJournal_t::global().clear();
 }
 
-VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate()
+VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate()
 {	try
 	{	return new vi_tmJournal_t{};
 	}
@@ -173,45 +173,46 @@ VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate()
 	}
 }
 
-void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h)
+void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR h)
 {	delete h;
 }
 
-VI_TM_HMEASURING VI_TM_CALL vi_tmMeasuring(VI_TM_HJOURNAL h, const char *name)
+VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR h, const char *name)
 {	auto& itm = from_handle(h).get_item(name);
-	return static_cast<VI_TM_HMEASURING>(&itm);
+	return static_cast<VI_TM_HMEAS>(&itm);
 }
 
-void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEASURING measuring, VI_TM_TICKDIFF tick_diff, std::size_t amount) noexcept
+void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS measuring, VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
 {	assert(measuring);
 	if (measuring)
 	{	measuring->second.add(tick_diff, amount);
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEASURING measuring, const char **name, VI_TM_TICKDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS measuring, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
 {	assert(measuring);
 	if (measuring)
 	{	if (name)
 		{	*name = measuring->first.c_str();
 		}
+	VI_TM_TDIFF dummy = 0U;
 		VI_TM_CNT _ = 0U;
-		measuring->second.get(total ? *total : _, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
+		measuring->second.get(total ? *total : dummy, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEASURING measuring)
+void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS measuring)
 {	assert(measuring);
 	if (measuring)
 	{	measuring->second.clear();
 	}
 }
 
-void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL journal, const char* name) noexcept
+void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR journal, const char* name) noexcept
 {	from_handle(journal).clear(name);
 }
 
-int VI_TM_CALL vi_tmMeasuringEnum(VI_TM_HJOURNAL h, vi_tmMeasuringEnumCallback_t fn, void *data)
+int VI_TM_CALL vi_tmMeasuringEnum(VI_TM_HJOUR h, vi_tmMeasuringEnumCallback_t fn, void *data)
 {	return from_handle(h).enumerate(fn, data);
 }
 

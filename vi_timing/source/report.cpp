@@ -76,10 +76,10 @@ namespace
 		std::string average_txt_{ NotAvailable };
 		std::size_t amount_{}; // Number of measured units
 
-		metering_t(const char *name, VI_TM_TICKDIFF total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
+		metering_t(const char *name, VI_TM_TDIFF total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
 	};
 
-	metering_t::metering_t(const char *name, VI_TM_TICKDIFF total_ticks, std::size_t amount, std::size_t calls_cnt) noexcept
+	metering_t::metering_t(const char *name, VI_TM_TDIFF total_ticks, std::size_t amount, std::size_t calls_cnt) noexcept
 	:	name_{ name },
 		amount_{ amount }
 	{	assert(amount >= calls_cnt);
@@ -165,18 +165,18 @@ namespace
 		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
-		int print_header(const vi_tmLogSTR_t fn, void *data) const;
-		int print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *data) const;
+		int print_header(const vi_tmRptCb_t fn, void *data) const;
+		int print_metering(const metering_t &i, const vi_tmRptCb_t fn, void *data) const;
 	};
 
-	std::vector<metering_t> get_meterings(VI_TM_HJOURNAL journal_handle)
+	std::vector<metering_t> get_meterings(VI_TM_HJOUR journal_handle)
 	{	std::vector<metering_t> result;
 		vi_tmMeasuringEnum
 		(	journal_handle,
-			[](VI_TM_HMEASURING h, void *callback_data)
+			[](VI_TM_HMEAS h, void *callback_data)
 			{	
 				const char *name;
-				VI_TM_TICKDIFF total;
+				VI_TM_TDIFF total;
 				std::size_t amount;
 				std::size_t calls_cnt;
 				vi_tmMeasuringGet(h, &name, &total, &amount, &calls_cnt);
@@ -188,7 +188,7 @@ namespace
 		return result;
 	}
 
-	int print_props(vi_tmLogSTR_t fn, void *data, unsigned flags)
+	int print_props(vi_tmRptCb_t fn, void *data, unsigned flags)
 	{	assert(!!fn);
 		int result = 0;
 		if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
@@ -256,7 +256,7 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 	}
 }
 
-int formatter_t::print_header(const vi_tmLogSTR_t fn, void *data) const
+int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
 {	
 	if (flags_ & vi_tmShowNoHeader)
 	{	return 0;
@@ -296,7 +296,7 @@ int formatter_t::print_header(const vi_tmLogSTR_t fn, void *data) const
 	return fn(result.c_str(), data);
 }
 
-int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, void *data) const
+int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void *data) const
 {
 	std::ostringstream str;
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
@@ -317,7 +317,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmLogSTR_t fn, voi
 	return fn(result.c_str(), data);
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL journal_handle, unsigned flags, vi_tmLogSTR_t fn, void *data)
+int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRptCb_t fn, void *data)
 {	
 	if (nullptr == fn)
 	{	fn = [](const char *str, void *data) { return std::fputs(str, static_cast<std::FILE *>(data)); };

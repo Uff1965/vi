@@ -103,10 +103,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 typedef VI_STD(size_t) VI_TM_CNT;
 typedef VI_STD(uint64_t) VI_TM_TICK;
-typedef VI_STD(uint64_t) VI_TM_TICKDIFF;
-typedef struct vi_tmJournal_t *VI_TM_HJOURNAL;
-typedef struct vi_tmMeasuring_t *VI_TM_HMEASURING;
-typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEASURING h, void* data);
+typedef VI_STD(uint64_t) VI_TM_TDIFF;
+typedef struct vi_tmJournal_t *VI_TM_HJOUR;
+typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
+typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS h, void* data);
 enum vi_tmInfo_e
 {	VI_TM_INFO_VER, // unsigned
 	VI_TM_INFO_VERSION, // const char*
@@ -127,19 +127,19 @@ extern "C"
 	VI_TM_API VI_NODISCARD VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
-	VI_TM_API VI_NODISCARD VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate(void);
-	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h);
-	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnum(VI_TM_HJOURNAL h, vi_tmMeasuringEnumCallback_t fn, void* data);
-	VI_TM_API VI_NODISCARD VI_TM_HMEASURING VI_TM_CALL vi_tmMeasuring(VI_TM_HJOURNAL h, const char* name);
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEASURING j, VI_TM_TICKDIFF duration, VI_TM_CNT amount VI_DEF(1)) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEASURING h, const char** name, VI_TM_TICKDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt);
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEASURING h);
+	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(void);
+	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR j, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR j);
+	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnum(VI_TM_HJOUR j, vi_tmMeasuringEnumCallback_t fn, void* data);
+	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR j, const char* name);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, VI_TM_CNT amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amt, VI_TM_CNT *cnt);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS m);
 	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	typedef int (VI_SYS_CALL *vi_tmLogSTR_t)(const char* str, void* data); // Must be compatible with std::fputs!
+	typedef int (VI_SYS_CALL *vi_tmRptCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
 	enum vi_tmReportFlags_e
 	{	vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
@@ -156,10 +156,10 @@ extern "C"
 		vi_tmShowNoHeader = 0x0100,
 	};
 
-	static inline int VI_SYS_CALL vi_tmReportCallback(const char* str, void* data)
+	static inline int VI_SYS_CALL vi_tmRptCb(const char* str, void* data)
 	{	return VI_STD(fputs)(str, (VI_STD(FILE)*)data);
 	}
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOURNAL h, unsigned flags VI_DEF(0), vi_tmLogSTR_t callback VI_DEF(vi_tmReportCallback), void *data VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmRptCb_t VI_DEF(vi_tmRptCb), void* VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityFixate(void);
 	VI_TM_API void VI_TM_CALL vi_tmThreadAffinityRestore(void);
@@ -210,10 +210,10 @@ extern "C"
 namespace vi_tm
 {
 	class init_t
-	{	static constexpr auto default_callback_fn = &vi_tmReportCallback;
+	{	static constexpr auto default_callback_fn = &vi_tmRptCb;
 		static inline const auto default_callback_data = static_cast<void*>(stdout);
 		std::string title_ = "Timing report:\n";
-		vi_tmLogSTR_t callback_function_ = default_callback_fn;
+		vi_tmRptCb_t callback_function_ = default_callback_fn;
 		void* callback_data_ = default_callback_data;
 		unsigned flags_ = 0;
 
@@ -237,7 +237,7 @@ namespace vi_tm
 		{	if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
 			{	flags_ |= v;
 			}
-			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmLogSTR_t>)
+			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmRptCb_t>)
 			{	assert(default_callback_fn == callback_function_ && nullptr != v);
 				callback_function_ = v;
 			}
@@ -264,13 +264,13 @@ namespace vi_tm
 	}; // class init_t
 
 	class meter_t
-	{	VI_TM_HMEASURING h_;
+	{	VI_TM_HMEAS h_;
 		VI_TM_CNT amt_;
 		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
 		meter_t(const meter_t &) = delete;
 		void operator=(const meter_t &) = delete;
 	public:
-		meter_t(VI_TM_HMEASURING h, VI_TM_CNT amt = 1): h_{h}, amt_{amt} {/**/}
+		meter_t(VI_TM_HMEAS h, VI_TM_CNT amt = 1): h_{h}, amt_{amt} {/**/}
 		~meter_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasuringAdd(h_, finish - start_, amt_); }
 	};
 } // namespace vi_tm

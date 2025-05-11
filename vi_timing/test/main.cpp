@@ -63,7 +63,7 @@ namespace {
 VI_OPTIMIZE_OFF
 	void test_multithreaded()
 	{	VI_TM_FUNC;
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
 
 #ifdef NDEBUG
 		static constexpr auto CNT = 2'000'000;
@@ -111,7 +111,7 @@ VI_OPTIMIZE_ON
 	void test_instances()
 	{	VI_TM("Test additional timers");
 		std::cout << "\nAdditional timers:\n";
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
 			{	static auto j1 = vi_tmMeasuring(h, "long, long, long, very long name");
 				vi_tm::meter_t tm1{ j1 };
@@ -137,7 +137,7 @@ VI_OPTIMIZE_OFF
 	{	VI_TM_FUNC;
 		std::cout << "\nTest test_empty:\n";
 
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOURNAL>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto const h = handler.get();
 
 			vi_tmJournalClear(h, "vi_tm");
@@ -166,7 +166,7 @@ VI_OPTIMIZE_OFF
 			}
 
 			const char *name = nullptr;
-			VI_TM_TICKDIFF ticks = 0U;
+			VI_TM_TDIFF ticks = 0U;
 			std::size_t amount = 0U;
 			std::size_t calls_cnt = 0U;
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &ticks, &amount, &calls_cnt);
@@ -237,9 +237,9 @@ VI_OPTIMIZE_ON
 		};
 
 		std::cout << "\nTest vi_tmResults:";
-		auto results_callback = [](VI_TM_HMEASURING m, void* data)
+		auto results_callback = [](VI_TM_HMEAS m, void* data)
 			{	const char *name;
-				VI_TM_TICKDIFF ticks = 0U;
+				VI_TM_TDIFF ticks = 0U;
 				VI_TM_CNT amount = 0U;
 				VI_TM_CNT calls_cnt = 0U;
 				vi_tmMeasuringGet(m, &name, &ticks, &amount, &calls_cnt);
