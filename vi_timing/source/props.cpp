@@ -58,7 +58,7 @@ namespace
 	};
 
 	constexpr auto cache_warmup = 5U;
-	constexpr auto now = std::chrono::steady_clock::now;
+	constexpr auto now = ch::steady_clock::now;
 
 	duration seconds_per_tick()
 	{

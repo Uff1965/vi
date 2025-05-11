@@ -182,29 +182,29 @@ VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR h, const char *name)
 	return static_cast<VI_TM_HMEAS>(&itm);
 }
 
-void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS measuring, VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
-{	assert(measuring);
-	if (measuring)
-	{	measuring->second.add(tick_diff, amount);
+void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
+{	assert(meas);
+	if (meas)
+	{	meas->second.add(tick_diff, amount);
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS measuring, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
-{	assert(measuring);
-	if (measuring)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
+{	assert(meas);
+	if (meas)
 	{	if (name)
-		{	*name = measuring->first.c_str();
+		{	*name = meas->first.c_str();
 		}
 	VI_TM_TDIFF dummy = 0U;
 		VI_TM_CNT _ = 0U;
-		measuring->second.get(total ? *total : dummy, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
+		meas->second.get(total ? *total : dummy, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS measuring)
-{	assert(measuring);
-	if (measuring)
-	{	measuring->second.clear();
+void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS meas)
+{	assert(meas);
+	if (meas)
+	{	meas->second.clear();
 	}
 }
 

@@ -106,7 +106,7 @@ typedef VI_STD(uint64_t) VI_TM_TICK;
 typedef VI_STD(uint64_t) VI_TM_TDIFF;
 typedef struct vi_tmJournal_t *VI_TM_HJOUR;
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
-typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS h, void* data);
+typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data);
 enum vi_tmInfo_e
 {	VI_TM_INFO_VER, // unsigned
 	VI_TM_INFO_VERSION, // const char*
