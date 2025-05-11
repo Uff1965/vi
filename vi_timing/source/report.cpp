@@ -76,10 +76,10 @@ namespace
 		std::string average_txt_{ NotAvailable };
 		std::size_t amount_{}; // Number of measured units
 
-		metering_t(const char *name, VI_TM_TICK total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
+		metering_t(const char *name, VI_TM_TICKDIFF total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
 	};
 
-	metering_t::metering_t(const char *name, VI_TM_TICK total_ticks, std::size_t amount, std::size_t calls_cnt) noexcept
+	metering_t::metering_t(const char *name, VI_TM_TICKDIFF total_ticks, std::size_t amount, std::size_t calls_cnt) noexcept
 	:	name_{ name },
 		amount_{ amount }
 	{	assert(amount >= calls_cnt);
@@ -171,10 +171,16 @@ namespace
 
 	std::vector<metering_t> get_meterings(VI_TM_HJOURNAL journal_handle)
 	{	std::vector<metering_t> result;
-		vi_tmResults
+		vi_tmMeasPointEnum
 		(	journal_handle,
-			[](const char *name, VI_TM_TICK total, std::size_t amount, std::size_t calls_cnt, void *callback_data)
-			{	static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, total, amount, calls_cnt);
+			[](VI_TM_HMEASPOINT h, void *callback_data)
+			{	
+				const char *name;
+				VI_TM_TICKDIFF total;
+				std::size_t amount;
+				std::size_t calls_cnt;
+				vi_tmMeasPointGet(h, &name, &total, &amount, &calls_cnt);
+				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, total, amount, calls_cnt);
 				return 0; // Ok, continue enumerate.
 			},
 			&result

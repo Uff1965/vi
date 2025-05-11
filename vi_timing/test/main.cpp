@@ -165,12 +165,13 @@ VI_OPTIMIZE_OFF
 				}
 			}
 
-			VI_TM_TICK ticks;
-			std::size_t amount;
-			std::size_t calls_cnt;
-			vi_tmResult(h, "vi_tm", &ticks, &amount, &calls_cnt);
+			const char *name = nullptr;
+			VI_TM_TICKDIFF ticks = 0U;
+			std::size_t amount = 0U;
+			std::size_t calls_cnt = 0U;
+			vi_tmMeasPointGet(vi_tmMeasPoint(h, "vi_tm"), &name, &ticks, &amount, &calls_cnt);
 			std::cout << "vi_tm:\tticks = " << std::setw(16) << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
-			vi_tmResult(h, "empty", &ticks, &amount, &calls_cnt);
+			vi_tmMeasPointGet(vi_tmMeasPoint(h, "empty"), &name, &ticks, &amount, &calls_cnt);
 			std::cout << "empty:\tticks = " << std::setw(16)  << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
 			endl(std::cout);
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
@@ -236,10 +237,15 @@ VI_OPTIMIZE_ON
 		};
 
 		std::cout << "\nTest vi_tmResults:";
-		auto results_callback = [](const char* name, VI_TM_TICK ticks, std::size_t amount, std::size_t calls_cnt, void* data)
-			{	const auto props = *static_cast<props_t *>(data);
+		auto results_callback = [](VI_TM_HMEASPOINT m, void* data)
+			{	const char *name;
+				VI_TM_TICKDIFF ticks = 0U;
+				VI_TM_CNT amount = 0U;
+				VI_TM_CNT calls_cnt = 0U;
+				vi_tmMeasPointGet(m, &name, &ticks, &amount, &calls_cnt);
 				if (0U != calls_cnt)
-				{	std::cout << 
+				{	const auto props = *static_cast<props_t *>(data);
+					std::cout << 
 					"\n"<< std::left << std::setw(48) << name << ":"
 					" ticks = " << std::setw(15) << std::right << ticks << ","
 					" (" << std::setprecision(2) << std::setw(9) << std::scientific << (props.unit_ * (ticks - calls_cnt * props.add_) / calls_cnt) << "),"
@@ -248,7 +254,7 @@ VI_OPTIMIZE_ON
 				}
 				return 0;
 			};
-		vi_tmResults(nullptr, results_callback, const_cast<props_t*>(&props));
+		vi_tmMeasPointEnum(nullptr, results_callback, const_cast<props_t*>(&props));
 		std::cout << "\nTest vi_tmResults - done" << std::endl;
 	}
 

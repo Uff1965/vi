@@ -45,26 +45,33 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
+	struct MeasPoint_t
+	{	std::atomic<VI_TM_TICKDIFF> total_ = 0U;
+		std::atomic<std::size_t> counter_ = 0U;
+		std::atomic<std::size_t> calls_cnt_ = 0U;
+		void add(VI_TM_TICKDIFF tick_diff, std::size_t amount) noexcept
+		{	total_.fetch_add(tick_diff, std::memory_order_relaxed);
+			counter_.fetch_add(amount, std::memory_order_relaxed);
+			calls_cnt_.fetch_add(1, std::memory_order_relaxed);
+		}
+		void get(VI_TM_TICKDIFF &total, VI_TM_CNT &amount, VI_TM_CNT &calls_cnt)
+		{	total = total_.load();
+			amount = counter_.load();
+			calls_cnt = calls_cnt_.load();
+		}
+		void clear() noexcept
+		{	total_ = 0U;
+			counter_ = 0U;
+			calls_cnt_ = 0U;
+		}
+	};
+
 	constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	constexpr std::size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	using storage_t = std::unordered_map<std::string, vi_tmMeasPoint_t>;
-} // namespace
+	using storage_t = std::unordered_map<std::string, MeasPoint_t>;
+}
 
-struct vi_tmMeasPoint_t
-{	std::atomic<VI_TM_TICK> total_ = 0U;
-	std::atomic<std::size_t> counter_ = 0U;
-	std::atomic<std::size_t> calls_cnt_ = 0U;
-	void add(VI_TM_TICK tick_diff, std::size_t amount) noexcept
-	{	total_.fetch_add(tick_diff, std::memory_order_relaxed);
-		counter_.fetch_add(amount, std::memory_order_relaxed);
-		calls_cnt_.fetch_add(1, std::memory_order_relaxed);
-	}
-	void clear() noexcept
-	{	total_ = 0U;
-		counter_ = 0U;
-		calls_cnt_ = 0U;
-	}
-};
+struct vi_tmMeasPoint_t: storage_t::value_type {/**/};
 
 struct vi_tmJournal_t
 {	std::mutex storage_guard_;
@@ -84,12 +91,12 @@ struct vi_tmJournal_t
 	{	return 0;
 	}
 
-	vi_tmMeasPoint_t& get_item(const char *name)
+	storage_t::value_type& get_item(const char *name)
 	{	std::lock_guard lock{ storage_guard_ };
-		return storage_[name];
+		return *storage_.try_emplace(name).first;
 	}
 
-	int result(const char *name, VI_TM_TICK &time, std::size_t &amount, std::size_t &calls_cnt)
+	int result(const char *name, VI_TM_TICKDIFF &time, std::size_t &amount, std::size_t &calls_cnt)
 	{	assert(name);
 		if (nullptr == name)
 		{	return -1;
@@ -114,21 +121,13 @@ struct vi_tmJournal_t
 		return 1;
 	}
 
-	int results(vi_tmLogRAW_t fn, void *data)
+	int enumerate(vi_tmMeasPointEnumCallback_t fn, void *data)
 	{	std::lock_guard lock{ storage_guard_ };
 
-		for (const auto &[name, item] : storage_)
-		{	assert(item.counter_ >= item.calls_cnt_ && ((0 == item.total_) == (0 == item.calls_cnt_)));
-			if (!name.empty())
-			{	const auto interrupt = std::invoke
-					(	fn,
-						name.c_str(),
-						item.total_.load(std::memory_order_relaxed),
-						item.counter_.load(std::memory_order_relaxed),
-						item.calls_cnt_.load(std::memory_order_relaxed),
-						data
-					);
-				if (0 != interrupt)
+		for (auto &it : storage_)
+		{	assert(it.second.counter_ >= it.second.calls_cnt_ && ((0 == it.second.total_) == (0 == it.second.calls_cnt_)));
+			if (!it.first.empty())
+			{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEASPOINT>(&it), data); 0 != interrupt)
 				{	return interrupt;
 				}
 			}
@@ -180,13 +179,24 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h)
 
 VI_TM_HMEASPOINT VI_TM_CALL vi_tmMeasPoint(VI_TM_HJOURNAL h, const char *name)
 {	auto& itm = from_handle(h).get_item(name);
-	return &itm;
+	return static_cast<VI_TM_HMEASPOINT>(&itm);
 }
 
-void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT j, VI_TM_TICK tick_diff, std::size_t amount) noexcept
-{	assert(j);
-	if (j)
-	{	j->add(tick_diff, amount);
+void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT m, VI_TM_TICKDIFF tick_diff, std::size_t amount) noexcept
+{	assert(m);
+	if (m)
+	{	m->second.add(tick_diff, amount);
+	}
+}
+
+void VI_TM_CALL vi_tmMeasPointGet(VI_TM_HMEASPOINT m, const char **name, VI_TM_TICKDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
+{	assert(m);
+	if (m)
+	{	if (name)
+		{	*name = m->first.c_str();
+		}
+		VI_TM_CNT _ = 0U;
+		m->second.get(total ? *total : _, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
 	}
 }
 
@@ -194,26 +204,8 @@ void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name) noexcept
 {	from_handle(h).clear(name);
 }
 
-int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void *data)
-{	return from_handle(h).results(fn, data);
-}
-
-int VI_TM_CALL vi_tmResult
-(	VI_TM_HJOURNAL h,
-	const char *name,
-	VI_TM_TICK *time,
-	std::size_t *amount,
-	std::size_t *calls_cnt
-)
-{	assert(name);
-	VI_TM_TICK dummy_ticks = 0;
-	std::size_t dummy_size = 0;
-	return from_handle(h).result
-		(	name,
-			time? *time: dummy_ticks,
-			amount? *amount: dummy_size,
-			calls_cnt? *calls_cnt: dummy_size
-		);
+int VI_TM_CALL vi_tmMeasPointEnum(VI_TM_HJOURNAL h, vi_tmMeasPointEnumCallback_t fn, void *data)
+{	return from_handle(h).enumerate(fn, data);
 }
 
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

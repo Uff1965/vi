@@ -101,10 +101,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
+typedef VI_STD(size_t) VI_TM_CNT;
+typedef VI_STD(uint64_t) VI_TM_TICK;
+typedef VI_STD(uint64_t) VI_TM_TICKDIFF;
 typedef struct vi_tmJournal_t *VI_TM_HJOURNAL;
 typedef struct vi_tmMeasPoint_t *VI_TM_HMEASPOINT;
-typedef VI_STD(uint64_t) VI_TM_TICK;
-typedef int (VI_TM_CALL *vi_tmLogRAW_t)(const char* name, VI_TM_TICK total, VI_STD(size_t) amount, VI_STD(size_t) calls_cnt, void* data);
+typedef int (VI_TM_CALL *vi_tmMeasPointEnumCallback_t)(VI_TM_HMEASPOINT h, void* data);
 enum vi_tmInfo_e
 {	VI_TM_INFO_VER, // unsigned
 	VI_TM_INFO_VERSION, // const char*
@@ -122,17 +124,17 @@ extern "C"
 #	endif
 
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 	VI_TM_API VI_NODISCARD VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
 	VI_TM_API VI_NODISCARD VI_TM_HJOURNAL VI_TM_CALL vi_tmJournalCreate(void);
 	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOURNAL h, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOURNAL h);
+	VI_TM_API int VI_TM_CALL vi_tmMeasPointEnum(VI_TM_HJOURNAL h, vi_tmMeasPointEnumCallback_t fn, void* data);
 	VI_TM_API VI_NODISCARD VI_TM_HMEASPOINT VI_TM_CALL vi_tmMeasPoint(VI_TM_HJOURNAL h, const char* name);
-	VI_TM_API void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT j, VI_TM_TICK duration, VI_STD(size_t) amount VI_DEF(1)) VI_NOEXCEPT;
-	VI_TM_API int VI_TM_CALL vi_tmResult(VI_TM_HJOURNAL h, const char* name, VI_TM_TICK *total, VI_STD(size_t) *amount, VI_STD(size_t) *calls_cnt);
-	VI_TM_API int VI_TM_CALL vi_tmResults(VI_TM_HJOURNAL h, vi_tmLogRAW_t fn, void* data);
+	VI_TM_API void VI_TM_CALL vi_tmMeasPointAdd(VI_TM_HMEASPOINT j, VI_TM_TICKDIFF duration, VI_TM_CNT amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasPointGet(VI_TM_HMEASPOINT h, const char** name, VI_TM_TICKDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt);
+	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -262,12 +264,12 @@ namespace vi_tm
 
 	class meter_t
 	{	VI_TM_HMEASPOINT h_;
-		std::size_t amt_;
+		VI_TM_CNT amt_;
 		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
 		meter_t(const meter_t &) = delete;
 		void operator=(const meter_t &) = delete;
 	public:
-		meter_t(VI_TM_HMEASPOINT h, std::size_t amt = 1): h_{h}, amt_{amt} {/**/}
+		meter_t(VI_TM_HMEASPOINT h, VI_TM_CNT amt = 1): h_{h}, amt_{amt} {/**/}
 		~meter_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasPointAdd(h_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
@@ -282,7 +284,7 @@ namespace vi_tm
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
-				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, std::size_t amount = 1)\
+				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, VI_TM_CNT amount = 1)\
 					{	static auto const h = vi_tmMeasPoint(nullptr, name);\
 						return vi_tm::meter_t{h, amount};\
 					}(__VA_ARGS__)
