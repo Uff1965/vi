@@ -31,26 +31,21 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_VERSION_MINOR 1	// 0 - 999
 #	define VI_TM_VERSION_PATCH 0	// 0 - 9999
 
+#	include <stdint.h>
+#	include <stdio.h> // For fputs and stdout
 #	ifdef __cplusplus
 #		include <cassert>
-#		include <cstdint>
-#		include <cstdio> // For fputs and stdout
 #		include <string>
-#	else
-#		include <stdint.h>
-#		include <stdio.h> // For fputs and stdout
 #	endif
 
 #ifdef __cplusplus
 #	define VI_DEF(v) = (v)
 #	define VI_NODISCARD [[nodiscard]]
 #	define VI_NOEXCEPT noexcept
-#	define VI_STD(s) std::s
 #else
 #	define VI_DEF(v)
 #	define VI_NODISCARD
 #	define VI_NOEXCEPT
-#	define VI_STD(s) s
 #endif
 
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
@@ -106,9 +101,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef VI_STD(size_t) VI_TM_CNT;
-typedef VI_STD(uint64_t) VI_TM_TICK;
-typedef VI_STD(uint64_t) VI_TM_TDIFF;
+typedef size_t VI_TM_CNT;
+typedef uint64_t VI_TM_TICK;
+typedef uint64_t VI_TM_TDIFF;
 typedef struct vi_tmJournal_t *VI_TM_HJOUR;
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
 typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data);
@@ -140,7 +135,7 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, VI_TM_CNT amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amt, VI_TM_CNT *calls);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS m);
-	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(vi_tmInfo_e info);
+	VI_TM_API VI_NODISCARD uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -162,7 +157,7 @@ extern "C"
 	} vi_tmReportFlags_e;
 
 	static inline int VI_SYS_CALL vi_tmRptCb(const char* str, void* data)
-	{	return VI_STD(fputs)(str, (VI_STD(FILE)*)data);
+	{	return fputs(str, (FILE*)data);
 	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmRptCb_t VI_DEF(vi_tmRptCb), void* VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
