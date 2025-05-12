@@ -54,7 +54,7 @@ namespace
 			counter_.fetch_add(amount, std::memory_order_relaxed);
 			calls_cnt_.fetch_add(1, std::memory_order_relaxed);
 		}
-		void get(VI_TM_TDIFF &total, VI_TM_CNT &amount, VI_TM_CNT &calls_cnt) const
+		void get(VI_TM_TDIFF &total, size_t &amount, size_t &calls_cnt) const
 		{	total = total_.load();
 			amount = counter_.load();
 			calls_cnt = calls_cnt_.load();
@@ -169,14 +169,14 @@ void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std::
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, VI_TM_TDIFF *total, VI_TM_CNT *amount, VI_TM_CNT *calls_cnt)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, VI_TM_TDIFF *total, size_t *amount, size_t *calls_cnt)
 {	assert(meas);
 	if (meas)
 	{	if (name)
 		{	*name = meas->first.c_str();
 		}
 		VI_TM_TDIFF dummy = 0U;
-		VI_TM_CNT _ = 0U;
+		size_t _ = 0U;
 		meas->second.get(total ? *total : dummy, amount ? *amount : _, calls_cnt ? *calls_cnt : _);
 	}
 }

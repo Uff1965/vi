@@ -33,22 +33,21 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #	include <stdint.h>
 #	include <stdio.h> // For fputs and stdout
-#	ifdef __cplusplus
-#		include <cassert>
-#		include <string>
-#	endif
 
 #ifdef __cplusplus
-#	define VI_DEF(v) = (v)
+#	include <cassert>
+#	include <string>
+
 #	define VI_NODISCARD [[nodiscard]]
 #	define VI_NOEXCEPT noexcept
+#	define VI_DEF(v) = (v)
 #else
-#	define VI_DEF(v)
 #	define VI_NODISCARD
 #	define VI_NOEXCEPT
+#	define VI_DEF(v)
 #endif
 
-// Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL vvvvvvvvvvvvvv
+// Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
 #	if defined(_MSC_VER)
 #		define VI_FUNCNAME __FUNCSIG__
 
@@ -99,23 +98,47 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define VI_FUNCNAME __func__
 #		define VI_TM_DISABLE "Unknown compiler!"
 #	endif
-// Define: VI_TM_CALL, VI_TM_API and VI_SYS_CALL ^^^^^^^^^^^^^^^^^^^^^^^
+// Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef size_t VI_TM_CNT;
+// Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#define VI_STR_AUX(s) #s
+#define VI_STR(s) VI_STR_AUX(s)
+#define VI_STR_GUM_AUX( a, b ) a##b
+#define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
+#define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+
+#if defined(_MSC_VER)
+#	define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
+#	define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
+#elif defined(__clang__)
+#	define VI_OPTIMIZE_OFF	_Pragma("clang optimize push") \
+							_Pragma("clang optimize off")
+#	define VI_OPTIMIZE_ON	_Pragma("clang optimize pop")
+#elif defined(__GNUC__)
+#	define VI_OPTIMIZE_OFF	_Pragma("GCC push_options") \
+							_Pragma("GCC optimize(\"O0\")")
+#	define VI_OPTIMIZE_ON	_Pragma("GCC pop_options")
+#else
+#	define VI_OPTIMIZE_OFF
+#	define VI_OPTIMIZE_ON
+#endif
+// Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 typedef uint64_t VI_TM_TICK;
 typedef uint64_t VI_TM_TDIFF;
 typedef struct vi_tmJournal_t *VI_TM_HJOUR;
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
 typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data);
+// Enumeration for various timing information types.
 typedef enum
-{	VI_TM_INFO_VER, // unsigned
-	VI_TM_INFO_VERSION, // const char*
-	VI_TM_INFO_BUILDNUMBER, // unsigned
-	VI_TM_INFO_BUILDTYPE, // "Release" or "Debug"
-	VI_TM_INFO_RESOLUTION, // const double* - Clock resolution [ticks]
-	VI_TM_INFO_DURATION, // const double* - Measure duration [sec]
-	VI_TM_INFO_OVERHEAD, // const double* - Clock duration [ticks]
-	VI_TM_INFO_UNIT, // const double* - seconds per tick [sec]
+{	VI_TM_INFO_VER,         // unsigned: Version number of the library.
+	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
+	VI_TM_INFO_BUILDNUMBER, // unsigned: Build number of the library.
+	VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
+	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
+	VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
+	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
+	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
 } vi_tmInfo_e;
 
 #	ifdef __cplusplus
@@ -132,8 +155,8 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR j);
 	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR j, const char* name);
 	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR j, vi_tmMeasuringEnumCallback_t fn, void* data);
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, VI_TM_CNT amount VI_DEF(1)) VI_NOEXCEPT;
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amt, VI_TM_CNT *calls);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, size_t *amt, size_t *calls);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS m);
 	VI_TM_API VI_NODISCARD uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -170,35 +193,13 @@ extern "C"
 } // extern "C"
 #	endif
 
-// Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-#define VI_STR_AUX(s) #s
-#define VI_STR(s) VI_STR_AUX(s)
-#define VI_STR_GUM_AUX( a, b ) a##b
-#define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
-
-#if defined(_MSC_VER)
-#	define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
-#	define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
-#elif defined(__clang__)
-#	define VI_OPTIMIZE_OFF	_Pragma("clang optimize push") \
-							_Pragma("clang optimize off")
-#	define VI_OPTIMIZE_ON	_Pragma("clang optimize pop")
-#elif defined(__GNUC__)
-#	define VI_OPTIMIZE_OFF	_Pragma("GCC push_options") \
-							_Pragma("GCC optimize(\"O0\")")
-#	define VI_OPTIMIZE_ON	_Pragma("GCC pop_options")
-#else
-#	define VI_OPTIMIZE_OFF
-#	define VI_OPTIMIZE_ON
-#endif
-
 #	ifdef __cplusplus
 namespace vi_tm
 {
 	class init_t
 	{	static constexpr auto default_callback_fn = &vi_tmRptCb;
 		static inline const auto default_callback_data = static_cast<void*>(stdout);
+
 		std::string title_ = "Timing report:\n";
 		vi_tmRptCb_t callback_function_ = default_callback_fn;
 		void* callback_data_ = default_callback_data;
@@ -252,12 +253,12 @@ namespace vi_tm
 
 	class measurer_t
 	{	VI_TM_HMEAS meas_;
-		VI_TM_CNT amt_;
+		size_t amt_;
 		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
 		measurer_t(const measurer_t &) = delete;
 		void operator=(const measurer_t &) = delete;
 	public:
-		measurer_t(VI_TM_HMEAS m, VI_TM_CNT amt = 1): meas_{m}, amt_{amt} {/**/}
+		measurer_t(VI_TM_HMEAS m, size_t amt = 1): meas_{m}, amt_{amt} {/**/}
 		~measurer_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasuringAdd(meas_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
@@ -272,7 +273,7 @@ namespace vi_tm
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
-				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, VI_TM_CNT amount = 1)\
+				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)\
 					{	static auto const h = vi_tmMeasuring(nullptr, name);\
 						return vi_tm::measurer_t{h, amount};\
 					}(__VA_ARGS__)
@@ -283,6 +284,4 @@ namespace vi_tm
 #		endif
 
 #	endif // #ifdef __cplusplus
-// Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 #endif // #ifndef VI_TIMING_VI_TIMING_H

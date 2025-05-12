@@ -242,8 +242,8 @@ VI_OPTIMIZE_ON
 		auto results_callback = [](VI_TM_HMEAS m, void* data)
 			{	const char *name;
 				VI_TM_TDIFF ticks = 0U;
-				VI_TM_CNT amount = 0U;
-				VI_TM_CNT calls_cnt = 0U;
+				size_t amount = 0U;
+				size_t calls_cnt = 0U;
 				vi_tmMeasuringGet(m, &name, &ticks, &amount, &calls_cnt);
 				if (0U != calls_cnt)
 				{	const auto props = *static_cast<props_t *>(data);

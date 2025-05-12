@@ -59,7 +59,7 @@ namespace
 		const unsigned hour = time_c(h1) * 10 + time_c(h2);
 		const unsigned minute = time_c(m1) * 10 + time_c(m2);
 
-		return(100 * (100 * (100 * (100 * (year) + month) + day) + hour) + minute);
+		return(100 * (100 * (100 * (100 * year + month) + day) + hour) + minute);
 	}
 
 	unsigned build_number = 0U; // build_number is initialized by the compilation time of the last unit of translation in the YYMMDDhhmm format.
