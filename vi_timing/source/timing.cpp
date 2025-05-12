@@ -31,6 +31,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <atomic>
 #include <cassert>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <string>
