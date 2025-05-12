@@ -112,7 +112,7 @@ typedef VI_STD(uint64_t) VI_TM_TDIFF;
 typedef struct vi_tmJournal_t *VI_TM_HJOUR;
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
 typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data);
-enum vi_tmInfo_e
+typedef enum
 {	VI_TM_INFO_VER, // unsigned
 	VI_TM_INFO_VERSION, // const char*
 	VI_TM_INFO_BUILDNUMBER, // unsigned
@@ -121,7 +121,7 @@ enum vi_tmInfo_e
 	VI_TM_INFO_DURATION, // const double* - Measure duration [sec]
 	VI_TM_INFO_OVERHEAD, // const double* - Clock duration [ticks]
 	VI_TM_INFO_UNIT, // const double* - seconds per tick [sec]
-};
+} vi_tmInfo_e;
 
 #	ifdef __cplusplus
 extern "C"
@@ -140,12 +140,12 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, VI_TM_CNT amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, VI_TM_CNT *amt, VI_TM_CNT *calls);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS m);
-	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(enum vi_tmInfo_e info);
+	VI_TM_API VI_NODISCARD VI_STD(uintptr_t) VI_TM_CALL vi_tmInfo(vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef int (VI_SYS_CALL *vi_tmRptCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
-	enum vi_tmReportFlags_e
+	typedef enum
 	{	vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
 		vi_tmSortBySpeed = 0x02,
@@ -159,7 +159,7 @@ extern "C"
 		vi_tmShowDuration = 0x40,
 		vi_tmShowResolution = 0x80,
 		vi_tmShowNoHeader = 0x0100,
-	};
+	} vi_tmReportFlags_e;
 
 	static inline int VI_SYS_CALL vi_tmRptCb(const char* str, void* data)
 	{	return VI_STD(fputs)(str, (VI_STD(FILE)*)data);
