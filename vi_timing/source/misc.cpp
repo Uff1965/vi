@@ -107,13 +107,10 @@ namespace
 		}
 
 		bool restore_affinity(previous_affinity_t prev)
-		{
-			static const cpu_set_t affinity_zero{};
+		{	static const cpu_set_t affinity_zero{};
 			if (!CPU_EQUAL(&prev, &affinity_zero))
-			{
-				if (0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev))
-				{
-					return true;
+			{	if (0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev))
+				{	return true;
 				}
 				assert(false);
 			}
@@ -122,47 +119,39 @@ namespace
 #endif
 
 		class affinity_fix_t
-		{
-			static thread_local affinity_fix_t s_instance;
+		{	static thread_local affinity_fix_t s_instance;
 			std::size_t cnt_ = 0U;
 			previous_affinity_t previous_affinity_{};
 
 			~affinity_fix_t() { assert(0 == cnt_); }
 		public:
 			static void fixate()
-			{
-				if (0 == s_instance.cnt_++)
-				{
-					if (auto prev = set_affinity(); prev.has_value())
-					{
-						s_instance.previous_affinity_ = prev.value();
+			{	if (0 == s_instance.cnt_++)
+				{	if (auto prev = set_affinity(); prev.has_value())
+					{	s_instance.previous_affinity_ = prev.value();
 					}
 					else
-					{
-						assert(false);
+					{	assert(false);
 					}
 				}
 				return;
 			}
 			static void restore()
-			{
-				assert(s_instance.cnt_ > 0);
+			{	assert(s_instance.cnt_ > 0);
 				if (0 == --s_instance.cnt_ && restore_affinity(s_instance.previous_affinity_))
-				{
-					s_instance.previous_affinity_ = previous_affinity_t{};
+				{	s_instance.previous_affinity_ = previous_affinity_t{};
 				}
 			}
 		};
 		thread_local affinity_fix_t affinity_fix_t::s_instance;
 	} // namespace affinity
 
-	namespace fmt
+	namespace to_str
 	{
 		constexpr auto GROUP_SIZE = 3;
 
 		struct
-		{
-			int exp_;
+		{	int exp_;
 			char suffix_[3];
 		} constexpr factors[]
 		{ { -30, " q" }, // quecto
@@ -191,10 +180,8 @@ namespace
 		static_assert(GROUP_SIZE *(std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
 
 		const char *get_suffix(int group_pos, std::array<char, 6> &buff)
-		{
-			if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
-			{
-				assert(factors[idx].exp_ == group_pos);
+		{	if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
+			{	assert(factors[idx].exp_ == group_pos);
 				return factors[idx].suffix_;
 			}
 			std::snprintf(buff.data(), buff.size(), "e%d", group_pos);
@@ -203,10 +190,8 @@ namespace
 
 		template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 		constexpr T group(T v) noexcept
-		{
-			if (v < 0)
-			{
-				v -= GROUP_SIZE - 1;
+		{	if (v < 0)
+			{	v -= GROUP_SIZE - 1;
 			}
 			return v / GROUP_SIZE;
 		};
@@ -214,33 +199,27 @@ namespace
 
 		template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 		constexpr T floor_mod(T v) noexcept
-		{
-			auto result = v % GROUP_SIZE;
+		{	auto result = v % GROUP_SIZE;
 			if (result < 0)
-			{
-				result += GROUP_SIZE;
+			{	result += GROUP_SIZE;
 			}
 			return result;
 		};
 		static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
 
 		std::tuple<double, const char *> to_string_aux2(double val_org, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
-		{
-			assert(std::isgreaterequal(std::abs(val_org), DBL_MIN) && sig_pos >= dec);
+		{	assert(std::isgreaterequal(std::abs(val_org), DBL_MIN) && sig_pos >= dec);
 
 			auto val = std::abs(val_org);
 			auto fact = static_cast<int>(std::floor(std::log10(val)));
 			if (auto d = floor_mod(sig_pos - dec) - floor_mod(fact); d > 0)
-			{
-				sig_pos -= d;
+			{	sig_pos -= d;
 			}
 
 			const auto rounded_f = fact - sig_pos;
-			{
-				auto exp = -rounded_f;
+			{	auto exp = -rounded_f;
 				while (exp >= DBL_MAX_10_EXP)
-				{
-					static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
+				{	static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
 					val *= MAX10;
 					exp -= DBL_MAX_10_EXP;
 				}
@@ -249,8 +228,7 @@ namespace
 
 			val = std::round(val);
 			if (auto fact_rounded = static_cast<int>(std::floor(std::log10(val))); fact_rounded != sig_pos)
-			{
-				assert(fact_rounded == sig_pos + 1);
+			{	assert(fact_rounded == sig_pos + 1);
 				++fact;
 			}
 
@@ -261,28 +239,25 @@ namespace
 		}
 
 		std::string to_string_aux(double val_org, unsigned char sig, unsigned char const dec)
-		{
-			assert(sig > dec && 0 == errno);
+		{	assert(sig > dec && 0 == errno);
 			std::array<char, 6> buff;
 
-			const auto [val, suffix] = std::isless(std::abs(val_org), DBL_MIN) ?
-				std::make_tuple(+0.0, "  ") :
-				to_string_aux2(val_org, sig - 1, dec, buff);
+			const auto [val, suffix] = std::isnormal(val_org) ?
+				to_string_aux2(val_org, sig - 1, dec, buff) :
+				std::make_tuple(+0.0, "  ");
 
-			std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "  -6666.66e-308" -> 9 + 6;
+			std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "-  6666.66e-308" -> 9 + 6;
 			if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); len >= 0)
-			{
-				assert(result.size() > len);
+			{	assert(result.size() > len);
 				result.resize(len);
 			}
 			else
-			{
-				assert(false);
+			{	assert(false);
 				result = "ERR";
 			}
 			return result;
 		}
-	} // namespace fmt
+	} // namespace to_str
 } // namespace
 
 /// <summary>
@@ -297,9 +272,9 @@ namespace
 /// It rounds the number to the specified precision and formats it with the appropriate suffix.
 /// </remarks>
 [[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
-{	assert(significant > decimal);
-	if (decimal >= significant)
-	{	return "ERR";
+{	if (decimal >= significant)
+	{	assert(false);
+		return "ERR";
 	}
 	if (std::isnan(val))
 	{	return "NaN";
@@ -307,7 +282,7 @@ namespace
 	if (std::isinf(val))
 	{	return std::signbit(val) ? "-INF" : "INF";
 	}
-	return fmt::to_string_aux(val, significant, decimal);
+	return to_str::to_string_aux(val, significant, decimal);
 }
 
 void VI_TM_CALL vi_tmCurrentThreadAffinityFixate()
@@ -323,8 +298,7 @@ void VI_TM_CALL vi_tmThreadYield(void)
 }
 
 void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
-{
-	if (0 == ms)
+{	if (0 == ms)
 	{	return;
 	}
 
@@ -332,25 +306,14 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	{	threads_qty = cores_qty;
 	}
 
-	static auto load_dummy = []
-		{	volatile auto _ = 0.0;
-			for (auto n = 100'000U; n; --n)
-			{	_ = _ + std::sin(n) * std::cos(n);
-			}
-		};
-
 	std::atomic_bool done = false;
-	auto thread_func = [&done]
-		{	while (!done)
-			{	load_dummy();
-			}
-		};
+	static auto load_dummy = [] { volatile auto f = 0.0; for (auto n = 10'000U; n; --n) f += std::sin(n) * std::cos(n); };
+	auto thread_func = [&done] { while (!done) load_dummy(); };
 
 	std::vector<std::thread> additional_threads(threads_qty - 1); // Additional threads
 	for (auto &t : additional_threads)
 	{	t = std::thread{ thread_func };
 	}
-
 	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
 	{	load_dummy();
 	}
@@ -358,17 +321,14 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	done = true;
 
 	for (auto &t : additional_threads)
-	{	if (t.joinable())
-		{	t.join();
-		}
+	{	t.join();
 	}
 }
 
 const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 {	const void *result = nullptr;
 	switch (info)
-	{
-		case VI_TM_INFO_VER:
+	{	case VI_TM_INFO_VER:
 		{	static const unsigned ver = (VI_TM_VERSION_MAJOR * 1000U + VI_TM_VERSION_MINOR) * 10000U + VI_TM_VERSION_PATCH;
 			result = &ver;
 		} break;
@@ -428,15 +388,17 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		{	assert(false);
 		} break;
 	}
+
 	return result;
-}
+
+} // vi_tmStaticInfo(vi_tmInfo_e info)
 
 #ifndef NDEBUG
 namespace
 {
 	const auto nanotest_factors = []
-	{	for (auto &v: fmt::factors)
-		{	assert(v.exp_ == fmt::factors[0].exp_ + fmt::GROUP_SIZE * std::distance(fmt::factors, &v));
+	{	for (auto &v: to_str::factors)
+		{	assert(v.exp_ == to_str::factors[0].exp_ + to_str::GROUP_SIZE * std::distance(to_str::factors, &v));
 		}
 		return 0;
 	}();
