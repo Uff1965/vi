@@ -32,7 +32,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <atomic>
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <mutex>
 #include <string>
 #include <unordered_map> // unordered_map: "does not invalidate pointers or references to elements".
@@ -101,7 +100,7 @@ struct vi_tmJournal_t
 		for (auto &it : storage_)
 		{	assert(it.second.counter_ >= it.second.calls_cnt_ && ((0 == it.second.total_) == (0 == it.second.calls_cnt_)));
 			if (!it.first.empty())
-			{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data); 0 != interrupt)
+			{	if (const auto interrupt = fn(static_cast<VI_TM_HMEAS>(&it), data); 0 != interrupt)
 				{	return interrupt;
 				}
 			}

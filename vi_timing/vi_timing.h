@@ -131,10 +131,11 @@ typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
 typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data);
 // Enumeration for various timing information types.
 typedef enum
-{	VI_TM_INFO_VER,         // unsigned: Version number of the library.
+{	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
+	VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
 	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
-	VI_TM_INFO_BUILDNUMBER, // unsigned: Build number of the library.
 	VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
+	VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
 	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
 	VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
 	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
@@ -158,7 +159,7 @@ extern "C"
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, size_t *amt, size_t *calls);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS m);
-	VI_TM_API VI_NODISCARD uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info);
+	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -273,15 +274,13 @@ namespace vi_tm
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
-				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)\
-					{	static auto const h = vi_tmMeasuring(nullptr, name);\
-						return vi_tm::measurer_t{h, amount};\
+				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)->vi_tm::measurer_t\
+					{	return {vi_tmMeasuring(nullptr, name), amount};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
 #			define VI_TM_CLEAR(...) vi_tmJournalClear(nullptr, __VA_ARGS__)
-#			define VI_TM_FULLVERSION reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_VERSION))
+#			define VI_TM_FULLVERSION reinterpret_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
 #		endif
-
 #	endif // #ifdef __cplusplus
 #endif // #ifndef VI_TIMING_VI_TIMING_H

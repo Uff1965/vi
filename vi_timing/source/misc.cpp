@@ -45,6 +45,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <cfloat>
 #include <chrono>
 #include <cmath>
+#include <optional>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -65,183 +66,223 @@ namespace
 	constexpr char TYPE[] = "static";
 #endif
 
-	class affinity_fix_t
+	namespace affinity
 	{
 #if defined(_WIN32)
-		DWORD_PTR previous_affinity_{};
-#elif defined(__linux__)
-		cpu_set_t previous_affinity_{};
-#endif
-		std::size_t cnt_ = 0U;
-		static thread_local affinity_fix_t s_affinity;
-		~affinity_fix_t() { assert(0 == cnt_); }
-	public:
-		static void fixate();
-		static void restore();
-	};
+		using previous_affinity_t = DWORD_PTR;
 
-	thread_local affinity_fix_t affinity_fix_t::s_affinity;
-
-	void affinity_fix_t::fixate()
-	{
-		if (0 != s_affinity.cnt_++)
-		{	return;
+		std::optional<previous_affinity_t> set_affinity()
+		{	const auto affinity = static_cast<previous_affinity_t>(1U) << GetCurrentProcessorNumber();
+			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), affinity))
+				return ret;
+			return {};
 		}
 
-#if defined(_WIN32)
-		const auto core_id = GetCurrentProcessorNumber();
-		const auto affinity = static_cast<DWORD_PTR>(1U) << core_id;
-		const auto thread = GetCurrentThread();
-		if ((s_affinity.previous_affinity_ = SetThreadAffinityMask(thread, affinity)) != 0)
-		{	return; // Ok!
+		bool restore_affinity(previous_affinity_t prev)
+		{	if (0 != prev)
+			{	if (0 != SetThreadAffinityMask(GetCurrentThread(), prev))
+				{	return true;
+				}
+				assert(false);
+			}
+			return false;
 		}
 #elif defined(__linux__)
-		const auto thread = pthread_self();
-		if (0 == pthread_getaffinity_np(thread, sizeof(s_affinity.previous_affinity_), &s_affinity.previous_affinity_))
-		{	if (const auto core_id = sched_getcpu(); core_id >= 0)
-			{	cpu_set_t affinity;
-				CPU_ZERO(&affinity);
-				CPU_SET(core_id, &affinity);
-				if (0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity))
-				{	return; // Ok!
+		using previous_affinity_t = cpu_set_t;
+
+		std::optional<previous_affinity_t> set_affinity()
+		{	const auto thread = pthread_self();
+			if (previous_affinity_t prev{}; 0 == pthread_getaffinity_np(thread, sizeof(prev), &prev))
+			{	if (const auto core_id = sched_getcpu(); core_id >= 0)
+				{	cpu_set_t affinity;
+					CPU_ZERO(&affinity);
+					CPU_SET(core_id, &affinity);
+					if (0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity))
+					{	return prev; // Ok!
+					}
 				}
 			}
+			assert(false);
+			return {};
 		}
-#endif
-		assert(false);
-		return; // Fail!
-	}
 
-	void affinity_fix_t::restore()
-	{	assert(s_affinity.cnt_ > 0);
-		if (0 == --s_affinity.cnt_)
+		bool restore_affinity(previous_affinity_t prev)
 		{
-#if defined(_WIN32)
-			if (s_affinity.previous_affinity_ != 0)
-			{	const auto thread = GetCurrentThread();
-				[[maybe_unused]] const auto ret = SetThreadAffinityMask(thread, s_affinity.previous_affinity_);
-				assert(ret != 0);
-			}
-#elif defined(__linux__)
 			static const cpu_set_t affinity_zero{};
-			if (!CPU_EQUAL(&s_affinity.previous_affinity_, &affinity_zero))
-			{	const auto thread = pthread_self();
-				const auto ret = pthread_setaffinity_np(thread, sizeof(s_affinity.previous_affinity_), &s_affinity.previous_affinity_);
-				assert(0 == ret);
+			if (!CPU_EQUAL(&prev, &affinity_zero))
+			{
+				if (0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev))
+				{
+					return true;
+				}
+				assert(false);
 			}
+			return false;
+		}
 #endif
-		}
-	}
 
-	constexpr auto GROUP_SIZE = 3;
+		class affinity_fix_t
+		{
+			static thread_local affinity_fix_t s_instance;
+			std::size_t cnt_ = 0U;
+			previous_affinity_t previous_affinity_{};
 
-	struct
-	{	int exp_;
-		char suffix_[3];
-	} constexpr factors[]
-	{	{ -30, " q" }, // quecto
-		{ -27, " r" }, // ronto
-		{ -24, " y" }, // yocto
-		{ -21, " z" }, // zepto
-		{ -18, " a" }, // atto
-		{ -15, " f" }, // femto
-		{ -12, " p" }, // pico
-		{ -9, " n" }, // nano
-		{ -6, " u" }, // micro
-		{ -3, " m" }, // milli
-		{ 0, "  " },
-		{ 3, " k" }, // kilo
-		{ 6, " M" }, // mega
-		{ 9, " G" }, // giga
-		{ 12, " T" }, // tera
-		{ 15, " P" }, // peta
-		{ 18, " E" }, // exa
-		{ 21, " Z" }, // zetta
-		{ 24, " Y" }, // yotta
-		{ 27, " R" }, // ronna
-		{ 30, " Q" }, // quetta
-	};
-	static_assert(0 == factors[0].exp_ % GROUP_SIZE);
-	static_assert(GROUP_SIZE * (std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
-
-	const char* get_suffix(int group_pos, std::array<char, 6> &buff)
-	{	if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
-		{	assert(factors[idx].exp_ == group_pos);
-			return factors[idx].suffix_;
-		}
-		std::snprintf(buff.data(), buff.size(), "e%d", group_pos);
-		return buff.data();
-	}
-
-	template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
-	constexpr T group(T v) noexcept
-	{	if (v < 0)
-		{	v -= GROUP_SIZE - 1;
-		}
-		return v / GROUP_SIZE;
-	};
-	static_assert(group(9) == 3 && group(2) == 0 && group(0) == 0 && group(-1) == -1 && group(-6) == -2);
-
-	template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
-	constexpr T floor_mod(T v) noexcept
-	{	auto result = v % GROUP_SIZE;
-		if (result < 0)
-		{	result += GROUP_SIZE;
-		}
-		return result;
-	};
-	static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
-
-	std::tuple<double, const char*> to_string_aux2(double val_org, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
-	{	assert(std::isgreaterequal(std::abs(val_org), DBL_MIN) && sig_pos >= dec);
-
-		auto val = std::abs(val_org);
-		auto fact = static_cast<int>(std::floor(std::log10(val)));
-		if (auto d = floor_mod(sig_pos - dec) - floor_mod(fact); d > 0)
-		{	sig_pos -= d;
-		}
-
-		const auto rounded_f = fact - sig_pos;
-		{	auto exp = -rounded_f;
-			while (exp >= DBL_MAX_10_EXP)
-			{	static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
-				val *= MAX10;
-				exp -= DBL_MAX_10_EXP;
+			~affinity_fix_t() { assert(0 == cnt_); }
+		public:
+			static void fixate()
+			{
+				if (0 == s_instance.cnt_++)
+				{
+					if (auto prev = set_affinity(); prev.has_value())
+					{
+						s_instance.previous_affinity_ = prev.value();
+					}
+					else
+					{
+						assert(false);
+					}
+				}
+				return;
 			}
-			val *= std::pow(10, exp);
+			static void restore()
+			{
+				assert(s_instance.cnt_ > 0);
+				if (0 == --s_instance.cnt_ && restore_affinity(s_instance.previous_affinity_))
+				{
+					s_instance.previous_affinity_ = previous_affinity_t{};
+				}
+			}
+		};
+		thread_local affinity_fix_t affinity_fix_t::s_instance;
+	} // namespace affinity
+
+	namespace fmt
+	{
+		constexpr auto GROUP_SIZE = 3;
+
+		struct
+		{
+			int exp_;
+			char suffix_[3];
+		} constexpr factors[]
+		{ { -30, " q" }, // quecto
+			{ -27, " r" }, // ronto
+			{ -24, " y" }, // yocto
+			{ -21, " z" }, // zepto
+			{ -18, " a" }, // atto
+			{ -15, " f" }, // femto
+			{ -12, " p" }, // pico
+			{ -9, " n" }, // nano
+			{ -6, " u" }, // micro
+			{ -3, " m" }, // milli
+			{ 0, "  " },
+			{ 3, " k" }, // kilo
+			{ 6, " M" }, // mega
+			{ 9, " G" }, // giga
+			{ 12, " T" }, // tera
+			{ 15, " P" }, // peta
+			{ 18, " E" }, // exa
+			{ 21, " Z" }, // zetta
+			{ 24, " Y" }, // yotta
+			{ 27, " R" }, // ronna
+			{ 30, " Q" }, // quetta
+		};
+		static_assert(0 == factors[0].exp_ % GROUP_SIZE);
+		static_assert(GROUP_SIZE *(std::size(factors) - 1) == factors[std::size(factors) - 1].exp_ - factors[0].exp_);
+
+		const char *get_suffix(int group_pos, std::array<char, 6> &buff)
+		{
+			if (const auto idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && idx < std::size(factors))
+			{
+				assert(factors[idx].exp_ == group_pos);
+				return factors[idx].suffix_;
+			}
+			std::snprintf(buff.data(), buff.size(), "e%d", group_pos);
+			return buff.data();
 		}
 
-		val = std::round(val);
+		template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+		constexpr T group(T v) noexcept
+		{
+			if (v < 0)
+			{
+				v -= GROUP_SIZE - 1;
+			}
+			return v / GROUP_SIZE;
+		};
+		static_assert(group(9) == 3 && group(2) == 0 && group(0) == 0 && group(-1) == -1 && group(-6) == -2);
+
+		template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+		constexpr T floor_mod(T v) noexcept
+		{
+			auto result = v % GROUP_SIZE;
+			if (result < 0)
+			{
+				result += GROUP_SIZE;
+			}
+			return result;
+		};
+		static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
+
+		std::tuple<double, const char *> to_string_aux2(double val_org, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
+		{
+			assert(std::isgreaterequal(std::abs(val_org), DBL_MIN) && sig_pos >= dec);
+
+			auto val = std::abs(val_org);
+			auto fact = static_cast<int>(std::floor(std::log10(val)));
+			if (auto d = floor_mod(sig_pos - dec) - floor_mod(fact); d > 0)
+			{
+				sig_pos -= d;
+			}
+
+			const auto rounded_f = fact - sig_pos;
+			{
+				auto exp = -rounded_f;
+				while (exp >= DBL_MAX_10_EXP)
+				{
+					static const auto MAX10 = std::pow(10, DBL_MAX_10_EXP);
+					val *= MAX10;
+					exp -= DBL_MAX_10_EXP;
+				}
+				val *= std::pow(10, exp);
+			}
+
+			val = std::round(val);
 			if (auto fact_rounded = static_cast<int>(std::floor(std::log10(val))); fact_rounded != sig_pos)
-			{	assert(fact_rounded == sig_pos + 1);
+			{
+				assert(fact_rounded == sig_pos + 1);
 				++fact;
 			}
 
-		const auto group_pos = (group(fact) - group(sig_pos - dec)) * GROUP_SIZE;
-		val *= std::pow(10, rounded_f - group_pos);
-		assert(0 == errno);
-		return { std::copysign(val, val_org), get_suffix(group_pos, buff) };
-	}
-
-	std::string to_string_aux(double val_org, unsigned char sig, unsigned char const dec)
-	{	assert(sig > dec && 0 == errno);
-		std::array<char, 6> buff;
-
-		const auto [val, suffix] = std::isless(std::abs(val_org), DBL_MIN) ?
-			std::make_tuple(+0.0, "  ") :
-			to_string_aux2(val_org, sig - 1, dec, buff);
-
-		std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "  -6666.66e-308" -> 9 + 6;
-		if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); len >= 0)
-		{	assert(result.size() > len);
-			result.resize(len);
+			const auto group_pos = (group(fact) - group(sig_pos - dec)) * GROUP_SIZE;
+			val *= std::pow(10, rounded_f - group_pos);
+			assert(0 == errno);
+			return { std::copysign(val, val_org), get_suffix(group_pos, buff) };
 		}
-		else
-		{	assert(false);
-			result = "ERR";
+
+		std::string to_string_aux(double val_org, unsigned char sig, unsigned char const dec)
+		{
+			assert(sig > dec && 0 == errno);
+			std::array<char, 6> buff;
+
+			const auto [val, suffix] = std::isless(std::abs(val_org), DBL_MIN) ?
+				std::make_tuple(+0.0, "  ") :
+				to_string_aux2(val_org, sig - 1, dec, buff);
+
+			std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "  -6666.66e-308" -> 9 + 6;
+			if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); len >= 0)
+			{
+				assert(result.size() > len);
+				result.resize(len);
+			}
+			else
+			{
+				assert(false);
+				result = "ERR";
+			}
+			return result;
 		}
-		return result;
-	}
+	} // namespace fmt
 } // namespace
 
 /// <summary>
@@ -266,15 +307,15 @@ namespace
 	if (std::isinf(val))
 	{	return std::signbit(val) ? "-INF" : "INF";
 	}
-	return to_string_aux(val, significant, decimal);
+	return fmt::to_string_aux(val, significant, decimal);
 }
 
 void VI_TM_CALL vi_tmCurrentThreadAffinityFixate()
-{	affinity_fix_t::fixate();
+{	affinity::affinity_fix_t::fixate();
 }
 
 void VI_TM_CALL vi_tmCurrentThreadAffinityRestore()
-{	affinity_fix_t::restore();
+{	affinity::affinity_fix_t::restore();
 }
 
 void VI_TM_CALL vi_tmThreadYield(void)
@@ -323,58 +364,64 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	}
 }
 
-std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
-{	std::uintptr_t result = 0U;
+const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
+{	const void *result = nullptr;
 	switch (info)
 	{
 		case VI_TM_INFO_VER:
-		{	result = (((VI_TM_VERSION_MAJOR) * 1000U + (VI_TM_VERSION_MINOR)) * 10000U + (VI_TM_VERSION_PATCH));
+		{	static const unsigned ver = (VI_TM_VERSION_MAJOR * 1000U + VI_TM_VERSION_MINOR) * 10000U + VI_TM_VERSION_PATCH;
+			result = &ver;
 		} break;
 
 		case VI_TM_INFO_BUILDNUMBER:
-		{	result = misc::build_number_get();
+		{	static const unsigned build = misc::build_number_get();
+			result = &build;
 		} break;
 
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
-					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> res;
+					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> result;
 					[[maybe_unused]] const auto sz = snprintf
-						(	res.data(),
-							res.size(),
+						(	result.data(),
+							result.size(),
 							VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH) ".%u%c %s",
 							misc::build_number_get(),
 							CONFIG[0],
 							TYPE
 						);
-					assert(0 < sz && sz < static_cast<int>(res.size()));
-					return res;
+					assert(0 < sz && sz < static_cast<int>(result.size()));
+					return result;
 				}();
-			result = reinterpret_cast<std::uintptr_t>(version.data());
+			result = version.data();
 		} break;
 
 		case VI_TM_INFO_BUILDTYPE:
-		{	result = reinterpret_cast<std::uintptr_t>(CONFIG);
+		{	result = CONFIG;
 		} break;
 
-		case VI_TM_INFO_RESOLUTION: // double - Clock resolution [ticks]
+		case VI_TM_INFO_LIBRARYTYPE:
+		{	result = TYPE;
+		} break;
+
+		case VI_TM_INFO_RESOLUTION:
 		{	static const double resolution = misc::properties_t::props().clock_resolution_ticks_;
-			result = reinterpret_cast<std::uintptr_t>(&resolution);
+			result = &resolution;
 		} break;
 
-		case VI_TM_INFO_DURATION: // double - Measure duration [sec]
+		case VI_TM_INFO_DURATION:
 		{	static const double duration = misc::properties_t::props().all_latency_.count();
-			result = reinterpret_cast<std::uintptr_t>(&duration);
+			result = &duration;
 		} break;
 
-		case VI_TM_INFO_OVERHEAD: // double - Clock duration [ticks]
+		case VI_TM_INFO_OVERHEAD:
 		{	static const double overhead = misc::properties_t::props().clock_latency_ticks_;
-			result = reinterpret_cast<std::uintptr_t>(&overhead);
+			result = &overhead;
 		} break;
 
-		case VI_TM_INFO_UNIT: // double - Clock duration [sec]
+		case VI_TM_INFO_UNIT:
 		{	static const double unit = misc::properties_t::props().seconds_per_tick_.count();
-			result = reinterpret_cast<std::uintptr_t>(&unit);
+			result = &unit;
 		} break;
 
 		default:
@@ -388,8 +435,8 @@ std::uintptr_t VI_TM_CALL vi_tmInfo(vi_tmInfo_e info)
 namespace
 {
 	const auto nanotest_factors = []
-	{	for (auto &v: factors)
-		{	assert(v.exp_ == factors[0].exp_ + GROUP_SIZE * std::distance(factors, &v));
+	{	for (auto &v: fmt::factors)
+		{	assert(v.exp_ == fmt::factors[0].exp_ + fmt::GROUP_SIZE * std::distance(fmt::factors, &v));
 		}
 		return 0;
 	}();

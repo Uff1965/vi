@@ -5,6 +5,7 @@
 
 #include "../vi_timing.h"
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <threads.h>
@@ -53,8 +54,7 @@ void foo_c(void)
 	
 	vi_tmWarming(256, 2);
 	
-	printf("Version: \'%s\' [%" PRIdPTR "]\n", (const char*)vi_tmInfo(VI_TM_INFO_VERSION), (intptr_t)vi_tmInfo(VI_TM_INFO_VER));
-
+	printf("Version: \'%s\' [%u]\n", (const char*)vi_tmStaticInfo(VI_TM_INFO_VERSION), *(const unsigned*)vi_tmStaticInfo(VI_TM_INFO_VER));
 	thrd_yield();
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 

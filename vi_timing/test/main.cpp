@@ -195,9 +195,9 @@ VI_OPTIMIZE_ON
 
 		std::cout <<
 			"Information about the \'vi_timing\' library:" << "\n"
-			"\tBuild type: " << reinterpret_cast<const char*>(vi_tmInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
-			"\tVer: " << vi_tmInfo(VI_TM_INFO_VER) << "\n"
-			"\tBuild number: " << vi_tmInfo(VI_TM_INFO_BUILDNUMBER) << "\n"
+			"\tBuild type: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
+			"\tVer: " << *static_cast<const unsigned*>(vi_tmStaticInfo(VI_TM_INFO_VER)) << "\n"
+			"\tBuild number: " << *static_cast<const unsigned*>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n"
 			"\tVersion: " << VI_TM_FULLVERSION << std::endl;
 	}
 
@@ -213,16 +213,16 @@ VI_OPTIMIZE_ON
 
 	void prn_clock_properties()
 	{	std::cout << "\nClock properties:";
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_RESOLUTION)); ptr)
+		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_RESOLUTION)))
 		{	std::cout << "\nResolution: " << std::setprecision(3) << *ptr << " ticks";
 		}
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_DURATION)); ptr)
+		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION)))
 		{	std::cout << "\nDuration: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)); ptr)
+		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_OVERHEAD)))
 		{	std::cout << "\nAdditive: " << std::setprecision(3) << *ptr << " ticks";
 		}
-		if (auto ptr = reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT)); ptr)
+		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT)))
 		{	std::cout << "\nTick: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
 		std::cout << "\nClock properties - done" << std::endl;
@@ -234,8 +234,8 @@ VI_OPTIMIZE_ON
 		{	double add_;
 			double unit_;
 		} const props =
-		{	*reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_OVERHEAD)),
-			*reinterpret_cast<const double *>(vi_tmInfo(VI_TM_INFO_UNIT))
+		{	*reinterpret_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_OVERHEAD)),
+			*reinterpret_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT))
 		};
 
 		std::cout << "\nTest vi_tmResults:";
