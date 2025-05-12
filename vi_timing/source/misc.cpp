@@ -127,8 +127,8 @@ namespace
 		public:
 			static void fixate()
 			{	if (0 == s_instance.cnt_++)
-				{	if (auto prev = set_affinity(); prev.has_value())
-					{	s_instance.previous_affinity_ = prev.value();
+				{	if (auto prev = set_affinity())
+					{	s_instance.previous_affinity_ = *prev;
 					}
 					else
 					{	assert(false);
