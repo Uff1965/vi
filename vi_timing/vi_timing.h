@@ -36,6 +36,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #ifdef __cplusplus
 #	include <cassert>
+#	include <cstring>
 #	include <string>
 
 #	define VI_NODISCARD [[nodiscard]]
@@ -289,7 +290,7 @@ namespace vi_tm
 						DEBUG_ONLY /* You cannot use the same macro substitution with different names!!! */\
 						(	const char* str = nullptr;\
 							vi_tmMeasuringGet(meas, &str, nullptr, nullptr, nullptr);\
-							assert(0 == strcmp(name, str));\
+							assert(0 == std::strcmp(name, str));\
 						)\
 						return {meas, amount};\
 					}(__VA_ARGS__)
