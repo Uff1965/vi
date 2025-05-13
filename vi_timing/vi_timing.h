@@ -111,9 +111,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
 #	define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
 #	ifdef NDEBUG
-#		define DEBUG_ONLY(t) /**/
+#		define VI_DEBUG_ONLY(t) /**/
 #	else
-#		define DEBUG_ONLY(t) t
+#		define VI_DEBUG_ONLY(t) t
 #	endif
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -163,13 +163,13 @@ extern "C" {
 	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
 	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(void);
-	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR j, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR j, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR j);
 	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR j, const char* name);
 	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR j, vi_tmMeasuringEnumCallback_t fn, void* data);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, size_t *amt, size_t *calls);
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS m);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS m);
 	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -280,14 +280,16 @@ namespace vi_tm
 #			define VI_TM(...) static const int VI_MAKE_ID(_vi_tm_) = 0
 #			define VI_TM_FUNC ((void)0)
 #			define VI_TM_REPORT(...) ((void)0)
-#			define VI_TM_CLEAR ((void)0)
+#			define VI_TM_RESET ((void)0)
 #			define VI_TM_FULLVERSION ""
 #		else
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
+			//	The macro VI_TM(const char* name, siz_t amount = 1) stores the pointer to the named measurer
+			//	in a static variable to save resources. Therefore, it cannot be used with different names.
 #			define VI_TM(...)\
 				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)->vi_tm::measurer_t\
 					{	static auto const meas = vi_tmMeasuring(nullptr, name); /*!!! STATIC !!!*/\
-						DEBUG_ONLY /* You cannot use the same macro substitution with different names!!! */\
+						VI_DEBUG_ONLY /* You cannot use the same macro substitution with different names!!! */\
 						(	const char* str = nullptr;\
 							vi_tmMeasuringGet(meas, &str, nullptr, nullptr, nullptr);\
 							assert(0 == std::strcmp(name, str));\
@@ -296,7 +298,7 @@ namespace vi_tm
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
-#			define VI_TM_CLEAR(name) vi_tmJournalClear(nullptr, (name))
+#			define VI_TM_RESET(name) vi_tmJournalReset(nullptr, (name)) // If 'name' is zero, then all the meters in the log are reset (but not deleted!).
 #			define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
 #		endif
 #	endif // #ifdef __cplusplus

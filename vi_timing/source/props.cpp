@@ -206,7 +206,7 @@ misc::properties_t::properties_t()
 
 	vi_tmWarming(1, 500);
 
-	vi_tmJournalClear(nullptr, "");
+	vi_tmJournalReset(nullptr, "");
 	seconds_per_tick_ = seconds_per_tick();
 	clock_latency_ticks_ = measurement_cost();
 	all_latency_ = measurement_duration();

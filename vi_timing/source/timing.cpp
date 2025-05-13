@@ -132,7 +132,7 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR journal)
 {	delete journal;
 }
 
-void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR journal, const char* name) noexcept
+void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal, const char* name) noexcept
 {	vi_tmJournal_t::from_handle(journal).reset(name);
 }
 
@@ -163,7 +163,7 @@ void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, VI_TM_TDI
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringClear(VI_TM_HMEAS meas)
+void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS meas)
 {	assert(meas);
 	if (meas)
 	{	meas->second.reset();

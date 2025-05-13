@@ -34,12 +34,12 @@ void bar_c(void)
 		puts("Original:");
 		vi_tmReport(journal, vi_tmShowNoHeader, (vi_tmRptCb_t)fputs, stdout);
 
-		vi_tmMeasuringClear(m1);
-		puts("After vi_tmMeasuringClear(m1) (Clear \"xxx\"):");
+		vi_tmMeasuringReset(m1);
+		puts("After vi_tmMeasuringReset(m1) (Clear \"xxx\"):");
 		vi_tmReport(journal, vi_tmShowNoHeader, (vi_tmRptCb_t)fputs, stdout);
 
-		vi_tmJournalClear(journal, NULL);
-		puts("After vi_tmJournalClear(htimer, NULL):");
+		vi_tmJournalReset(journal, NULL);
+		puts("After vi_tmJournalReset(htimer, NULL):");
 		vi_tmReport(journal, vi_tmShowNoHeader, (vi_tmRptCb_t)fputs, stdout);
 		vi_tmJournalClose(journal);
 	}

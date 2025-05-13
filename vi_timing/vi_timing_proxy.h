@@ -18,7 +18,7 @@
 #		define VI_TM(...) static const int VI_MAKE_ID(_vi_tm_) = 0
 #		define VI_TM_FUNC ((void)0)
 #		define VI_TM_REPORT(...) ((void)0)
-#		define VI_TM_CLEAR ((void)0)
+#		define VI_TM_RESET ((void)0)
 #		define VI_TM_FULLVERSION ""
 #	endif
 

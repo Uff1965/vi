@@ -142,10 +142,10 @@ VI_OPTIMIZE_OFF
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto const h = handler.get();
 
-			vi_tmJournalClear(h, "vi_tm");
-			vi_tmJournalClear(h, "empty");
-			VI_TM_CLEAR("VI_TM");
-			VI_TM_CLEAR("EMPTY");
+			vi_tmJournalReset(h, "vi_tm");
+			vi_tmJournalReset(h, "empty");
+			VI_TM_RESET("VI_TM");
+			VI_TM_RESET("EMPTY");
 
 			static auto const jTm = vi_tmMeasuring(h, "vi_tm");
 			static auto const jEmpty = vi_tmMeasuring(h, "empty");
