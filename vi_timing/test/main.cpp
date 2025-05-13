@@ -337,24 +337,13 @@ VI_OPTIMIZE_OFF
 			}
 
 			{	VI_TM("TestE First");
-				VI_TM("TestE");
-				nothing();
-			}
-			{	VI_TM("TestE Other", CNT);
-				for (auto n = 0; n < CNT; ++n)
-				{	VI_TM("TestE");
-					nothing();
-				}
-			}
-
-			{	VI_TM("TestF First");
 				const auto start = vi_tmGetTicks();
 				nothing();
 				const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestF"), finish - start);
+				vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestE"), finish - start);
 			}
 			{	VI_TM("TestF Other", CNT);
-				const auto h = vi_tmMeasuring(nullptr, "TestF");
+				const auto h = vi_tmMeasuring(nullptr, "TestE");
 				for (auto n = 0; n < CNT; ++n)
 				{	const auto start = vi_tmGetTicks();
 					nothing();
