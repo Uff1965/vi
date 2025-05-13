@@ -42,7 +42,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 namespace
 {
 	constexpr char TitleName[] = "Name";
-	constexpr char TitleAverage[] = "Average";
+	constexpr char TitleAverage[] = "Avg.";
 	constexpr char TitleTotal[] = "Total";
 	constexpr char TitleAmount[] = "Amount";
 	constexpr char Ascending[] = " [^]";

@@ -45,6 +45,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
+	inline bool verify(bool b) { assert(b); return b; }
+
 	struct measuring_t
 	{	std::atomic<VI_TM_TDIFF> total_ = 0U;
 		std::atomic<std::size_t> counter_ = 0U;
@@ -71,6 +73,7 @@ namespace
 }
 
 struct vi_tmMeasuring_t: storage_t::value_type {/**/};
+static_assert(sizeof(vi_tmMeasuring_t) == sizeof(storage_t::value_type), "'vi_tmMeasuring_t' should simply be a synonym for 'storage_t::value_type'.");
 
 struct vi_tmJournal_t
 {	std::mutex storage_guard_;
@@ -145,15 +148,11 @@ VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR journal, const char *name)
 }
 
 void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
-{	assert(meas);
-	if (meas)
-	{	meas->second.add(tick_diff, amount);
-	}
+{	if (verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
 void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, VI_TM_TDIFF *total, size_t *amount, size_t *calls_cnt)
-{	assert(meas);
-	if (meas)
+{	if (verify(meas))
 	{	if (name)
 		{	*name = meas->first.c_str();
 		}
@@ -164,9 +163,6 @@ void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, VI_TM_TDI
 }
 
 void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS meas)
-{	assert(meas);
-	if (meas)
-	{	meas->second.reset();
-	}
+{	if (verify(meas)) meas->second.reset();
 }
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

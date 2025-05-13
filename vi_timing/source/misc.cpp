@@ -66,6 +66,8 @@ namespace
 	constexpr char TYPE[] = "static";
 #endif
 
+	inline bool verify(bool b) { assert(b); return b; }
+
 	namespace affinity
 	{
 #if defined(_WIN32)
@@ -80,10 +82,9 @@ namespace
 
 		bool restore_affinity(previous_affinity_t prev)
 		{	if (0 != prev)
-			{	if (0 != SetThreadAffinityMask(GetCurrentThread(), prev))
+			{	if (verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)))
 				{	return true;
 				}
-				assert(false);
 			}
 			return false;
 		}
@@ -92,27 +93,25 @@ namespace
 
 		std::optional<previous_affinity_t> set_affinity()
 		{	const auto thread = pthread_self();
-			if (previous_affinity_t prev{}; 0 == pthread_getaffinity_np(thread, sizeof(prev), &prev))
-			{	if (const auto core_id = sched_getcpu(); core_id >= 0)
+			if (previous_affinity_t prev{}; verify(0 == pthread_getaffinity_np(thread, sizeof(prev), &prev)))
+			{	if (const auto core_id = sched_getcpu(); verify(core_id >= 0))
 				{	cpu_set_t affinity;
 					CPU_ZERO(&affinity);
 					CPU_SET(core_id, &affinity);
-					if (0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity))
+					if (vrify(0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity)))
 					{	return prev; // Ok!
 					}
 				}
 			}
-			assert(false);
 			return {};
 		}
 
 		bool restore_affinity(previous_affinity_t prev)
 		{	static const cpu_set_t affinity_zero{};
 			if (!CPU_EQUAL(&prev, &affinity_zero))
-			{	if (0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev))
+			{	if (verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
 				{	return true;
 				}
-				assert(false);
 			}
 			return false;
 		}
@@ -127,11 +126,8 @@ namespace
 		public:
 			static void fixate()
 			{	if (0 == s_instance.cnt_++)
-				{	if (auto prev = set_affinity())
+				{	if (auto prev = set_affinity(); verify(!!prev))
 					{	s_instance.previous_affinity_ = *prev;
-					}
-					else
-					{	assert(false);
 					}
 				}
 				return;
@@ -247,13 +243,12 @@ namespace
 				std::make_tuple(+0.0, "  ");
 
 			std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "-  6666.66e-308" -> 9 + 6;
-			if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); len >= 0)
+			if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); verify(len >= 0))
 			{	assert(result.size() > len);
 				result.resize(len);
 			}
 			else
-			{	assert(false);
-				result = "ERR";
+			{	result = "ERR";
 			}
 			return result;
 		}
@@ -272,9 +267,8 @@ namespace
 /// It rounds the number to the specified precision and formats it with the appropriate suffix.
 /// </remarks>
 [[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
-{	if (decimal >= significant)
-	{	assert(false);
-		return "ERR";
+{	if (!verify(decimal < significant))
+	{	return "ERR";
 	}
 	if (std::isnan(val))
 	{	return "NaN";
@@ -341,11 +335,11 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
-					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> result;
+					std::array<char, (std::size("99.999.9999.YYMMDDHHmm") - 1) + 2 + (std::size(TYPE) - 1) + 1> result;
 					[[maybe_unused]] const auto sz = snprintf
 					(result.data(),
 						result.size(),
-						VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH) ".%u%c %s",
+						VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH) "." "%u%c %s",
 						misc::build_number_get(),
 						CONFIG[0],
 						TYPE
@@ -383,13 +377,10 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		}
 
 		default:
-		static_assert(VI_TM_INFO__COUNT == 9, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
-		break;
+			static_assert(VI_TM_INFO__COUNT == 9, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
+			assert(false); // If we reach this point, the info type is not recognized.
+			return nullptr;
 	}
-
-	assert(false); // If we reach this point, the info type is not recognized.
-	return nullptr;
-
 } // vi_tmStaticInfo(vi_tmInfo_e info)
 
 #ifndef NDEBUG
