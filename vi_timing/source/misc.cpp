@@ -326,70 +326,69 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 }
 
 const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
-{	const void *result = nullptr;
-	switch (info)
-	{	case VI_TM_INFO_VER:
+{	switch (info)
+	{
+		case VI_TM_INFO_VER:
 		{	static const unsigned ver = (VI_TM_VERSION_MAJOR * 1000U + VI_TM_VERSION_MINOR) * 10000U + VI_TM_VERSION_PATCH;
-			result = &ver;
-		} break;
+			return &ver;
+		}
 
 		case VI_TM_INFO_BUILDNUMBER:
 		{	static const unsigned build = misc::build_number_get();
-			result = &build;
-		} break;
+			return &build;
+		}
 
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
 					std::array<char, std::size("99.999.9999.YYMMDDHHmmC ") - 1 + std::size(TYPE) - 1 + 1> result;
 					[[maybe_unused]] const auto sz = snprintf
-						(	result.data(),
-							result.size(),
-							VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH) ".%u%c %s",
-							misc::build_number_get(),
-							CONFIG[0],
-							TYPE
-						);
+					(result.data(),
+						result.size(),
+						VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH) ".%u%c %s",
+						misc::build_number_get(),
+						CONFIG[0],
+						TYPE
+					);
 					assert(0 < sz && sz < static_cast<int>(result.size()));
 					return result;
 				}();
-			result = version.data();
-		} break;
+			return version.data();
+		}
 
 		case VI_TM_INFO_BUILDTYPE:
-		{	result = CONFIG;
-		} break;
+			return CONFIG;
 
 		case VI_TM_INFO_LIBRARYTYPE:
-		{	result = TYPE;
-		} break;
+			return TYPE;
 
 		case VI_TM_INFO_RESOLUTION:
 		{	static const double resolution = misc::properties_t::props().clock_resolution_ticks_;
-			result = &resolution;
-		} break;
+			return &resolution;
+		}
 
 		case VI_TM_INFO_DURATION:
 		{	static const double duration = misc::properties_t::props().all_latency_.count();
-			result = &duration;
-		} break;
+			return &duration;
+		}
 
 		case VI_TM_INFO_OVERHEAD:
 		{	static const double overhead = misc::properties_t::props().clock_latency_ticks_;
-			result = &overhead;
-		} break;
+			return &overhead;
+		}
 
 		case VI_TM_INFO_UNIT:
 		{	static const double unit = misc::properties_t::props().seconds_per_tick_.count();
-			result = &unit;
-		} break;
+			return &unit;
+		}
 
 		default:
-		{	assert(false);
-		} break;
+		static_assert(VI_TM_INFO__COUNT == 9, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
+		break;
 	}
 
-	return result;
+	assert(false); // If we reach this point, the info type is not recognized.
+	return nullptr;
 
 } // vi_tmStaticInfo(vi_tmInfo_e info)
 

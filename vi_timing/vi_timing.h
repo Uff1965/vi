@@ -140,6 +140,8 @@ typedef enum
 	VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
 	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
 	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
+
+	VI_TM_INFO__COUNT,      // Number of information types.
 } vi_tmInfo_e;
 
 #	ifdef __cplusplus
