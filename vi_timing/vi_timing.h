@@ -95,8 +95,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #			define VI_TM_API
 #		endif
 #	else
-#		define VI_FUNCNAME __func__
 #		define VI_TM_DISABLE "Unknown compiler!"
+#		define VI_FUNCNAME __func__
+#		define VI_SYS_CALL
+#		define VI_TM_CALL
+#		define VI_TM_API
 #	endif
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -106,7 +109,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #define VI_STR_GUM_AUX( a, b ) a##b
 #define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
 #define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+// Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+// Define: VI_OPTIMIZE_ON/OFF vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #if defined(_MSC_VER)
 #	define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
 #	define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
@@ -122,15 +127,15 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_OPTIMIZE_OFF
 #	define VI_OPTIMIZE_ON
 #endif
-// Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Define: VI_OPTIMIZE_ON/OFF ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 typedef uint64_t VI_TM_TICK;
 typedef uint64_t VI_TM_TDIFF;
 typedef struct vi_tmJournal_t *VI_TM_HJOUR;
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
-typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data);
-// Enumeration for various timing information types.
-typedef enum
+typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Returning a non-zero value aborts the enumeration.
+
+typedef enum // Enumeration for various timing information types.
 {	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
 	VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
 	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
@@ -145,10 +150,8 @@ typedef enum
 } vi_tmInfo_e;
 
 #	ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #	endif
-
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
 	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
@@ -172,6 +175,7 @@ extern "C"
 		vi_tmSortBySpeed = 0x02,
 		vi_tmSortByAmount = 0x03,
 		vi_tmSortMask = 0x07,
+
 		vi_tmSortDescending = 0x00,
 		vi_tmSortAscending = 0x08,
 
@@ -200,8 +204,8 @@ extern "C"
 namespace vi_tm
 {
 	class init_t
-	{	static constexpr auto default_callback_fn = &vi_tmRptCb;
-		static inline const auto default_callback_data = static_cast<void*>(stdout);
+	{	inline static constexpr auto default_callback_fn = &vi_tmRptCb;
+		inline static const auto default_callback_data = static_cast<void*>(stdout);
 
 		std::string title_ = "Timing report:\n";
 		vi_tmRptCb_t callback_function_ = default_callback_fn;
@@ -220,7 +224,6 @@ namespace vi_tm
 		{	if (!title_.empty())
 			{	callback_function_(title_.c_str(), callback_data_);
 			}
-
 			vi_tmReport(nullptr, flags_, callback_function_, callback_data_);
 			vi_tmFinit();
 		}
@@ -277,12 +280,13 @@ namespace vi_tm
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 #			define VI_TM(...)\
 				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)->vi_tm::measurer_t\
-					{	return {vi_tmMeasuring(nullptr, name), amount};\
+					{	static auto const meas = vi_tmMeasuring(nullptr, name); /*!!! STATIC !!!*/\
+						return {meas, amount};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
-#			define VI_TM_CLEAR(...) vi_tmJournalClear(nullptr, __VA_ARGS__)
-#			define VI_TM_FULLVERSION reinterpret_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
+#			define VI_TM_CLEAR(name) vi_tmJournalClear(nullptr, (name))
+#			define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
 #		endif
 #	endif // #ifdef __cplusplus
 #endif // #ifndef VI_TIMING_VI_TIMING_H
