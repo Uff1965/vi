@@ -342,7 +342,7 @@ VI_OPTIMIZE_OFF
 				const auto finish = vi_tmGetTicks();
 				vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestE"), finish - start);
 			}
-			{	VI_TM("TestF Other", CNT);
+			{	VI_TM("TestE Other", CNT);
 				const auto h = vi_tmMeasuring(nullptr, "TestE");
 				for (auto n = 0; n < CNT; ++n)
 				{	const auto start = vi_tmGetTicks();
