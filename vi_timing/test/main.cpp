@@ -359,10 +359,12 @@ VI_OPTIMIZE_ON
 
 } // namespace
 
-namespace long_namespace_name
-{	struct long_class_name
-	{	static int long_function_name(int long_argument_name) { VI_TM_FUNC; return long_argument_name; }
-		static const char *long_function_name(const char *long_argument_name) { VI_TM_FUNC; return long_argument_name; }
+namespace namespace_name
+{	struct class_name
+	{	static int function_name(int argument_name) { VI_TM_FUNC; return argument_name; }
+		static const char *function_name(const char *argument_name) { VI_TM_FUNC; return argument_name; }
+		template<typename T>
+		static T function_name(T argument_name) { VI_TM_FUNC; return argument_name; }
 	};
 }
 
@@ -386,8 +388,9 @@ int main()
 	test_multithreaded();
 	test_vi_tmResults();
 	vi_tmCurrentThreadAffinityRestore();
-	long_namespace_name::long_class_name::long_function_name(0);
-	long_namespace_name::long_class_name::long_function_name("");
+	namespace_name::class_name::function_name(0);
+	namespace_name::class_name::function_name("");
+	namespace_name::class_name::function_name(3.14);
 
 	std::cout << "\nHello, World!\n" << std::endl;
 
