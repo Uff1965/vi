@@ -104,11 +104,16 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-#define VI_STR_AUX(s) #s
-#define VI_STR(s) VI_STR_AUX(s)
-#define VI_STR_GUM_AUX( a, b ) a##b
-#define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+#	define VI_STR_AUX(s) #s
+#	define VI_STR(s) VI_STR_AUX(s)
+#	define VI_STR_GUM_AUX( a, b ) a##b
+#	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
+#	define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+#	ifdef NDEBUG
+#		define DEBUG_ONLY(t) /**/
+#	else
+#		define DEBUG_ONLY(t) t
+#	endif
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Define: VI_OPTIMIZE_ON/OFF vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -281,6 +286,11 @@ namespace vi_tm
 #			define VI_TM(...)\
 				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)->vi_tm::measurer_t\
 					{	static auto const meas = vi_tmMeasuring(nullptr, name); /*!!! STATIC !!!*/\
+						DEBUG_ONLY /* You cannot use the same macro substitution with different names!!! */\
+						(	const char* str = nullptr;\
+							vi_tmMeasuringGet(meas, &str, nullptr, nullptr, nullptr);\
+							assert(0 == strcmp(name, str));\
+						)\
 						return {meas, amount};\
 					}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
