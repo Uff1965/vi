@@ -106,20 +106,6 @@ typedef struct vi_tmJournal_t *VI_TM_HJOUR;
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
 typedef int (VI_TM_CALL *vi_tmMeasuringEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Returning a non-zero value aborts the enumeration.
 
-typedef enum // Enumeration for various timing information types.
-{	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
-	VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
-	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
-	VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
-	VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
-	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
-	VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
-	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
-	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
-
-	VI_TM_INFO__COUNT,      // Number of information types.
-} vi_tmInfo_e;
-
 #	ifdef __cplusplus
 extern "C" {
 #	endif
@@ -135,11 +121,28 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, size_t *amt, size_t *calls);
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS m);
+
+	typedef enum // Enumeration for various timing information types.
+	{	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
+		VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
+		VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
+		VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
+		VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
+		VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
+		VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
+		VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
+		VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
+
+		VI_TM_INFO__COUNT,      // Number of information types.
+	} vi_tmInfo_e;
 	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	typedef int (VI_SYS_CALL *vi_tmRptCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
+	static inline int VI_SYS_CALL vi_tmRptCb(const char* str, void* data)
+	{	return fputs(str, (FILE*)data);
+	}
 	typedef enum
 	{	vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
@@ -156,10 +159,6 @@ extern "C" {
 		vi_tmShowResolution = 0x80,
 		vi_tmShowNoHeader = 0x0100,
 	} vi_tmReportFlags_e;
-
-	static inline int VI_SYS_CALL vi_tmRptCb(const char* str, void* data)
-	{	return fputs(str, (FILE*)data);
-	}
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmRptCb_t VI_DEF(vi_tmRptCb), void* VI_DEF(stdout));
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
 	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityFixate(void);
