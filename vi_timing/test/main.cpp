@@ -11,6 +11,7 @@
 
 #include "../vi_timing.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -260,98 +261,124 @@ VI_OPTIMIZE_ON
 		std::cout << "\nTest vi_tmResults - done" << std::endl;
 	}
 
-VI_OPTIMIZE_OFF
+	VI_OPTIMIZE_OFF
 	void test()
 	{	std::cout << "\nTest test:";
-		
-		auto nothing = [] {/**/};
-		constexpr auto CNT = 10'000;
 
-		vi_tmWarming(1, 500);
-		vi_tmThreadYield();
-;
-		{	VI_TM("Test");
+		static auto nothing = [] {/**/};
+		static constexpr auto CNT = 10'000;
 
-			for (auto n = 0; n < 100; ++n)
-			{	(void) vi_tmGetTicks();
-			}
-
-			{	VI_TM("TestA First");
-				VI_TM("TestA");
-				nothing();
-			}
-			{	VI_TM("TestA Other", CNT);
-				for (auto n = 0; n < CNT; ++n)
-				{	VI_TM("TestA");
-					nothing();
+		auto a = []
+			{	static const auto _ = []
+					{	VI_TM("Test First");
+						{	VI_TM("TestA");
+							nothing();
+						}
+						return 0;
+					}();
+				{	VI_TM("TestA Other", CNT);
+					for (auto n = 0; n < CNT; ++n)
+					{	VI_TM("TestA");
+						nothing();
+					}
 				}
+			};
+
+		auto b = []
+			{	static const auto _ = []
+					{	VI_TM("Test First");
+						static auto const h = vi_tmMeasuring(nullptr, "TestB");
+						const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						vi_tmMeasuringAdd(h, finish - start);
+						return 0;
+					}();
+				{	VI_TM("TestB Other", CNT);
+					for (auto n = 0; n < CNT; ++n)
+					{	static auto const h = vi_tmMeasuring(nullptr, "TestB");
+						const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						vi_tmMeasuringAdd(h, finish - start);
+					}
+				}
+			};
+
+		auto c = []
+			{	static const auto _ = []
+					{	VI_TM("Test First");
+						const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestC"), finish - start);
+						return 0;
+					}();
+				{	VI_TM("TestC Other", CNT);
+					for (auto n = 0; n < CNT; ++n)
+					{	const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestC"), finish - start);
+					}
+				}
+			};
+
+		auto d = []
+			{	static const auto _ = []
+					{	VI_TM("Test First");
+						const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						static auto const h = vi_tmMeasuring(nullptr, "TestD");
+						vi_tmMeasuringAdd(h, finish - start);
+						return 0;
+					}();
+				{	VI_TM("TestD Other", CNT);
+					for (auto n = 0; n < CNT; ++n)
+					{	const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						static auto const h = vi_tmMeasuring(nullptr, "TestD");
+						vi_tmMeasuringAdd(h, finish - start);
+					}
+				}
+			};
+
+		auto e = []
+			{	static const auto _ = []
+					{	VI_TM("Test First");
+						const auto h = vi_tmMeasuring(nullptr, "TestE");
+						const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						vi_tmMeasuringAdd(h, finish - start);
+						return 0;
+					}();
+				{	VI_TM("TestE Other", CNT);
+					const auto h = vi_tmMeasuring(nullptr, "TestE");
+					for (auto n = 0; n < CNT; ++n)
+					{	const auto start = vi_tmGetTicks();
+						nothing();
+						const auto finish = vi_tmGetTicks();
+						vi_tmMeasuringAdd(h, finish - start);
+					}
+				}
+			};
+
+		void (*arr[])() = {  a, b, c, d, e, };
+		std::sort(std::begin(arr), std::end(arr));
+		do
+		{	vi_tmThreadYield();
+			for (int n = 0; n < 5; ++n)
+			{	vi_tmGetTicks();
 			}
 
-			{	VI_TM("TestB First");
-				const auto start = vi_tmGetTicks();
-				nothing();
-				const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestB"), finish - start);
-			}
-			{	VI_TM("TestB Other", CNT);
-				for (auto n = 0; n < CNT; ++n)
-				{	const auto start = vi_tmGetTicks();
-					nothing();
-					const auto finish = vi_tmGetTicks();
-					vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestB"), finish - start);
-				}
+			for (auto f : arr)
+			{	f();
 			}
 
-			{	VI_TM("TestC First");
-				static auto const h = vi_tmMeasuring(nullptr, "TestC");
-				const auto start = vi_tmGetTicks();
-				nothing();
-				const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringAdd(h, finish - start);
-			}
-			{	VI_TM("TestC Other", CNT);
-				for (auto n = 0; n < CNT; ++n)
-				{	static auto const h = vi_tmMeasuring(nullptr, "TestC");
-					const auto start = vi_tmGetTicks();
-					nothing();
-					const auto finish = vi_tmGetTicks();
-					vi_tmMeasuringAdd(h, finish - start);
-				}
-			}
-
-			{	VI_TM("TestD First");
-				const auto start = vi_tmGetTicks();
-				nothing();
-				const auto finish = vi_tmGetTicks();
-				static auto const h = vi_tmMeasuring(nullptr, "TestD");
-				vi_tmMeasuringAdd(h, finish - start);
-			}
-			{	VI_TM("TestD Other", CNT);
-				for (auto n = 0; n < CNT; ++n)
-				{	const auto start = vi_tmGetTicks();
-					nothing();
-					const auto finish = vi_tmGetTicks();
-					static auto const h = vi_tmMeasuring(nullptr, "TestD");
-					vi_tmMeasuringAdd(h, finish - start);
-				}
-			}
-
-			{	VI_TM("TestE First");
-				const auto start = vi_tmGetTicks();
-				nothing();
-				const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestE"), finish - start);
-			}
-			{	VI_TM("TestE Other", CNT);
-				const auto h = vi_tmMeasuring(nullptr, "TestE");
-				for (auto n = 0; n < CNT; ++n)
-				{	const auto start = vi_tmGetTicks();
-					nothing();
-					const auto finish = vi_tmGetTicks();
-					vi_tmMeasuringAdd(h, finish - start);
-				}
-			}
-		}
+		} while (std::next_permutation(std::begin(arr), std::end(arr)));
 
 		std::cout << "\nTest test - done" << std::endl;
 	}
