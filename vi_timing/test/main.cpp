@@ -371,7 +371,7 @@ VI_OPTIMIZE_ON
 		do
 		{	vi_tmThreadYield();
 			for (int n = 0; n < 5; ++n)
-			{	vi_tmGetTicks();
+			{	(void)vi_tmGetTicks();
 			}
 
 			for (auto f : arr)
