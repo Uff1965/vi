@@ -29,7 +29,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "misc.h"
 
 #include "build_number_maker.h"
-#include "../vi_timing.h"
+#include "../vi_timing.hpp"
 
 #include <thread>
 #include <chrono>

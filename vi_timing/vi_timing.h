@@ -100,37 +100,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-// Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-#	define VI_STR_AUX(s) #s
-#	define VI_STR(s) VI_STR_AUX(s)
-#	define VI_STR_GUM_AUX( a, b ) a##b
-#	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#	define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
-#	ifdef NDEBUG
-#		define VI_DEBUG_ONLY(t) /**/
-#	else
-#		define VI_DEBUG_ONLY(t) t
-#	endif
-// Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-// Define: VI_OPTIMIZE_ON/OFF vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-#if defined(_MSC_VER)
-#	define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
-#	define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
-#elif defined(__clang__)
-#	define VI_OPTIMIZE_OFF	_Pragma("clang optimize push") \
-							_Pragma("clang optimize off")
-#	define VI_OPTIMIZE_ON	_Pragma("clang optimize pop")
-#elif defined(__GNUC__)
-#	define VI_OPTIMIZE_OFF	_Pragma("GCC push_options") \
-							_Pragma("GCC optimize(\"O0\")")
-#	define VI_OPTIMIZE_ON	_Pragma("GCC pop_options")
-#else
-#	define VI_OPTIMIZE_OFF
-#	define VI_OPTIMIZE_ON
-#endif
-// Define: VI_OPTIMIZE_ON/OFF ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 typedef uint64_t VI_TM_TICK;
 typedef uint64_t VI_TM_TDIFF;
 typedef struct vi_tmJournal_t *VI_TM_HJOUR;
