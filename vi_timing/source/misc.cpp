@@ -98,7 +98,7 @@ namespace
 				{	cpu_set_t affinity;
 					CPU_ZERO(&affinity);
 					CPU_SET(core_id, &affinity);
-					if (vrify(0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity)))
+					if (verify(0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity)))
 					{	return prev; // Ok!
 					}
 				}
