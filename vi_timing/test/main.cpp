@@ -9,7 +9,7 @@
 
 #include "header.h"
 
-#include "../vi_timing.h"
+#include "../vi_timing.hpp"
 
 #include <algorithm>
 #include <atomic>

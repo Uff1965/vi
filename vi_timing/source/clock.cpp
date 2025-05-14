@@ -40,8 +40,8 @@ VI_OPTIMIZE_OFF
 #		error "Undefined compiler"
 #	endif
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
-	{	std::uint32_t _; // Will be removed by the optimizer.
-		const std::uint64_t result = __rdtscp(&_);
+	{	uint32_t _; // Will be removed by the optimizer.
+		const uint64_t result = __rdtscp(&_);
 		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
 		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
 		//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
@@ -51,7 +51,7 @@ VI_OPTIMIZE_OFF
 	}
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
-	{	std::uint64_t result;
+	{	uint64_t result;
         asm volatile
         (   "DSB SY\n\t"
             "mrs %0, cntvct_el0\n\t"
@@ -68,10 +68,10 @@ VI_OPTIMIZE_OFF
 #	include <unistd.h>
 
 	static auto get_peripheral_base()
-	{	std::uint32_t result = 0;
+	{	uint32_t result = 0;
 
 		if (auto fp = open("/proc/device-tree/soc/ranges", O_RDONLY); fp >= 0)
-		{	std::uint8_t buf[32];
+		{	uint8_t buf[32];
 			if (auto sz = read(fp, buf, sizeof(buf)); sz >= 32) // Raspberry Pi 4
 			{	result = (buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | buf[11];
 				assert(result == 0xFE00'0000);
@@ -93,8 +93,8 @@ VI_OPTIMIZE_OFF
 		return result;
 	}
 
-	static const volatile std::uint32_t* get_timer_base()
-	{	const volatile std::uint32_t *result = nullptr;
+	static const volatile uint32_t* get_timer_base()
+	{	const volatile uint32_t *result = nullptr;
 
 		if (const off_t peripheral_base = get_peripheral_base())
 		{	constexpr auto TIMER_OFFSET = 0x3000;
@@ -105,7 +105,7 @@ VI_OPTIMIZE_OFF
 				assert(PAGE_SIZE == 0x1000 && 0 == timer_base % PAGE_SIZE);
 
 				if (void *mapped_base = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, mem_fd, timer_base); mapped_base != MAP_FAILED)
-				{	result = reinterpret_cast<volatile std::uint32_t *>(mapped_base);
+				{	result = reinterpret_cast<volatile uint32_t *>(mapped_base);
 				}
 				else
 				{	//perror("SystemTimer_by_DevMem initial filed");
@@ -132,17 +132,17 @@ VI_OPTIMIZE_OFF
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	VI_TM_TICK result = 0;
 
-		static const volatile std::uint32_t *const timer_base = get_timer_base();
+		static const volatile uint32_t *const timer_base = get_timer_base();
 		if (timer_base)
-		{	const std::uint64_t lo = timer_base[1]; // Timer low 32 bits
-			const std::uint64_t hi = timer_base[2]; // Timer high 32 bits
+		{	const uint64_t lo = timer_base[1]; // Timer low 32 bits
+			const uint64_t hi = timer_base[2]; // Timer high 32 bits
 			result = (hi << 32) | lo;
-//			result = *reinterpret_cast<const volatile std::uint64_t*>(timer_base);
+//			result = *reinterpret_cast<const volatile uint64_t*>(timer_base);
 		}
 		else
 		{	struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-			result = std::uint64_t(1'000'000'000U) * ts.tv_sec + ts.tv_nsec;
+			result = uint64_t(1'000'000'000U) * ts.tv_sec + ts.tv_nsec;
 		}
 
 		return result;
