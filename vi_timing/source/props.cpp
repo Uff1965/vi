@@ -29,7 +29,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "misc.h"
 
 #include "build_number_maker.h"
-#include "../vi_timing.hpp"
+#include "../vi_timing.h"
 
 #include <thread>
 #include <chrono>
@@ -93,7 +93,7 @@ VI_OPTIMIZE_OFF
 			{	static vi_tmMeasuring_t* const meas_point = vi_tmMeasuring(nullptr, ""); // Create a service item with empty name "".
 				const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringAdd(meas_point, finish - start, 1U);
+				vi_tmMeasuringRepl(meas_point, finish - start, 1U);
 			};
 		auto time_point = []
 			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.

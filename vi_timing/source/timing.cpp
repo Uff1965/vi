@@ -26,7 +26,7 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
-#include "../vi_timing.hpp"
+#include "../vi_timing.h"
 #include "build_number_maker.h"
 
 #include <atomic>
@@ -82,12 +82,12 @@ struct vi_tmJournal_t
 	explicit vi_tmJournal_t() { storage_.max_load_factor(MAX_LOAD_FACTOR); storage_.reserve(DEFAULT_STORAGE_CAPACITY); }
 	int init() { return 0; }
 	auto &at(const char *name) { std::lock_guard lock{ storage_guard_ }; return *storage_.try_emplace(name).first; }
-	int for_each_measurement(vi_tmMeasuringEnumCallback_t fn, void *data);
+	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data);
 	void reset(const char *name = nullptr);
 	static auto& from_handle(VI_TM_HJOUR journal = nullptr) { static vi_tmJournal_t global; return journal ? *journal : global; }
 };
 
-int vi_tmJournal_t::for_each_measurement(vi_tmMeasuringEnumCallback_t fn, void *data)
+int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 {	std::lock_guard lock{ storage_guard_ };
 	for (auto &it : storage_)
 	{	assert(it.second.counter_ >= it.second.calls_cnt_ && (!!it.second.total_ == !!it.second.calls_cnt_));
@@ -139,7 +139,7 @@ void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal, const char* name) noexcep
 {	vi_tmJournal_t::from_handle(journal).reset(name);
 }
 
-int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasuringEnumCallback_t fn, void *data)
+int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCallback_t fn, void *data)
 {	return vi_tmJournal_t::from_handle(journal).for_each_measurement(fn, data);
 }
 
@@ -147,7 +147,7 @@ VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR journal, const char *name)
 {	return static_cast<VI_TM_HMEAS>(&vi_tmJournal_t::from_handle(journal).at(name));
 }
 
-void VI_TM_CALL vi_tmMeasuringAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
+void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std::size_t amount) noexcept
 {	if (verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 

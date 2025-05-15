@@ -12,7 +12,7 @@
 
 static inline void vi_tmFinish(VI_TM_HMEAS measure, VI_TM_TICK start, size_t amount)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
-	vi_tmMeasuringAdd(measure, finish - start, amount);
+	vi_tmMeasuringRepl(measure, finish - start, amount);
 }
 
 void bar_c(void)
@@ -32,15 +32,15 @@ void bar_c(void)
 		vi_tmFinish(m1, s, 10);
 
 		puts("Original:");
-		vi_tmReport(journal, vi_tmShowNoHeader, (vi_tmRptCb_t)fputs, stdout);
+		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
 
 		vi_tmMeasuringReset(m1);
 		puts("After vi_tmMeasuringReset(m1) (Clear \"xxx\"):");
-		vi_tmReport(journal, vi_tmShowNoHeader, (vi_tmRptCb_t)fputs, stdout);
+		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
 
 		vi_tmJournalReset(journal, NULL);
 		puts("After vi_tmJournalReset(htimer, NULL):");
-		vi_tmReport(journal, vi_tmShowNoHeader, (vi_tmRptCb_t)fputs, stdout);
+		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
 		vi_tmJournalClose(journal);
 	}
 

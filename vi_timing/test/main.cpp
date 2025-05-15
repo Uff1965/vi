@@ -9,7 +9,7 @@
 
 #include "header.h"
 
-#include "../vi_timing.hpp"
+#include "../vi_timing.h"
 
 #include <algorithm>
 #include <atomic>
@@ -85,7 +85,7 @@ VI_OPTIMIZE_OFF
 			{	const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				vi_tmMeasuringAdd(vi_tmMeasuring(h, name.c_str()), f - s, 1);
+				vi_tmMeasuringRepl(vi_tmMeasuring(h, name.c_str()), f - s, 1);
 				v++;
 			}
 		};
@@ -158,9 +158,9 @@ VI_OPTIMIZE_OFF
 					const auto sEmpty = vi_tmGetTicks(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
 					/**/
 					const auto fEmpty = vi_tmGetTicks();
-					vi_tmMeasuringAdd(jEmpty, fEmpty - sEmpty, 1);
+					vi_tmMeasuringRepl(jEmpty, fEmpty - sEmpty, 1);
 					const auto fTm = vi_tmGetTicks();
-					vi_tmMeasuringAdd(jTm, fTm - sTm, 1);
+					vi_tmMeasuringRepl(jTm, fTm - sTm, 1);
 				}
 
 				{	VI_TM("VI_TM");
@@ -291,7 +291,7 @@ VI_OPTIMIZE_ON
 						const auto start = vi_tmGetTicks();
 						nothing();
 						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringAdd(h, finish - start);
+						vi_tmMeasuringRepl(h, finish - start);
 						return 0;
 					}();
 				{	VI_TM("TestB Other", CNT);
@@ -300,7 +300,7 @@ VI_OPTIMIZE_ON
 						const auto start = vi_tmGetTicks();
 						nothing();
 						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringAdd(h, finish - start);
+						vi_tmMeasuringRepl(h, finish - start);
 					}
 				}
 			};
@@ -311,7 +311,7 @@ VI_OPTIMIZE_ON
 						const auto start = vi_tmGetTicks();
 						nothing();
 						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestC"), finish - start);
+						vi_tmMeasuringRepl(vi_tmMeasuring(nullptr, "TestC"), finish - start);
 						return 0;
 					}();
 				{	VI_TM("TestC Other", CNT);
@@ -319,7 +319,7 @@ VI_OPTIMIZE_ON
 					{	const auto start = vi_tmGetTicks();
 						nothing();
 						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringAdd(vi_tmMeasuring(nullptr, "TestC"), finish - start);
+						vi_tmMeasuringRepl(vi_tmMeasuring(nullptr, "TestC"), finish - start);
 					}
 				}
 			};
@@ -331,7 +331,7 @@ VI_OPTIMIZE_ON
 						nothing();
 						const auto finish = vi_tmGetTicks();
 						static auto const h = vi_tmMeasuring(nullptr, "TestD");
-						vi_tmMeasuringAdd(h, finish - start);
+						vi_tmMeasuringRepl(h, finish - start);
 						return 0;
 					}();
 				{	VI_TM("TestD Other", CNT);
@@ -340,7 +340,7 @@ VI_OPTIMIZE_ON
 						nothing();
 						const auto finish = vi_tmGetTicks();
 						static auto const h = vi_tmMeasuring(nullptr, "TestD");
-						vi_tmMeasuringAdd(h, finish - start);
+						vi_tmMeasuringRepl(h, finish - start);
 					}
 				}
 			};
@@ -352,7 +352,7 @@ VI_OPTIMIZE_ON
 						const auto start = vi_tmGetTicks();
 						nothing();
 						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringAdd(h, finish - start);
+						vi_tmMeasuringRepl(h, finish - start);
 						return 0;
 					}();
 				{	VI_TM("TestE Other", CNT);
@@ -361,7 +361,7 @@ VI_OPTIMIZE_ON
 					{	const auto start = vi_tmGetTicks();
 						nothing();
 						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringAdd(h, finish - start);
+						vi_tmMeasuringRepl(h, finish - start);
 					}
 				}
 			};

@@ -26,7 +26,7 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
-#include "../vi_timing.hpp"
+#include "../vi_timing.h"
 #include "build_number_maker.h"
 #include "misc.h"
 
@@ -191,7 +191,7 @@ namespace
 	int print_props(vi_tmRptCb_t fn, void *data, unsigned flags)
 	{	assert(!!fn);
 		int result = 0;
-		if (flags & (vi_tmShowOverhead | vi_tmShowDuration | vi_tmShowUnit | vi_tmShowResolution))
+		if (flags & vi_tmShowMask)
 		{	std::ostringstream str;
 			auto &props = misc::properties_t::props();
 
@@ -258,7 +258,7 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 
 int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
 {	
-	if (flags_ & vi_tmShowNoHeader)
+	if (flags_ & vi_tmHideHeader)
 	{	return 0;
 	}
 

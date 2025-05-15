@@ -5,8 +5,8 @@
 #	pragma once
 
 // Check if the vi/timing.h header is available and include it if possible
-#	if !defined(VI_TM_DISABLE) && __has_include(<vi_timing/vi_timing.hpp>)
-#		include <vi_timing/vi_timing.hpp>
+#	if !defined(VI_TM_DISABLE) && __has_include(<vi_timing/vi_timing.h>)
+#		include <vi_timing/vi_timing.h>
 #	else
 		// Auxiliary macros for combining tokens and generating a unique identifier.
 #		define VI_STR_GUM_AUX( a, b ) a##b

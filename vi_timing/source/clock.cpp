@@ -26,7 +26,7 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
-#include "../vi_timing.hpp"
+#include "../vi_timing.h"
 #include "build_number_maker.h"
 
 VI_OPTIMIZE_OFF
