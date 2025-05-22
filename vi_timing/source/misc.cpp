@@ -71,16 +71,16 @@ namespace
 	namespace affinity
 	{
 #if defined(_WIN32)
-		using previous_affinity_t = DWORD_PTR;
+		using thread_affinity_mask_t = DWORD_PTR;
 
-		std::optional<previous_affinity_t> set_affinity()
-		{	const auto affinity = static_cast<previous_affinity_t>(1U) << GetCurrentProcessorNumber();
+		std::optional<thread_affinity_mask_t> set_affinity()
+		{	const auto affinity = static_cast<thread_affinity_mask_t>(1U) << GetCurrentProcessorNumber();
 			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), affinity))
 				return ret;
 			return {};
 		}
 
-		bool restore_affinity(previous_affinity_t prev)
+		bool restore_affinity(thread_affinity_mask_t prev)
 		{	if (0 != prev)
 			{	if (verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)))
 				{	return true;
@@ -89,11 +89,11 @@ namespace
 			return false;
 		}
 #elif defined(__linux__)
-		using previous_affinity_t = cpu_set_t;
+		using thread_affinity_mask_t = cpu_set_t;
 
-		std::optional<previous_affinity_t> set_affinity()
+		std::optional<thread_affinity_mask_t> set_affinity()
 		{	const auto thread = pthread_self();
-			if (previous_affinity_t prev{}; verify(0 == pthread_getaffinity_np(thread, sizeof(prev), &prev)))
+			if (thread_affinity_mask_t prev{}; verify(0 == pthread_getaffinity_np(thread, sizeof(prev), &prev)))
 			{	if (const auto core_id = sched_getcpu(); verify(core_id >= 0))
 				{	cpu_set_t affinity;
 					CPU_ZERO(&affinity);
@@ -106,7 +106,7 @@ namespace
 			return {};
 		}
 
-		bool restore_affinity(previous_affinity_t prev)
+		bool restore_affinity(thread_affinity_mask_t prev)
 		{	static const cpu_set_t affinity_zero{};
 			if (!CPU_EQUAL(&prev, &affinity_zero))
 			{	if (verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
@@ -120,7 +120,7 @@ namespace
 		class affinity_fix_t
 		{	static thread_local affinity_fix_t s_instance;
 			std::size_t cnt_ = 0U;
-			previous_affinity_t previous_affinity_{};
+			thread_affinity_mask_t previous_affinity_{};
 
 			~affinity_fix_t() { assert(0 == cnt_); }
 		public:
@@ -135,7 +135,7 @@ namespace
 			static void restore()
 			{	assert(s_instance.cnt_ > 0);
 				if (0 == --s_instance.cnt_ && restore_affinity(s_instance.previous_affinity_))
-				{	s_instance.previous_affinity_ = previous_affinity_t{};
+				{	s_instance.previous_affinity_ = thread_affinity_mask_t{};
 				}
 			}
 		};
@@ -279,10 +279,18 @@ namespace
 	return to_str::to_string_aux(val, significant, decimal);
 }
 
+/// <summary>
+/// Fixates the CPU affinity of the current thread.
+/// </summary>
+/// <returns>This function does not return a value.</returns>
 void VI_TM_CALL vi_tmCurrentThreadAffinityFixate()
 {	affinity::affinity_fix_t::fixate();
 }
 
+/// <summary>
+/// Restores the CPU affinity of the current thread to its previous state.
+/// </summary>
+/// <returns>This function does not return a value.</returns>
 void VI_TM_CALL vi_tmCurrentThreadAffinityRestore()
 {	affinity::affinity_fix_t::restore();
 }
@@ -291,6 +299,12 @@ void VI_TM_CALL vi_tmThreadYield(void)
 {	std::this_thread::yield();
 }
 
+/// <summary>
+/// Performs a CPU warming routine by running computationally intensive tasks across multiple threads for a specified duration.
+/// </summary>
+/// <param name="threads_qty">The number of threads to use for the warming routine. If zero or greater than the number of available hardware threads, the function uses the maximum available.</param>
+/// <param name="ms">The duration of the warming routine in milliseconds. If zero, the function returns immediately.</param>
+/// <returns>This function does not return a value.</returns>
 void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 {	if (0 == ms)
 	{	return;
@@ -319,6 +333,11 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	}
 }
 
+/// <summary>
+/// Retrieves static information about the timing module based on the specified info type.
+/// </summary>
+/// <param name="info">The type of information to retrieve, specified as a value of the vi_tmInfo_e enumeration.</param>
+/// <returns>A pointer to the requested static information. The type of the returned data depends on the info parameter and may point to an unsigned int, a double, or a null-terminated string. Returns nullptr if the info type is not recognized.</returns>
 const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 {	switch (info)
 	{

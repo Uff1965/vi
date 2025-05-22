@@ -317,6 +317,14 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void
 	return fn(result.c_str(), data);
 }
 
+/// <summary>
+/// Generates a report for the specified journal handle, using a callback function to output the report data.
+/// </summary>
+/// <param name="journal_handle">The handle to the journal whose data will be reported.</param>
+/// <param name="flags">Flags that control the formatting and content of the report.</param>
+/// <param name="fn">A callback function used to output each line of the report. If nullptr, defaults to writing to a FILE* stream.</param>
+/// <param name="data">A pointer to user data passed to the callback function. If fn is nullptr and data is nullptr, defaults to stdout.</param>
+/// <returns>The total number of characters written by the report, or a negative value if an error occurs.</returns>
 int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRptCb_t fn, void *data)
 {	
 	if (nullptr == fn)

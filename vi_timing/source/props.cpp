@@ -60,6 +60,10 @@ namespace
 	constexpr auto cache_warmup = 5U;
 	constexpr auto now = ch::steady_clock::now;
 
+	/// <summary>
+	/// Calculates the duration, in seconds, represented by a single tick of the system's tick counter.
+	/// </summary>
+	/// <returns>A duration value representing the number of seconds per tick.</returns>
 	duration seconds_per_tick()
 	{
 		auto time_point = []
@@ -134,6 +138,10 @@ VI_OPTIMIZE_OFF
 VI_OPTIMIZE_ON
 
 VI_OPTIMIZE_OFF
+	/// <summary>
+	/// Estimates the average overhead (cost) of a single call to vi_tmGetTicks().
+	/// </summary>
+	/// <returns>The estimated average time cost of a single vi_tmGetTicks() call, as a double.</returns>
 	double measurement_cost()
 	{	constexpr auto CNT = 500U;
 
@@ -174,6 +182,10 @@ VI_OPTIMIZE_OFF
 VI_OPTIMIZE_ON
 
 VI_OPTIMIZE_OFF
+	/// <summary>
+	/// Estimates the timer resolution by measuring the smallest detectable time interval.
+	/// </summary>
+	/// <returns>The estimated timer resolution as a double, representing the average tick difference per measurement.</returns>
 	double resolution()
 	{	for (auto CNT = 8;; CNT *= 8) //-V1044 Loop break conditions do not depend on the number of iterations.
 		{	VI_TM_TICK first = 0;
@@ -213,6 +225,10 @@ misc::properties_t::properties_t()
 	clock_resolution_ticks_ = resolution();
 }
 
+/// <summary>
+/// Returns a reference to a static instance of misc::properties_t.
+/// </summary>
+/// <returns>A constant reference to a static misc::properties_t instance.</returns>
 const misc::properties_t& misc::properties_t::props()
 {	static const misc::properties_t inst_;
 	return inst_;
