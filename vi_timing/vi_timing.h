@@ -118,8 +118,16 @@ extern "C" {
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
 
-	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
+	/// <summary>
+	/// Initializes the global journal.
+	/// </summary>
+	/// <returns>If successful, returns 0.</returns>
+	VI_TM_API int VI_TM_CALL vi_tmInit(void);
 
+	/// <summary>
+	/// Deinitializes the global journal.
+	/// </summary>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
 
 	/// <summary>

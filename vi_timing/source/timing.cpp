@@ -84,7 +84,7 @@ struct vi_tmJournal_t
 	auto &at(const char *name) { std::lock_guard lock{ storage_guard_ }; return *storage_.try_emplace(name).first; }
 	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data);
 	void reset(const char *name = nullptr);
-	static auto& from_handle(VI_TM_HJOUR journal = nullptr) { static vi_tmJournal_t global; return journal ? *journal : global; }
+	static auto& from_handle(VI_TM_HJOUR journal) { static vi_tmJournal_t global; return journal ? *journal : global; }
 };
 
 int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
@@ -114,11 +114,11 @@ void vi_tmJournal_t::reset(const char *name)
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 int VI_TM_CALL vi_tmInit()
-{	return vi_tmJournal_t::from_handle().init();
+{	return vi_tmJournal_t::from_handle(nullptr).init();
 }
 
 void VI_TM_CALL vi_tmFinit(void)
-{	vi_tmJournal_t::from_handle().reset();
+{	vi_tmJournal_t::from_handle(nullptr).reset();
 }
 
 VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate()
