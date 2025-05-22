@@ -217,7 +217,7 @@ namespace vi_tm
 		std::string title_ = "Timing report:\n";
 		vi_tmRptCb_t callback_function_ = default_callback_fn;
 		void* callback_data_ = default_callback_data;
-		unsigned flags_ = 0;
+		unsigned flags_ = vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution | vi_tmSortBySpeed;
 
 		init_t(const init_t &) = delete;
 		init_t(init_t &&) = delete;
@@ -254,7 +254,9 @@ namespace vi_tm
 			init(std::forward<Args>(args)...);
 		}
 	public:
+		init_t() { init(); };
 		template<typename... Args> explicit init_t(Args&&... args)
+			: flags_{0U}
 		{	init(std::forward<Args>(args)...);
 		}
 		~init_t()
