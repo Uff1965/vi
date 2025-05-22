@@ -255,17 +255,6 @@ namespace
 	} // namespace to_str
 } // namespace
 
-/// <summary>
-/// Converts a double to a string representation with specified precision and decimal places.
-/// </summary>
-/// <param name="val">The value to be converted.</param>
-/// <param name="significant">The number of significant digits to round to.</param>
-/// <param name="decimal">The number of decimal places to display.</param>
-/// <returns>A string representation of the real number.</returns>
-/// <remarks>
-/// This function handles special cases such as NaN, infinity values.
-/// It rounds the number to the specified precision and formats it with the appropriate suffix.
-/// </remarks>
 [[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
 {	if (!verify(decimal < significant))
 	{	return "ERR";
@@ -279,18 +268,10 @@ namespace
 	return to_str::to_string_aux(val, significant, decimal);
 }
 
-/// <summary>
-/// Fixates the CPU affinity of the current thread.
-/// </summary>
-/// <returns>This function does not return a value.</returns>
 void VI_TM_CALL vi_tmCurrentThreadAffinityFixate()
 {	affinity::affinity_fix_t::fixate();
 }
 
-/// <summary>
-/// Restores the CPU affinity of the current thread to its previous state.
-/// </summary>
-/// <returns>This function does not return a value.</returns>
 void VI_TM_CALL vi_tmCurrentThreadAffinityRestore()
 {	affinity::affinity_fix_t::restore();
 }
@@ -299,12 +280,6 @@ void VI_TM_CALL vi_tmThreadYield(void)
 {	std::this_thread::yield();
 }
 
-/// <summary>
-/// Performs a CPU warming routine by running computationally intensive tasks across multiple threads for a specified duration.
-/// </summary>
-/// <param name="threads_qty">The number of threads to use for the warming routine. If zero or greater than the number of available hardware threads, the function uses the maximum available.</param>
-/// <param name="ms">The duration of the warming routine in milliseconds. If zero, the function returns immediately.</param>
-/// <returns>This function does not return a value.</returns>
 void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 {	if (0 == ms)
 	{	return;
@@ -333,11 +308,6 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	}
 }
 
-/// <summary>
-/// Retrieves static information about the timing module based on the specified info type.
-/// </summary>
-/// <param name="info">The type of information to retrieve, specified as a value of the vi_tmInfo_e enumeration.</param>
-/// <returns>A pointer to the requested static information. The type of the returned data depends on the info parameter and may point to an unsigned int, a double, or a null-terminated string. Returns nullptr if the info type is not recognized.</returns>
 const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 {	switch (info)
 	{

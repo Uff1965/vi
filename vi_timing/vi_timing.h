@@ -117,15 +117,74 @@ extern "C" {
 #	endif
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	VI_TM_API VI_NODISCARD VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
+
 	VI_TM_API int VI_TM_CALL vi_tmInit(void); // If successful, returns 0.
+
 	VI_TM_API void VI_TM_CALL vi_tmFinit(void);
+
+	/// <summary>
+	/// Creates a new journal object and returns a handle to it.
+	/// </summary>
+	/// <returns>A handle to the newly created journal object, or nullptr if memory allocation fails.</returns>
 	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(void);
+
+	/// <summary>
+	/// Resets journal items in the storage, either all items or a specific one by name.
+	/// </summary>
+	/// <param name="journal">The handle to the journal to reset.</param>
+	/// <param name="name">The name of the journal item to reset. If null, all items are reset.</param>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR j, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
+
+	/// <summary>
+	/// Closes and deletes a journal handle.
+	/// </summary>
+	/// <param name="journal">The handle to the journal to be closed and deleted.</param>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR j);
+	
+	/// <summary>
+	/// Retrieves a handle to the measurement associated with the given name, creating it if it does not exist.
+	/// </summary>
+	/// <param name="journal">The handle to the journal containing the measurement.</param>
+	/// <param name="name">The name of the measurement entry to retrieve.</param>
+	/// <returns>A handle to the specified measurement entry within the journal.</returns>
 	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR j, const char* name);
+
+	/// <summary>
+	/// Invokes a callback function for each measurement in the journal, allowing early interruption.
+	/// </summary>
+	/// <param name="journal">The handle to the journal containing the measurements.</param>
+	/// <param name="fn">A callback function to be called for each measurement. It receives a handle to the measurement and the user-provided data pointer.</param>
+	/// <param name="data">A pointer to user-defined data that is passed to the callback function.</param>
+	/// <returns>Returns 0 if all measurements were processed. If the callback returns a non-zero value, iteration stops and that value is returned.</returns>
 	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR j, vi_tmMeasEnumCallback_t fn, void* data);
+
+	/// <summary>
+	/// Performs a measurement replenishment operation by adding a time difference and amount to the measurement object.
+	/// </summary>
+	/// <param name="meas">A handle to the measurement object to be updated.</param>
+	/// <param name="tick_diff">The time difference value to add to the measurement.</param>
+	/// <param name="amount">The amount associated with the time difference to add.</param>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
+
+	/// <summary>
+	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
+	/// </summary>
+	/// <param name="meas">The measurement handle from which to retrieve information.</param>
+	/// <param name="name">Pointer to a string pointer that will receive the name of the measurement. Can be nullptr if not needed.</param>
+	/// <param name="total">Pointer to a VI_TM_TDIFF variable that will receive the total measured time. Can be nullptr if not needed.</param>
+	/// <param name="amount">Pointer to a size_t variable that will receive the measured amount. Can be nullptr if not needed.</param>
+	/// <param name="calls_cnt">Pointer to a size_t variable that will receive the number of calls. Can be nullptr if not needed.</param>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, size_t *amt, size_t *calls);
+	
+	/// <summary>
+	/// Resets the measurement state for the specified measurement handle.
+	/// </summary>
+	/// <param name="meas">The measurement handle whose state should be reset.</param>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS m);
 
 	typedef enum // Enumeration for various timing information types.
@@ -141,6 +200,12 @@ extern "C" {
 
 		VI_TM_INFO__COUNT,      // Number of information types.
 	} vi_tmInfo_e;
+
+	/// <summary>
+	/// Retrieves static information about the timing module based on the specified info type.
+	/// </summary>
+	/// <param name="info">The type of information to retrieve, specified as a value of the vi_tmInfo_e enumeration.</param>
+	/// <returns>A pointer to the requested static information. The type of the returned data depends on the info parameter and may point to an unsigned int, a double, or a null-terminated string. Returns nullptr if the info type is not recognized.</returns>
 	VI_TM_API VI_NODISCARD const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info);
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -165,10 +230,37 @@ extern "C" {
 
 		vi_tmHideHeader = 0x0100,
 	} vi_tmReportFlags_e;
+
+	/// <summary>
+	/// Generates a report for the specified journal handle, using a callback function to output the report data.
+	/// </summary>
+	/// <param name="journal_handle">The handle to the journal whose data will be reported.</param>
+	/// <param name="flags">Flags that control the formatting and content of the report.</param>
+	/// <param name="fn">A callback function used to output each line of the report. If nullptr, defaults to writing to a FILE* stream.</param>
+	/// <param name="data">A pointer to user data passed to the callback function. If fn is nullptr and data is nullptr, defaults to stdout.</param>
+	/// <returns>The total number of characters written by the report, or a negative value if an error occurs.</returns>
 	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmRptCb_t VI_DEF(vi_tmRptCb), void* VI_DEF(stdout));
+
+	/// <summary>
+	/// Performs a CPU warming routine by running computationally intensive tasks across multiple threads for a specified duration.
+	/// </summary>
+	/// <param name="threads_qty">The number of threads to use for the warming routine. If zero or greater than the number of available hardware threads, the function uses the maximum available.</param>
+	/// <param name="ms">The duration of the warming routine in milliseconds. If zero, the function returns immediately.</param>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
+
+	/// <summary>
+	/// Fixates the CPU affinity of the current thread.
+	/// </summary>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityFixate(void);
+
+	/// <summary>
+	/// Restores the CPU affinity of the current thread to its previous state.
+	/// </summary>
+	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityRestore(void);
+
 	VI_TM_API void VI_TM_CALL vi_tmThreadYield(void);
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
