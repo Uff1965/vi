@@ -51,6 +51,16 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #endif
 
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
+// Compiler and ABI macros for function names, calling conventions, and API export/import.
+// This section detects the compiler and platform, then defines:
+//   - VI_FUNCNAME: Macro for the current function signature/name (for logging/debugging)
+//   - VI_SYS_CALL: Macro for the system calling convention
+//   - VI_TM_CALL: Macro for the timing library's calling convention
+//   - VI_TM_API: Macro for symbol export/import (DLL/shared/static library support)
+//
+// For MSVC, also sets up automatic linking to the correct library variant based on build type.
+// For GCC/Clang, sets symbol visibility for shared libraries.
+// Type definitions for vi_timing handles and callback types.
 #	if defined(_MSC_VER)
 #		define VI_FUNCNAME __FUNCSIG__
 
@@ -106,11 +116,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef uint64_t VI_TM_TICK;
-typedef uint64_t VI_TM_TDIFF;
-typedef struct vi_tmJournal_t *VI_TM_HJOUR;
-typedef struct vi_tmMeasuring_t *VI_TM_HMEAS;
-typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Returning a non-zero value aborts the enumeration.
+typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
+typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
+typedef struct vi_tmJournal_t *VI_TM_HJOUR; // Opaque handle to a timing journal object.
+typedef struct vi_tmMeasuring_t *VI_TM_HMEAS; // Opaque handle to a measurement entry within a journal.
+typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
 
 #	ifdef __cplusplus
 extern "C" {
@@ -196,7 +206,8 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS m);
 
 	typedef enum // Enumeration for various timing information types.
-	{	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
+	{
+		VI_TM_INFO_VER,         // unsigned*: Version number of the library.
 		VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
 		VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
 		VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
@@ -221,7 +232,8 @@ extern "C" {
 	typedef int (VI_SYS_CALL *vi_tmRptCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
 	static inline int VI_SYS_CALL vi_tmRptCb(const char *str, void *data) { return fputs(str, (FILE *)data); }
 	typedef enum
-	{	vi_tmSortByTime = 0x00,
+	{
+		vi_tmSortByTime = 0x00,
 		vi_tmSortByName = 0x01,
 		vi_tmSortBySpeed = 0x02,
 		vi_tmSortByAmount = 0x03,
@@ -277,6 +289,13 @@ extern "C" {
 #	endif
 
 // Define: VI_OPTIMIZE_ON/OFF vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// The following macros allow you to enable or disable compiler optimizations
+// for specific code sections. This is useful for benchmarking or debugging
+// scenarios where you want to control optimization levels locally.
+// Usage:
+//   VI_OPTIMIZE_OFF
+//   // ... code with optimizations disabled ...
+//   VI_OPTIMIZE_ON
 #	if defined(_MSC_VER)
 #		define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
 #		define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
@@ -293,13 +312,16 @@ extern "C" {
 #		define VI_OPTIMIZE_ON
 #	endif
 // Define: VI_OPTIMIZE_ON/OFF ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+ 
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Stringification and token-pasting macros for unique identifier generation.
 #	define VI_STR_AUX(s) #s
 #	define VI_STR(s) VI_STR_AUX(s)
 #	define VI_STR_GUM_AUX( a, b ) a##b
 #	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
 #	define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+
+// VI_DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
 #	ifdef NDEBUG
 #		define VI_DEBUG_ONLY(t) /**/
 #	else
@@ -311,7 +333,8 @@ extern "C" {
 namespace vi_tm
 {
 	class init_t
-	{	inline static constexpr auto default_callback_fn = &vi_tmRptCb;
+	{
+		inline static constexpr auto default_callback_fn = &vi_tmRptCb;
 		inline static const auto default_callback_data = static_cast<void*>(stdout);
 
 		std::string title_ = "Timing report:\n";
@@ -325,12 +348,14 @@ namespace vi_tm
 		init_t &operator=(init_t &&) = delete;
 
 		void init() const
-		{	[[maybe_unused]] const auto result = vi_tmInit();
+		{
+			[[maybe_unused]] const auto result = vi_tmInit();
 			assert(0 == result);
 		}
 		template<typename T, typename... Args>
 		void init(T &&v, Args&&... args)
-		{	if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
+		{
+			if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
 			{	flags_ |= v;
 			}
 			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmRptCb_t>)
@@ -357,10 +382,12 @@ namespace vi_tm
 		init_t() { init(); };
 		template<typename... Args> explicit init_t(Args&&... args)
 			: flags_{0U}
-		{	init(std::forward<Args>(args)...);
+		{
+			init(std::forward<Args>(args)...);
 		}
 		~init_t()
-		{	if (!title_.empty())
+		{
+			if (!title_.empty())
 			{	callback_function_(title_.c_str(), callback_data_);
 			}
 			vi_tmReport(nullptr, flags_, callback_function_, callback_data_);
@@ -394,10 +421,10 @@ namespace vi_tm
 #			define VI_TM(...)\
 				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)->vi_tm::measurer_t\
 					{	static auto const meas = vi_tmMeasuring(nullptr, name); /*!!! STATIC !!!*/\
-						VI_DEBUG_ONLY /* You cannot use the same macro substitution with different names!!! */\
+						VI_DEBUG_ONLY\
 						(	const char* str = nullptr;\
 							vi_tmMeasuringGet(meas, &str, nullptr, nullptr, nullptr);\
-							assert(0 == std::strcmp(name, str));\
+							assert(0 == std::strcmp(name, str)); /* You cannot use the same macro substitution with different names!!! */\
 						)\
 						return {meas, amount};\
 					}(__VA_ARGS__)
