@@ -2,14 +2,14 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 /********************************************************************\
-'vi_timing' is a compact library designed for measuring the execution time of
-code in C and C++.
+'vi_timing' is a compact and lightweight library for measuring code execution
+time in C and C++. 
 
-Copyright (C) 2024 A.Prograamar
+Copyright (C) 2025 A.Prograamar
 
-This library was developed for experimental and educational purposes.
-Please temper your expectations accordingly. If you encounter any bugs or have
-suggestions for improvements, kindly contact me at programmer.amateur@proton.me.
+This library was created for experimental and educational use. 
+Please keep expectations reasonable. If you find bugs or have suggestions for 
+improvement, contact programmer.amateur@proton.me.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

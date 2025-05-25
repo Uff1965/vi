@@ -1,12 +1,12 @@
 /********************************************************************\
-'vi_timing' is a compact library designed for measuring the execution time of
-code in C and C++.
+'vi_timing' is a compact and lightweight library for measuring code execution
+time in C and C++. 
 
-Copyright (C) 2024 A.Prograamar
+Copyright (C) 2025 A.Prograamar
 
-This library was developed for experimental and educational purposes.
-Please temper your expectations accordingly. If you encounter any bugs or have
-suggestions for improvements, kindly contact me at programmer.amateur@proton.me.
+This library was created for experimental and educational use. 
+Please keep expectations reasonable. If you find bugs or have suggestions for 
+improvement, contact programmer.amateur@proton.me.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. 
+along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
@@ -51,16 +51,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #endif
 
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
-// Compiler and ABI macros for function names, calling conventions, and API export/import.
-// This section detects the compiler and platform, then defines:
-//   - VI_FUNCNAME: Macro for the current function signature/name (for logging/debugging)
-//   - VI_SYS_CALL: Macro for the system calling convention
-//   - VI_TM_CALL: Macro for the timing library's calling convention
-//   - VI_TM_API: Macro for symbol export/import (DLL/shared/static library support)
-//
-// For MSVC, also sets up automatic linking to the correct library variant based on build type.
-// For GCC/Clang, sets symbol visibility for shared libraries.
-// Type definitions for vi_timing handles and callback types.
 #	if defined(_MSC_VER)
 #		define VI_FUNCNAME __FUNCSIG__
 
@@ -418,17 +408,18 @@ namespace vi_tm
 #			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
 			//	The macro VI_TM(const char* name, siz_t amount = 1) stores the pointer to the named measurer
 			//	in a static variable to save resources. Therefore, it cannot be used with different names.
-#			define VI_TM(...)\
-				const auto VI_MAKE_ID(_vi_tm_) = [](const char *name, size_t amount = 1)->vi_tm::measurer_t\
-					{	static auto const meas = vi_tmMeasuring(nullptr, name); /*!!! STATIC !!!*/\
-						VI_DEBUG_ONLY\
-						(	const char* str = nullptr;\
-							vi_tmMeasuringGet(meas, &str, nullptr, nullptr, nullptr);\
-							assert(0 == std::strcmp(name, str)); /* You cannot use the same macro substitution with different names!!! */\
-						)\
-						return {meas, amount};\
-					}(__VA_ARGS__)
-#			define VI_TM_FUNC VI_TM( VI_FUNCNAME )
+#			define VI_TM(...) \
+				const auto VI_MAKE_ID(_vi_tm_) = [] (const char* name, size_t amount = 1) -> vi_tm::measurer_t { \
+					static const auto meas = vi_tmMeasuring(nullptr, name); /* Static to ensure one measurer per name */ \
+					VI_DEBUG_ONLY( \
+						const char* registered_name = nullptr; \
+						vi_tmMeasuringGet(meas, &registered_name, nullptr, nullptr, nullptr); \
+						assert(registered_name && 0 == std::strcmp(name, registered_name) && \
+							"VI_TM macro used with different names at the same location!"); \
+					) \
+					return vi_tm::measurer_t{meas, amount}; \
+				}(__VA_ARGS__)
+#			define VI_TM_FUNC VI_TM(VI_FUNCNAME)
 #			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
 #			define VI_TM_RESET(name) vi_tmJournalReset(nullptr, (name)) // If 'name' is zero, then all the meters in the log are reset (but not deleted!).
 #			define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
