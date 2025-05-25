@@ -177,6 +177,15 @@ extern "C" {
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
 
+	typedef struct vi_tmMeasuringData_t
+	{
+		VI_TM_TDIFF total_;
+		size_t amt_;
+		size_t calls_;
+#ifdef VI_TM_STATISTICS_EXT
+#endif
+	} vi_tmMeasuringData_t;
+
 	/// <summary>
 	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
 	/// </summary>
@@ -186,7 +195,7 @@ extern "C" {
 	/// <param name="amount">Pointer to a size_t variable that will receive the measured amount. Can be nullptr if not needed.</param>
 	/// <param name="calls_cnt">Pointer to a size_t variable that will receive the number of calls. Can be nullptr if not needed.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, VI_TM_TDIFF *total, size_t *amt, size_t *calls);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, vi_tmMeasuringData_t *data);
 	
 	/// <summary>
 	/// Resets the measurement state for the specified measurement handle.
@@ -413,7 +422,7 @@ namespace vi_tm
 					static const auto meas = vi_tmMeasuring(nullptr, name); /* Static to ensure one measurer per name */ \
 					VI_DEBUG_ONLY( \
 						const char* registered_name = nullptr; \
-						vi_tmMeasuringGet(meas, &registered_name, nullptr, nullptr, nullptr); \
+						vi_tmMeasuringGet(meas, &registered_name, nullptr); \
 						assert(registered_name && 0 == std::strcmp(name, registered_name) && \
 							"VI_TM macro used with different names at the same location!"); \
 					) \

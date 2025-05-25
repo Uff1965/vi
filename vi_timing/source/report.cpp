@@ -176,11 +176,9 @@ namespace
 			[](VI_TM_HMEAS h, void *callback_data)
 			{	
 				const char *name;
-				VI_TM_TDIFF total;
-				std::size_t amount;
-				std::size_t calls_cnt;
-				vi_tmMeasuringGet(h, &name, &total, &amount, &calls_cnt);
-				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, total, amount, calls_cnt);
+				vi_tmMeasuringData_t data;
+				vi_tmMeasuringGet(h, &name, &data);
+				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, data.total_, data.amt_, data.calls_);
 				return 0; // Ok, continue enumerate.
 			},
 			&result

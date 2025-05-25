@@ -169,13 +169,11 @@ VI_OPTIMIZE_OFF
 			}
 
 			const char *name = nullptr;
-			VI_TM_TDIFF ticks = 0U;
-			std::size_t amount = 0U;
-			std::size_t calls_cnt = 0U;
-			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &ticks, &amount, &calls_cnt);
-			std::cout << "vi_tm:\tticks = " << std::setw(16) << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
-			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &ticks, &amount, &calls_cnt);
-			std::cout << "empty:\tticks = " << std::setw(16)  << ticks << ",\tamount = " << amount << ",\tcalls = " << calls_cnt << std::endl;
+			vi_tmMeasuringData_t data;
+			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &data);
+			std::cout << "vi_tm:\tticks = " << std::setw(16) << data.total_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);
+			std::cout << "empty:\tticks = " << std::setw(16)  << data.total_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 			endl(std::cout);
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
@@ -242,18 +240,16 @@ VI_OPTIMIZE_ON
 		std::cout << "\nTest vi_tmResults:";
 		auto results_callback = [](VI_TM_HMEAS m, void* data)
 			{	const char *name;
-				VI_TM_TDIFF ticks = 0U;
-				size_t amount = 0U;
-				size_t calls_cnt = 0U;
-				vi_tmMeasuringGet(m, &name, &ticks, &amount, &calls_cnt);
-				if (0U != calls_cnt)
+				vi_tmMeasuringData_t meas;
+				vi_tmMeasuringGet(m, &name, &meas);
+				if (0U != meas.calls_)
 				{	const auto props = *static_cast<props_t *>(data);
 					std::cout << 
 					"\n"<< std::left << std::setw(48) << name << ":"
-					" ticks = " << std::setw(15) << std::right << ticks << ","
-					" (" << std::setprecision(2) << std::setw(9) << std::scientific << (props.unit_ * (ticks - calls_cnt * props.add_) / calls_cnt) << "),"
-					" amount = " << std::setw(12) << std::right << amount << ","
-					" calls = " << std::setw(12) << std::right << calls_cnt;
+					" ticks = " << std::setw(15) << std::right << meas.total_ << ","
+					" (" << std::setprecision(2) << std::setw(9) << std::scientific << (props.unit_ * (meas.total_ - meas.calls_ * props.add_) / meas.calls_) << "),"
+					" amount = " << std::setw(12) << std::right << meas.amt_ << ","
+					" calls = " << std::setw(12) << std::right << meas.calls_;
 				}
 				return 0;
 			};

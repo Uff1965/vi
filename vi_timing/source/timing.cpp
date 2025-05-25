@@ -55,11 +55,16 @@ namespace
 		{	total_.fetch_add(tick_diff, std::memory_order_relaxed);
 			counter_.fetch_add(amount, std::memory_order_relaxed);
 			calls_cnt_.fetch_add(1, std::memory_order_relaxed);
+#ifdef VI_TM_STATISTICS_EXT
+#endif
 		}
-		void get(VI_TM_TDIFF &total, size_t &amount, size_t &calls_cnt) const noexcept
-		{	total = total_.load();
-			amount = counter_.load();
-			calls_cnt = calls_cnt_.load();
+		void get(vi_tmMeasuringData_t& data) const noexcept
+		{
+			data.total_ = total_.load();
+			data.amt_ = counter_.load();
+			data.calls_ = calls_cnt_.load();
+#ifdef VI_TM_STATISTICS_EXT
+#endif
 		}
 		void reset() noexcept
 		{	total_ = 0U;
@@ -151,14 +156,14 @@ void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, std:
 {	if (verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, VI_TM_TDIFF *total, size_t *amount, size_t *calls_cnt)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasuringData_t *data)
 {	if (verify(meas))
 	{	if (name)
 		{	*name = meas->first.c_str();
 		}
-		VI_TM_TDIFF dummy_time = 0U;
-		size_t dummy_size = 0U;
-		meas->second.get(total ? *total : dummy_time, amount ? *amount : dummy_size, calls_cnt ? *calls_cnt : dummy_size);
+		if (data)
+		{	meas->second.get(*data);
+		}
 	}
 }
 
