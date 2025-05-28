@@ -137,7 +137,7 @@ VI_OPTIMIZE_ON
 
 VI_OPTIMIZE_OFF
 	void test_empty()
-	{	VI_TM_FUNC;
+	{	VI_TM("test_empty");
 		std::cout << "\nTest test_empty:\n";
 
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
@@ -171,9 +171,15 @@ VI_OPTIMIZE_OFF
 			const char *name = nullptr;
 			vi_tmMeasuringData_t data;
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &data);
-			std::cout << "vi_tm:\tticks = " << std::setw(16) << data.total_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+#ifdef VI_TM_STAT_USE_WELFORD
+			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);
-			std::cout << "empty:\tticks = " << std::setw(16)  << data.total_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+			std::cout << "empty:\tmean = " << std::setprecision(3)  << data.mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+#else
+			std::cout << "vi_tm:\tticks = " << std::setw(16) << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);
+			std::cout << "empty:\tticks = " << std::setw(16)  << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+#endif
 			endl(std::cout);
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
@@ -245,11 +251,15 @@ VI_OPTIMIZE_ON
 				if (0U != meas.calls_)
 				{	const auto props = *static_cast<props_t *>(data);
 					std::cout << 
-					"\n"<< std::left << std::setw(48) << name << ":"
-					" ticks = " << std::setw(15) << std::right << meas.total_ << ","
-					" (" << std::setprecision(2) << std::setw(9) << std::scientific << (props.unit_ * (meas.total_ - meas.calls_ * props.add_) / meas.calls_) << "),"
-					" amount = " << std::setw(12) << std::right << meas.amt_ << ","
-					" calls = " << std::setw(12) << std::right << meas.calls_;
+					"\n"<< std::left << std::setw(48) << name << ":" << std::right << std::scientific <<
+#ifdef VI_TM_STAT_USE_WELFORD
+					" mean = " << meas.mean_ << ", m2 = " << meas.m2_ <<
+#else
+					" ticks = " << std::setw(15) << meas.sum_ << ","
+					" (" << std::setw(9) << (props.unit_ * (meas.sum_ - meas.calls_ * props.add_) / meas.calls_) << "),"
+#endif
+					" amount = " << std::setw(12) << meas.amt_ << ","
+					" calls = " << std::setw(12) << meas.calls_;
 				}
 				return 0;
 			};

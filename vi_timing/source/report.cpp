@@ -44,6 +44,7 @@ namespace
 	constexpr char TitleName[] = "Name";
 	constexpr char TitleAverage[] = "Avg.";
 	constexpr char TitleTotal[] = "Total";
+	constexpr char TitlePrecision[] = "+/- %";
 	constexpr char TitleAmount[] = "Amount";
 	constexpr char Ascending[] = " [^]";
 	constexpr char Descending[] = " [v]";
@@ -70,51 +71,72 @@ namespace
 
 	struct metering_t
 	{	std::string_view name_;
-		duration_t<DURATION_PREC, DURATION_DEC> total_{ .0 }; // seconds
-		std::string total_txt_{ NotAvailable };
+		duration_t<DURATION_PREC, DURATION_DEC> sum_{ .0 }; // seconds
+		std::string sum_txt_{ NotAvailable };
 		duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
 		std::string average_txt_{ NotAvailable };
-		std::size_t amount_{}; // Number of measured units
+#if defined(VI_TM_STAT_USE_WELFORD)
+		double precision_{ .0 }; // percents
+		std::string precision_txt_{ NotAvailable };
+#endif
+		std::size_t amt_{}; // Number of measured units
 
-		metering_t(const char *name, VI_TM_TDIFF total_time, std::size_t amount, std::size_t calls_cnt) noexcept;
+		metering_t(const char *name, const vi_tmMeasuringData_t &meas) noexcept;
 	};
 
-	metering_t::metering_t(const char *name, VI_TM_TDIFF total_ticks, std::size_t amount, std::size_t calls_cnt) noexcept
+	metering_t::metering_t(const char *name, const vi_tmMeasuringData_t &meas) noexcept
 	:	name_{ name },
-		amount_{ amount }
-	{	assert(amount >= calls_cnt);
-		assert(!!calls_cnt == !!amount);
+		amt_{ meas.amt_ }
+	{	assert(amt_ >= meas.calls_);
+		assert(!!amt_ == !!meas.calls_);
 
-		if (0 != amount)
+		if (0 != amt_)
 		{	auto &props = misc::properties_t::props();
-			if (const auto ticks = static_cast<double>(total_ticks) - props.clock_latency_ticks_ * static_cast<double>(calls_cnt);
-				ticks <= props.clock_resolution_ticks_ * std::sqrt(calls_cnt)
-			)
-			{	total_txt_ = Insignificant;
+#ifdef VI_TM_STAT_USE_WELFORD
+			if (const auto ave = meas.mean_ - props.clock_latency_ticks_; ave <= props.clock_resolution_ticks_ / std::sqrt(meas.calls_))
+			{	sum_txt_ = Insignificant;
 				average_txt_ = Insignificant;
 			}
 			else
-			{	total_ = props.seconds_per_tick_ * ticks;
-				total_txt_ = to_string(total_);
-				average_ = total_ / amount_;
+			{	average_ = ave * props.seconds_per_tick_;
+				average_txt_ = to_string(average_);
+				sum_ = average_ * amt_;
+				sum_txt_ = to_string(sum_);
+				if (meas.calls_ > 1 && amt_ > 1)
+				{	precision_ = std::sqrt(meas.m2_ / (amt_ - 1));
+					precision_txt_ = misc::to_string(precision_ / ave * 100.0, 2, 1);
+				}
+			}
+#else
+			if (const auto ticks = static_cast<double>(meas.sum_) - props.clock_latency_ticks_ * static_cast<double>(meas.calls_);
+				ticks <= props.clock_resolution_ticks_ * std::sqrt(meas.calls_)
+			)
+			{	sum_txt_ = Insignificant;
+				average_txt_ = Insignificant;
+			}
+			else
+			{	sum_ = props.seconds_per_tick_ * ticks;
+				sum_txt_ = to_string(sum_);
+				average_ = sum_ / amt_;
 				average_txt_ = to_string(average_);
 			}
+#endif
 		}
 	}
 
 	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);
 
 	template<> auto make_tuple<vi_tmSortByName>(const metering_t &v)
-	{	return std::tuple{ v.name_, v.average_, v.total_, v.amount_ };
+	{	return std::tuple{ v.name_, v.average_, v.sum_, v.amt_ };
 	}
 	template<> auto make_tuple<vi_tmSortBySpeed>(const metering_t &v)
-	{	return std::tuple{ v.average_, v.total_, v.amount_, v.name_ };
+	{	return std::tuple{ v.average_, v.sum_, v.amt_, v.name_ };
 	}
 	template<> auto make_tuple<vi_tmSortByTime>(const metering_t &v)
-	{	return std::tuple{ v.total_, v.average_, v.amount_, v.name_ };
+	{	return std::tuple{ v.sum_, v.average_, v.amt_, v.name_ };
 	}
 	template<> auto make_tuple<vi_tmSortByAmount>(const metering_t &v)
-	{	return std::tuple{ v.amount_, v.average_, v.total_, v.name_ };
+	{	return std::tuple{ v.amt_, v.average_, v.sum_, v.name_ };
 	}
 
 	template<vi_tmReportFlags_e E> bool less(const metering_t &l, const metering_t &r)
@@ -159,8 +181,11 @@ namespace
 		const unsigned guideline_interval_;
 
 		std::size_t max_len_name_{ std::size(TitleName) - 1 };
-		std::size_t max_len_total_{ std::size(TitleTotal) - 1 };
 		std::size_t max_len_average_{ std::size(TitleAverage) - 1 };
+#if defined(VI_TM_STAT_USE_WELFORD)
+		std::size_t max_len_precision_{ std::size(TitlePrecision) - 1 };
+#endif
+		std::size_t max_len_total_{ std::size(TitleTotal) - 1 };
 		std::size_t max_len_amount_{ std::size(TitleAmount) - 1 };
 		mutable std::size_t n_{ 0 };
 
@@ -174,11 +199,10 @@ namespace
 		vi_tmMeasuringEnumerate
 		(	journal_handle,
 			[](VI_TM_HMEAS h, void *callback_data)
-			{	
-				const char *name;
+			{	const char *name;
 				vi_tmMeasuringData_t data;
 				vi_tmMeasuringGet(h, &name, &data);
-				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, data.total_, data.amt_, data.calls_);
+				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, data);
 				return 0; // Ok, continue enumerate.
 			},
 			&result
@@ -241,11 +265,14 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 
 	std::size_t max_amount = 0U;
 	for (auto &itm : itms)
-	{	max_len_total_ = std::max(max_len_total_, itm.total_txt_.length());
+	{	max_len_total_ = std::max(max_len_total_, itm.sum_txt_.length());
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
 		max_len_name_ = std::max(max_len_name_, itm.name_.length());
-		if (itm.amount_ > max_amount)
-		{	max_amount = itm.amount_;
+#if defined(VI_TM_STAT_USE_WELFORD)
+		max_len_precision_ = std::max(max_len_precision_, itm.precision_txt_.length());
+#endif
+		if (itm.amt_ > max_amount)
+		{	max_amount = itm.amt_;
 			auto len = static_cast<std::size_t>(std::floor(std::log10(max_amount)));
 			len += len / 3U; // for thousand separators
 			len += 1U;
@@ -283,14 +310,23 @@ int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
 	str <<
 		std::setw(number_len_) << "#" << "  " << std::setfill(fill_symbol) << std::left <<
 		std::setw(max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right <<
-		std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) << " [" <<
+		std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) <<
+#if defined(VI_TM_STAT_USE_WELFORD)
+		" " << std::setw(max_len_precision_) << TitlePrecision <<
+#endif
+		" [" <<
 		std::setw(max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
 		std::setw(max_len_amount_) << title(TitleAmount, vi_tmSortByAmount) << "]"
 		"\n";
 
 	const auto result = str.str();
-	assert(number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1 == result.size());
-
+#ifndef NDEBUG	
+	auto len = number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1;
+#if defined(VI_TM_STAT_USE_WELFORD)
+		len += max_len_precision_ + 1;
+#	endif
+	assert(len == result.size());
+#endif
 	return fn(result.c_str(), data);
 }
 
@@ -304,14 +340,25 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void
 	str <<
 		std::setw(number_len_) << n_ << ". " << std::setfill(fill) << std::left <<
 		std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<
-		std::setw(max_len_average_) << i.average_txt_ << " [" <<
-		std::setw(max_len_total_) << i.total_txt_ << " / " <<
-		std::setw(max_len_amount_) << i.amount_ << "]"
+		std::setw(max_len_average_) << i.average_txt_ <<
+#if defined(VI_TM_STAT_USE_WELFORD)
+		" " << std::setw(max_len_precision_) << i.precision_txt_ <<
+#endif
+		" [" <<
+		std::setw(max_len_total_) << i.sum_txt_ << " / " <<
+		std::setw(max_len_amount_) << i.amt_ << "]"
 		"\n";
 
 	const auto result = str.str();
-	assert(number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1 == result.size());
-
+#ifndef NDEBUG	
+	{	
+		auto len = number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1;
+#if defined(VI_TM_STAT_USE_WELFORD)
+		len += max_len_precision_ + 1;
+#	endif
+		assert(len == result.size());
+	}
+#endif
 	return fn(result.c_str(), data);
 }
 
