@@ -71,20 +71,20 @@ namespace
 
 	struct metering_t
 	{	std::string_view name_;
-		duration_t<DURATION_PREC, DURATION_DEC> sum_{ .0 }; // seconds
 		std::string sum_txt_{ NotAvailable };
-		duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
+		duration_t<DURATION_PREC, DURATION_DEC> sum_{ .0 }; // seconds
 		std::string average_txt_{ NotAvailable };
+		duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
 #if defined(VI_TM_STAT_USE_WELFORD)
 		double precision_{ .0 }; // standard deviation in ticks
 		std::string precision_txt_{ NotAvailable };
 #endif
 		std::size_t amt_{}; // Number of measured units
 
-		metering_t(const char *name, const vi_tmMeasuringData_t &meas) noexcept;
+		metering_t(const char *name, const vi_tmMeasuringRAW_t &meas) noexcept;
 	};
 
-	metering_t::metering_t(const char *name, const vi_tmMeasuringData_t &meas) noexcept
+	metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas) noexcept
 	:	name_{ name },
 		amt_{ meas.amt_ }
 	{	assert(amt_ >= meas.calls_);
@@ -102,8 +102,9 @@ namespace
 				average_txt_ = to_string(average_);
 				sum_ = average_ * amt_;
 				sum_txt_ = to_string(sum_);
-				if (meas.calls_ > 1 && amt_ > 1)
-				{	precision_ = std::sqrt(meas.m2_ / (amt_ - 1));
+				if (meas.calls_ > 1)
+				{	assert(amt_ > 1);
+					precision_ = std::sqrt(meas.m2_ / (meas.cnt_ - 1));
 					precision_txt_ = misc::to_string(precision_ / ave * 100.0, 2, 0) + "%";
 				}
 			}
@@ -176,7 +177,7 @@ namespace
 
 	struct formatter_t
 	{	static constexpr auto fill_symbol = '.';
-		const std::size_t number_len_{ 1 }; // '#'
+		const std::size_t number_len_;
 		const unsigned flags_;
 		const unsigned guideline_interval_;
 
@@ -200,9 +201,9 @@ namespace
 		(	journal_handle,
 			[](VI_TM_HMEAS h, void *callback_data)
 			{	const char *name;
-				vi_tmMeasuringData_t data;
-				vi_tmMeasuringGet(h, &name, &data);
-				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, data);
+				vi_tmMeasuringRAW_t meas;
+				vi_tmMeasuringGet(h, &name, &meas);
+				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, std::move(meas));
 				return 0; // Ok, continue enumerate.
 			},
 			&result
@@ -312,7 +313,7 @@ int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
 		std::setw(max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right <<
 		std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) <<
 #if defined(VI_TM_STAT_USE_WELFORD)
-		" (" << std::setw(max_len_precision_) << TitlePrecision << ")" <<
+		" (" << std::setw(max_len_precision_) << TitlePrecision << ")"
 #endif
 		" [" <<
 		std::setw(max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<

@@ -21,10 +21,12 @@
 #include <thread>
 #include <vector>
 
-//#undef VI_OPTIMIZE_ON
-//#define VI_OPTIMIZE_ON
-//#undef VI_OPTIMIZE_OFF
-//#define VI_OPTIMIZE_OFF
+#if false
+#	undef VI_OPTIMIZE_ON
+#	define VI_OPTIMIZE_ON
+#	undef VI_OPTIMIZE_OFF
+#	define VI_OPTIMIZE_OFF
+#endif
 
 using namespace std::literals;
 namespace ch = std::chrono;
@@ -65,18 +67,17 @@ namespace
 namespace {
 VI_OPTIMIZE_OFF
 	void test_multithreaded()
-	{	VI_TM_FUNC;
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
-
+	{	VI_TM("test_multithreaded");
 #ifdef NDEBUG
 		static constexpr auto CNT = 2'000'000;
 #else
 		static constexpr auto CNT = 100'000;
 #endif
-		static std::atomic<std::size_t> v{};
 
 		std::cout << "\nTest multithreaded():" << std::endl;
 
+		static std::atomic<std::size_t> v{};
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		auto load = [h = h.get()]
 		{	static auto j_load = vi_tmMeasuring(h, "load");
 			vi_tm::measurer_t tm{ j_load };
@@ -99,40 +100,36 @@ VI_OPTIMIZE_OFF
 		{	t.join();
 		}
 
+		std::cout << "v (" << v << ") must be equal to " << CNT << "*" << threads.size() << " (" << CNT * threads.size() << ")";
 		if (v.load() != CNT * threads.size())
-		{	std::cerr << "******* ERROR !!! *************\n";
+		{	std::cerr << " - FAIL!!!\n";
 			assert(false);
 		}
+		else
+		{	std::cout << " - OK\n";
+		}
 
-		std::cout << "v: " << v << " [" << CNT << "*" << threads.size() << "]" << "\n";
-		std::cout << "Timing:\n";
+		std::cout << "Timing Test multithreaded:\n";
 		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
-		std::cout << "nTest multithreaded - done" << std::endl;
+		std::cout << "Test multithreaded - done" << std::endl;
 	}
 VI_OPTIMIZE_ON
 
-	void test_instances()
-	{	VI_TM("Test additional timers");
-		std::cout << "\nAdditional timers:\n";
+	void test_sleep()
+	{	VI_TM("Test slleep");
+		std::cout << "\nTest slleep:\n";
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
-			{	static auto j1 = vi_tmMeasuring(h, "long, long, long, very long name");
-				vi_tm::measurer_t tm1{ j1 };
-				{	static auto j2 = vi_tmMeasuring(h, "100ms * 10");
-					vi_tm::measurer_t tm2{ j2, 10 };
-					for (int n = 0; n < 10; ++n)
-					{	std::this_thread::sleep_for(100ms);
-
-						static auto j3 = vi_tmMeasuring(h, "tm");
-						vi_tm::measurer_t tm3{ j3 };
-						static auto j4 = vi_tmMeasuring(h, "tm_empty");
-						vi_tm::measurer_t tm4{ j4 };
-					}
+			{	auto m = vi_tmMeasuring(h, "100ms");
+				vi_tm::measurer_t tm{ vi_tmMeasuring(h, "100ms*10"), 10U };
+				for (int n = 0; n < 10; ++n)
+				{	vi_tm::measurer_t tm{ m };
+					std::this_thread::sleep_for(100ms);
 				}
 			}
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		}
-		std::cout << "nTest additional timers - done" << std::endl;
+		std::cout << "Test sleep - done" << std::endl;
 	}
 
 VI_OPTIMIZE_OFF
@@ -145,8 +142,6 @@ VI_OPTIMIZE_OFF
 
 			vi_tmJournalReset(h, "vi_tm");
 			vi_tmJournalReset(h, "empty");
-			VI_TM_RESET("VI_TM");
-			VI_TM_RESET("EMPTY");
 
 			static auto const jTm = vi_tmMeasuring(h, "vi_tm");
 			static auto const jEmpty = vi_tmMeasuring(h, "empty");
@@ -162,14 +157,10 @@ VI_OPTIMIZE_OFF
 					const auto fTm = vi_tmGetTicks();
 					vi_tmMeasuringRepl(jTm, fTm - sTm, 1);
 				}
-
-				{	VI_TM("VI_TM");
-					VI_TM("EMPTY");
-				}
 			}
 
 			const char *name = nullptr;
-			vi_tmMeasuringData_t data;
+			vi_tmMeasuringRAW_t data;
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &data);
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
@@ -180,7 +171,6 @@ VI_OPTIMIZE_OFF
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);
 			std::cout << "empty:\tticks = " << std::setw(16)  << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 #endif
-			endl(std::cout);
 			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
 
@@ -233,173 +223,89 @@ VI_OPTIMIZE_ON
 		std::cout << "\nClock properties - done" << std::endl;
 	}
 
-	void test_vi_tmResults()
+	void report_RAW(VI_TM_HJOUR h)
 	{
-		struct props_t
-		{	double add_;
-			double unit_;
-		} const props =
-		{	*reinterpret_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_OVERHEAD)),
-			*reinterpret_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT))
-		};
+		struct data_t
+		{	std::size_t name_max_len_ = 0;
+		} data;
 
-		std::cout << "\nTest vi_tmResults:";
-		auto results_callback = [](VI_TM_HMEAS m, void* data)
-			{	const char *name;
-				vi_tmMeasuringData_t meas;
-				vi_tmMeasuringGet(m, &name, &meas);
-				if (0U != meas.calls_)
-				{	const auto props = *static_cast<props_t *>(data);
-					std::cout << 
-					"\n"<< std::left << std::setw(48) << name << ":" << std::right << std::scientific <<
-#ifdef VI_TM_STAT_USE_WELFORD
-					" mean = " << meas.mean_ << ", m2 = " << meas.m2_ <<
-#else
-					" ticks = " << std::setw(15) << meas.sum_ << ","
-					" (" << std::setw(9) << (props.unit_ * (meas.sum_ - meas.calls_ * props.add_) / meas.calls_) << "),"
-#endif
-					" amount = " << std::setw(12) << meas.amt_ << ","
-					" calls = " << std::setw(12) << meas.calls_;
+		auto cb_name = [](VI_TM_HMEAS m, void *data)
+			{	auto d = static_cast<data_t *>(data);
+				const char *name = nullptr;
+				vi_tmMeasuringGet(m, &name, nullptr);
+				if (name && *name && d->name_max_len_ < std::strlen(name))
+				{	d->name_max_len_ = std::strlen(name);
 				}
 				return 0;
 			};
-		vi_tmMeasuringEnumerate(nullptr, results_callback, const_cast<props_t*>(&props));
-		std::cout << "\nTest vi_tmResults - done" << std::endl;
+		vi_tmMeasuringEnumerate(h, cb_name, &data);
+
+		auto results_callback = [](VI_TM_HMEAS m, void* data)
+			{	auto d = static_cast<data_t *>(data);
+				const char *name;
+				vi_tmMeasuringRAW_t meas;
+				vi_tmMeasuringGet(m, &name, &meas);
+				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
+				std::right << std::scientific <<
+#ifdef VI_TM_STAT_USE_WELFORD
+				" mean = " << meas.mean_ << ","
+				" m2 = " << meas.m2_ << ","
+				" cnt = " << std::setw(12) << meas.cnt_ << ","
+#endif
+				" sum = " << std::setw(15) << meas.sum_ << ","
+				" amt = " << std::setw(12) << meas.amt_ << ","
+				" calls = " << std::setw(12) << meas.calls_ <<
+				std::endl;
+				return 0;
+			};
+		vi_tmMeasuringEnumerate(h, results_callback, &data);
 	}
 
-	VI_OPTIMIZE_OFF
-	void test()
-	{	std::cout << "\nTest test:";
+	void test_report()
+	{	VI_TM("test_report");
+		std::cout << "\nTest vi_tmReport:" << std::endl;
 
-		static auto nothing = [] {/**/};
-		static constexpr auto CNT = 10'000;
+//#	define TINY_SET_SAMPLES
+#	ifdef TINY_SET_SAMPLES
+		static constexpr VI_TM_TDIFF samples_simple[] = { 34, 81, 17 }; // 132/3=44; 2198/2=1099
+		static constexpr VI_TM_TDIFF samples_multiple[] = { 34, }; // 34/1=34; 1156/0=...
+		static constexpr auto M = 2;
+#	else
+		static constexpr VI_TM_TDIFF samples_simple[] =
+		{	40, 60, 37, 16, 44, 37, 22, 48, 37, 37, 48, 40, 39, 37, 52, 33, 44, 55, 42, 19,
+			36, 33, 43, 26, 41, 34, 40, 13, 27, 35, 21, 41, 35, 40, 41, 54, 37, 29, 35, 56,
+			35, 39, 26, 49, 25, 37, 30, 40, 32, 44, 48, 33, 56, 23, 47, 37, 34, 40, 58, 64,
+			35, 53, 48, 36, 70, 38, 41, 41, 45, 34, 32, 57, 39, 19, 43, 50, 23, 46, 45, 53,
+			42, 45, 44, 29, 54, 61, 32, 30, 39, 32, 47, 32, 42, 56, 38, 33, 36, 38, 35, 42,
+			28, 53, 50, 48, 32, 25, 34, 45, 32, 39, 34, 42, 43, 50, 52, 42, 41, 41, 48, 38,
+			42, 25, 39, 43, 65, 34, 46, 61, 55, 39, 41, 42, 37, 51, 38, 46, 31, 38, 48, 54,
+			48, 50, 28, 43, 48, 54, 38, 48, 18, 37, 47, 43, 38, 48, 36, 56, 32, 58, 46, 58,
+			39, 41, 31, 34, 33, 47, 43, 34, 39, 55, 39, 27, 39, 54, 24, 38, 44, 20, 40, 50,
+			43, 39, 33, 41, 46, 37, 42, 51, 57, 29, 52, 36, 57, 56, 42, 39, 35, 38, 31, 42,
+		}; // 8139/200=40.695; 19798.39442/199=99.48941920
+		static constexpr VI_TM_TDIFF samples_multiple[] =
+		{	35, 39, 43, 40, 38, 43, 41, 33, 39, 37,
+		}; // 388/10=38.8; 93.60/9=10.40
+		static constexpr auto M = 10; // (8139+10*388)/(200+10*10)=12019/300=40,063(3); (19798,39442+10*93,60)=20734,39442
+#	endif
 
-		auto a = []
-			{	static const auto _ = []
-					{	VI_TM("Test First");
-						{	VI_TM("TestA");
-							nothing();
-						}
-						return 0;
-					}();
-				{	VI_TM("TestA Other", CNT);
-					for (auto n = 0; n < CNT; ++n)
-					{	VI_TM("TestA");
-						nothing();
-					}
-				}
-			};
-
-		auto b = []
-			{	static const auto _ = []
-					{	VI_TM("Test First");
-						static auto const h = vi_tmMeasuring(nullptr, "TestB");
-						const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringRepl(h, finish - start);
-						return 0;
-					}();
-				{	VI_TM("TestB Other", CNT);
-					for (auto n = 0; n < CNT; ++n)
-					{	static auto const h = vi_tmMeasuring(nullptr, "TestB");
-						const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringRepl(h, finish - start);
-					}
-				}
-			};
-
-		auto c = []
-			{	static const auto _ = []
-					{	VI_TM("Test First");
-						const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringRepl(vi_tmMeasuring(nullptr, "TestC"), finish - start);
-						return 0;
-					}();
-				{	VI_TM("TestC Other", CNT);
-					for (auto n = 0; n < CNT; ++n)
-					{	const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringRepl(vi_tmMeasuring(nullptr, "TestC"), finish - start);
-					}
-				}
-			};
-
-		auto d = []
-			{	static const auto _ = []
-					{	VI_TM("Test First");
-						const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						static auto const h = vi_tmMeasuring(nullptr, "TestD");
-						vi_tmMeasuringRepl(h, finish - start);
-						return 0;
-					}();
-				{	VI_TM("TestD Other", CNT);
-					for (auto n = 0; n < CNT; ++n)
-					{	const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						static auto const h = vi_tmMeasuring(nullptr, "TestD");
-						vi_tmMeasuringRepl(h, finish - start);
-					}
-				}
-			};
-
-		auto e = []
-			{	static const auto _ = []
-					{	VI_TM("Test First");
-						const auto h = vi_tmMeasuring(nullptr, "TestE");
-						const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringRepl(h, finish - start);
-						return 0;
-					}();
-				{	VI_TM("TestE Other", CNT);
-					const auto h = vi_tmMeasuring(nullptr, "TestE");
-					for (auto n = 0; n < CNT; ++n)
-					{	const auto start = vi_tmGetTicks();
-						nothing();
-						const auto finish = vi_tmGetTicks();
-						vi_tmMeasuringRepl(h, finish - start);
-					}
-				}
-			};
-
-		void (*arr[])() = {  a, b, c, d, e, };
-		std::sort(std::begin(arr), std::end(arr));
-		do
-		{	vi_tmThreadYield();
-			for (int n = 0; n < 5; ++n)
-			{	(void)vi_tmGetTicks();
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose };
+		{	const auto unit = *static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT));
+			const auto m = vi_tmMeasuring(journal.get(), "Sample");
+			for (auto x : samples_simple)
+			{	vi_tmMeasuringRepl(m, static_cast<VI_TM_TDIFF>(x / unit));
 			}
-
-			for (auto f : arr)
-			{	f();
+			for (auto x : samples_multiple)
+			{	vi_tmMeasuringRepl(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
 			}
+		}
+		vi_tmReport(journal.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+		std::cout << "RAW:\n";
+		report_RAW(journal.get());
 
-		} while (std::next_permutation(std::begin(arr), std::end(arr)));
-
-		std::cout << "\nTest test - done" << std::endl;
+		std::cout << "Test vi_tmReport - done" << std::endl;
 	}
-VI_OPTIMIZE_ON
-
 } // namespace
-
-namespace namespace_name
-{	struct class_name
-	{	static int function_name(int argument_name) { VI_TM_FUNC; return argument_name; }
-		static const char *function_name(const char *argument_name) { VI_TM_FUNC; return argument_name; }
-		template<typename T>
-		static T function_name(T argument_name) { VI_TM_FUNC; return argument_name; }
-	};
-}
 
 int main()
 {	VI_TM_FUNC;
@@ -413,17 +319,16 @@ int main()
 
 		foo_c();
 		test_empty();
-		test_instances();
+		test_sleep();
 		prn_clock_properties();
-		test();
 	}
 
+	test_report();
 	test_multithreaded();
-	test_vi_tmResults();
+
+	report_RAW(nullptr);
+
 	vi_tmCurrentThreadAffinityRestore();
-	namespace_name::class_name::function_name(0);
-	namespace_name::class_name::function_name("");
-	namespace_name::class_name::function_name(3.14);
 
 	std::cout << "\nHello, World!\n" << std::endl;
 

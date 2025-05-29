@@ -54,30 +54,33 @@ namespace
 #ifdef VI_TM_STAT_USE_WELFORD
 		// Welford’s online algorithm for computing variance
 		mutable std::mutex mutex_;
-		double mean_ = 0.0;
-		double m2_ = 0.0;
-		size_t amt_ = 0U;
-		size_t calls_ = 0U;
+		double mean_ = 0.0; // Mean value.
+		double m2_ = 0.0; // Sum of squares.
+		size_t cnt_ = 0U; // Number of calls processed.
+		VI_TM_TDIFF sum_ = 0U; // Sum of all measurements. Not filtered!
+		size_t calls_ = 0U; // Number of calls to 'add()'. Not filtered!
+		size_t amt_ = 0U; // Number of items for measurements. Not filtered!
 #else
 		// Simple statistics: no standard deviation, only the mean value.
 		std::atomic<VI_TM_TDIFF> sum_ = 0U;
-		std::atomic<size_t> amt_ = 0U;
 		std::atomic<size_t> calls_ = 0U;
+		std::atomic<size_t> amt_ = 0U;
 #endif
 
 		void add(VI_TM_TDIFF diff, size_t amt) noexcept
 		{	if(verify(!!amt))
 			{
 #ifdef VI_TM_STAT_USE_WELFORD
-				const double ave = static_cast<double>(diff) / amt;
+				static constexpr double K = 3.0; // Threshold for outliers.
 				std::lock_guard lg(mutex_);
-				if (amt_ <= 2 || ave - mean_ > 2.5 * std::sqrt(m2_ / amt_)) // Avoids outliers.
-				{	++calls_;
-					const size_t total = amt_ + amt;
-					const double delta = ave - mean_;
-					mean_ = (amt_ * mean_ + diff) / total;
-					m2_ += delta * delta * amt_ * amt / total;
-					amt_ = total;
+				calls_++;
+				sum_ += diff;
+				amt_ += amt;
+				if (auto d = static_cast<double>(diff) / amt - mean_; cnt_ <= 2 || d < K * std::sqrt(m2_ / cnt_)) // Avoids outliers.
+				{	const size_t total = cnt_ + amt;
+					mean_ = (cnt_ * mean_ + diff) / total;
+					m2_ += d * d * cnt_ * amt / total;
+					cnt_ = total;
 				}
 #else
 				calls_.fetch_add(1, std::memory_order_relaxed);
@@ -86,15 +89,15 @@ namespace
 #endif
 			}
 		}
-		vi_tmMeasuringData_t get() const noexcept
-		{	vi_tmMeasuringData_t result;
+		vi_tmMeasuringRAW_t get() const noexcept
+		{	vi_tmMeasuringRAW_t result;
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::lock_guard lg(mutex_);
 			result.mean_ = mean_;
 			result.m2_ = m2_;
-#else
-			result.sum_ = sum_;
+			result.cnt_ = cnt_;
 #endif
+			result.sum_ = sum_;
 			result.amt_ = amt_;
 			result.calls_ = calls_;
 			return result;
@@ -103,11 +106,10 @@ namespace
 		{
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::lock_guard lg(mutex_);
-			mean_ = 0.0;
-			m2_ = 0.0;
-#else
-			sum_ = 0U;
+			mean_ = m2_ = 0.0;
+			cnt_ = 0U;
 #endif
+			sum_ = 0U;
 			amt_ = calls_ = 0U;
 		}
 	};
@@ -139,9 +141,9 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 	for (auto &it : storage_)
 	{
 #if defined VI_TM_STAT_USE_WELFORD
-		assert(it.second.amt_ >= it.second.calls_ && ((0.0 != it.second.mean_) == !!it.second.calls_));
+		assert(it.second.amt_ >= it.second.calls_ && (!!it.second.sum_ == !!it.second.calls_) && ((0.0 != it.second.mean_) == !!it.second.cnt_));
 #else
-		assert(it.second.amt_ >= it.second.calls_ && (!!it.second.sum_ == !!it.second.calls_));
+		assert(it.second.amt_ >= it.second.calls_);
 #endif
 		if (!it.first.empty())
 		{	if (const auto interrupt = fn(static_cast<VI_TM_HMEAS>(&it), data))
@@ -203,7 +205,7 @@ void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, size
 {	if (verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasuringData_t *data)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasuringRAW_t *data)
 {	if (verify(meas))
 	{	if (name) { *name = meas->first.c_str(); }
 		if (data) { *data = meas->second.get(); }
@@ -220,11 +222,10 @@ namespace
 {
 	const auto nanotest = []
 		{
-//#	define TINY_SET_SAMPLES
-#	ifdef TINY_SET_SAMPLES
-			static constexpr VI_TM_TDIFF samples_simple[] = { 34, 81, 17 };
-			static constexpr VI_TM_TDIFF samples_multiple[] = { 34, };
-			static constexpr auto M = 2;
+#	if false
+			static constexpr VI_TM_TDIFF samples_simple[] = { 34, 81, 17 }; // 132/3=44; 2198/2=1099
+			static constexpr VI_TM_TDIFF samples_multiple[] = { 34, }; // 34/1=34; 1156/0=0
+			static constexpr auto M = 2; // (132+2*34)/(3+2*1)=200/5=40.0; 2198+(34-44)^2*3*2/(3+2)=2318
 #	else
 			static constexpr VI_TM_TDIFF samples_simple[] =
 			{	40, 60, 37, 16, 44, 37, 22, 48, 37, 37, 48, 40, 39, 37, 52, 33, 44, 55, 42, 19,
@@ -237,12 +238,13 @@ namespace
 				48, 50, 28, 43, 48, 54, 38, 48, 18, 37, 47, 43, 38, 48, 36, 56, 32, 58, 46, 58,
 				39, 41, 31, 34, 33, 47, 43, 34, 39, 55, 39, 27, 39, 54, 24, 38, 44, 20, 40, 50,
 				43, 39, 33, 41, 46, 37, 42, 51, 57, 29, 52, 36, 57, 56, 42, 39, 35, 38, 31, 42,
-			};
+			}; // 8139/200=40,695; 19798,39442/199=99,48941920
 			static constexpr VI_TM_TDIFF samples_multiple[] =
 			{	35, 39, 43, 40, 38, 43, 41, 33, 39, 37,
-			};
-			static constexpr auto M = 10;
+			}; // 388/10=38.8; 93.60/9=10.40
+			static constexpr auto M = 10; // (8139+10*388)/(200+10*10)=12019/300=40,06(3); 19798,39442+(38,8-40,695)^2*200*100/(200+100)=305,3963147(3)
 #	endif
+			static constexpr VI_TM_TDIFF samples_exclue[] = { 340, }; // 340/1=340; 115600/0=...
 
 			static constexpr auto n = std::size(samples_simple) + M * std::size(samples_multiple);
 			static const auto mean = 
@@ -266,7 +268,7 @@ namespace
 			static constexpr char NAME[] = "dummy";
 
 			const char *name = nullptr;
-			vi_tmMeasuringData_t md;
+			vi_tmMeasuringRAW_t md;
 			std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose };
 			{	const auto m = vi_tmMeasuring(journal.get(), NAME);
 				for (auto x : samples_simple)
@@ -275,18 +277,24 @@ namespace
 				for (auto x : samples_multiple)
 				{	vi_tmMeasuringRepl(m, M * x, M);
 				}
+#	ifdef VI_TM_STAT_USE_WELFORD
+				for (auto x : samples_exclue)
+				{	vi_tmMeasuringRepl(m, x, 1);
+				}
+#	endif
 				vi_tmMeasuringGet(m, &name, &md);
 			}
 
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
-//			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
-//#	ifdef VI_TM_STAT_USE_WELFORD
-//			assert(std::abs(md.mean_ - mean) / mean < 1e-12);
-//			const auto s = std::sqrt(md.m2_ / (md.amt_ - 1));
-//			assert(std::abs(s - S) / S < 1e-12);
-//#	else
-//			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - mean) < 1e-12);
-//#	endif
+#	ifdef VI_TM_STAT_USE_WELFORD
+			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclue));
+			assert(std::abs(md.mean_ - mean) / mean < 1e-12);
+			const auto s = std::sqrt(md.m2_ / (md.cnt_ - 1));
+			assert(std::abs(s - S) / S < 1e-12);
+#	else
+			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
+			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - mean) < 1e-12);
+#	endif
 			return 0;
 		}();
 }

@@ -89,9 +89,9 @@ namespace
 VI_OPTIMIZE_OFF
 	duration measurement_duration()
 	{	
-		static auto gauge_zero = []
-			{	static vi_tmMeasuring_t* const meas_point = vi_tmMeasuring(nullptr, ""); // Create a service item with empty name "".
-				const auto start = vi_tmGetTicks();
+		static vi_tmMeasuring_t* const meas_point = vi_tmMeasuring(nullptr, ""); // Create a service item with empty name "".
+		static const auto gauge_zero = []
+			{	const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
 				vi_tmMeasuringRepl(meas_point, finish - start, 1U);
 			};

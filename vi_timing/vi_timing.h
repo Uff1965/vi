@@ -106,7 +106,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-#define VI_TM_STAT_USE_WELFORD // If defined, uses Welford's method for calculating variance and standard deviation.
+//#define VI_TM_STAT_USE_WELFORD // If defined, uses Welford's method for calculating variance and standard deviation.
 
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
@@ -179,17 +179,17 @@ extern "C" {
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
 
-	typedef struct vi_tmMeasuringData_t
+	typedef struct vi_tmMeasuringRAW_t
 	{
-		size_t amt_; // The amount of work measured, e.g., number of iterations or processed items.
-		size_t calls_; // The number of times the measurement was called or invoked.
+		size_t calls_; // The number of times the measurement was invoked. Not filtered!
+		size_t amt_; // The number of all measured elements, including discarded ones. Not filtered!
+		VI_TM_TDIFF sum_; // Total time spent measuring all elements, in ticks. Not filtered!
 #if defined VI_TM_STAT_USE_WELFORD
+		size_t cnt_; // Number of items counted.
 		double mean_; // The mean (average) time taken per processed items. In ticks.
-		double m2_; // The second moment, used for calculating variance and standard deviation.
-#else
-		VI_TM_TDIFF sum_; // The total time taken for the measurements, in ticks.
+		double m2_; // The second moment, used for calculating variance and standard deviation. In ticks
 #endif
-	} vi_tmMeasuringData_t;
+	} vi_tmMeasuringRAW_t;
 
 	/// <summary>
 	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
@@ -200,7 +200,7 @@ extern "C" {
 	/// <param name="amount">Pointer to a size_t variable that will receive the measured amount. Can be nullptr if not needed.</param>
 	/// <param name="calls_cnt">Pointer to a size_t variable that will receive the number of calls. Can be nullptr if not needed.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, vi_tmMeasuringData_t *data);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, vi_tmMeasuringRAW_t *data);
 	
 	/// <summary>
 	/// Resets the measurement state for the specified measurement handle.
