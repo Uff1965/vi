@@ -343,16 +343,16 @@ VI_OPTIMIZE_OFF
 		static std::recursive_mutex rmtx;
 		static std::timed_mutex tmtx;
 
-		auto a0 = [] { VI_TM("a0"); };
-		auto a1 = [] { VI_TM("a1"); v1 = 777; };
-		auto a2 = [] { VI_TM("a2"); v2 = 777; };
-		auto a3 = [] { VI_TM("a3"); v3.store(777, std::memory_order_relaxed); };
-		auto a4 = [] { VI_TM("a4"); v4 = 777; };
-		auto a5 = [] { VI_TM("a5"); v3 = 777; };
-		auto a6 = [] { VI_TM("a6"); std::lock_guard lg{ smtx  }; v1 = 777; };
-		auto a7 = [] { VI_TM("a7"); std::lock_guard lg{ mtx }; v1 = 777; };
-		auto a8 = [] { VI_TM("a8"); std::lock_guard lg{ rmtx }; v1 = 777; };
-		auto a9 = [] { VI_TM("a9"); std::lock_guard lg{ tmtx }; v1 = 777; };
+		auto a0 = [] { VI_TM("*empty"); };
+		auto a1 = [] { VI_TM("*normal"); v1 = 777; };
+		auto a2 = [] { VI_TM("*volatile"); v2 = 777; };
+		auto a3 = [] { VI_TM("*atomic_relax"); v3.store(777, std::memory_order_relaxed); };
+		auto a4 = [] { VI_TM("*thread_local"); v4 = 777; };
+		auto a5 = [] { VI_TM("*atomic"); v3 = 777; };
+		auto a6 = [] { VI_TM("*shared_mutex"); std::lock_guard lg{ smtx  }; v1 = 777; };
+		auto a7 = [] { VI_TM("*mutex"); std::lock_guard lg{ mtx }; v1 = 777; };
+		auto a8 = [] { VI_TM("*recursive_m"); std::lock_guard lg{ rmtx }; v1 = 777; };
+		auto a9 = [] { VI_TM("*timed_mutex"); std::lock_guard lg{ tmtx }; v1 = 777; };
 
 		void(*arr[])() = { a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, };
 		std::sort(std::begin(arr), std::end(arr));
