@@ -27,15 +27,16 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
 #include "../vi_timing.h"
-#include "build_number_maker.h"
+#include "build_number_maker.h" // For build number generation.
 
 #include <atomic>
 #include <cassert>
-#include <cstdint>
-#include <memory>
-#include <mutex>
-#include <numeric>
-#include <string>
+#include <cstdint> // std::uint64_t, std::size_t
+#include <cmath> // std::sqrt
+#include <memory> // std::unique_ptr
+#include <mutex> // std::mutex, std::lock_guard
+#include <numeric> // std::accumulate
+#include <string> // std::string
 #include <unordered_map> // unordered_map: "does not invalidate pointers or references to elements".
 
 #ifdef __STDC_NO_ATOMICS__
