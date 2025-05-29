@@ -181,13 +181,13 @@ extern "C" {
 
 	typedef struct vi_tmMeasuringData_t
 	{
-		size_t amt_;
-		size_t calls_;
+		size_t amt_; // The amount of work measured, e.g., number of iterations or processed items.
+		size_t calls_; // The number of times the measurement was called or invoked.
 #if defined VI_TM_STAT_USE_WELFORD
-		double mean_;
-		double m2_;
+		double mean_; // The mean (average) time taken per processed items. In ticks.
+		double m2_; // The second moment, used for calculating variance and standard deviation.
 #else
-		VI_TM_TDIFF sum_;
+		VI_TM_TDIFF sum_; // The total time taken for the measurements, in ticks.
 #endif
 	} vi_tmMeasuringData_t;
 

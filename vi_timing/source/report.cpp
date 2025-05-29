@@ -44,7 +44,7 @@ namespace
 	constexpr char TitleName[] = "Name";
 	constexpr char TitleAverage[] = "Avg.";
 	constexpr char TitleTotal[] = "Total";
-	constexpr char TitlePrecision[] = "+/- %";
+	constexpr char TitlePrecision[] = "StdDev";
 	constexpr char TitleAmount[] = "Amount";
 	constexpr char Ascending[] = " [^]";
 	constexpr char Descending[] = " [v]";
@@ -76,7 +76,7 @@ namespace
 		duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
 		std::string average_txt_{ NotAvailable };
 #if defined(VI_TM_STAT_USE_WELFORD)
-		double precision_{ .0 }; // percents
+		double precision_{ .0 }; // standard deviation in ticks
 		std::string precision_txt_{ NotAvailable };
 #endif
 		std::size_t amt_{}; // Number of measured units
@@ -104,7 +104,7 @@ namespace
 				sum_txt_ = to_string(sum_);
 				if (meas.calls_ > 1 && amt_ > 1)
 				{	precision_ = std::sqrt(meas.m2_ / (amt_ - 1));
-					precision_txt_ = misc::to_string(precision_ / ave * 100.0, 2, 1);
+					precision_txt_ = misc::to_string(precision_ / ave * 100.0, 2, 0) + "%";
 				}
 			}
 #else
@@ -182,7 +182,7 @@ namespace
 
 		std::size_t max_len_name_{ std::size(TitleName) - 1 };
 		std::size_t max_len_average_{ std::size(TitleAverage) - 1 };
-#if defined(VI_TM_STAT_USE_WELFORD)
+#ifdef VI_TM_STAT_USE_WELFORD
 		std::size_t max_len_precision_{ std::size(TitlePrecision) - 1 };
 #endif
 		std::size_t max_len_total_{ std::size(TitleTotal) - 1 };
@@ -312,7 +312,7 @@ int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
 		std::setw(max_len_name_) << title(TitleName, vi_tmSortByName) << ": " << std::setfill(' ') << std::right <<
 		std::setw(max_len_average_) << title(TitleAverage, vi_tmSortBySpeed) <<
 #if defined(VI_TM_STAT_USE_WELFORD)
-		" " << std::setw(max_len_precision_) << TitlePrecision <<
+		" (" << std::setw(max_len_precision_) << TitlePrecision << ")" <<
 #endif
 		" [" <<
 		std::setw(max_len_total_) << title(TitleTotal, vi_tmSortByTime) << " / " <<
@@ -323,7 +323,7 @@ int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
 #ifndef NDEBUG	
 	auto len = number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1;
 #if defined(VI_TM_STAT_USE_WELFORD)
-		len += max_len_precision_ + 1;
+		len += max_len_precision_ + 1 + 2;
 #	endif
 	assert(len == result.size());
 #endif
@@ -342,7 +342,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void
 		std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<
 		std::setw(max_len_average_) << i.average_txt_ <<
 #if defined(VI_TM_STAT_USE_WELFORD)
-		" " << std::setw(max_len_precision_) << i.precision_txt_ <<
+		" (" << std::setw(max_len_precision_) << i.precision_txt_ << ")" <<
 #endif
 		" [" <<
 		std::setw(max_len_total_) << i.sum_txt_ << " / " <<
@@ -354,7 +354,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void
 	{	
 		auto len = number_len_ + 2 + max_len_name_ + 2 + max_len_average_ + 2 + max_len_total_ + 3 + max_len_amount_ + 1 + 1;
 #if defined(VI_TM_STAT_USE_WELFORD)
-		len += max_len_precision_ + 1;
+		len += max_len_precision_ + 1 + 2;
 #	endif
 		assert(len == result.size());
 	}
