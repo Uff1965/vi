@@ -106,7 +106,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
-//#define VI_TM_STAT_USE_WELFORD // If defined, uses Welford's method for calculating variance and standard deviation.
+#define VI_TM_STAT_USE_WELFORD // If defined, uses Welford's method for calculating variance and standard deviation.
 
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).

@@ -18,6 +18,9 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
+#include <random>
+#include <shared_mutex>
 #include <thread>
 #include <vector>
 
@@ -116,8 +119,8 @@ VI_OPTIMIZE_OFF
 VI_OPTIMIZE_ON
 
 	void test_sleep()
-	{	VI_TM("Test slleep");
-		std::cout << "\nTest slleep:\n";
+	{	VI_TM("Test sleep");
+		std::cout << "\nTest sleep:\n";
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto h = handler.get();
 			{	auto m = vi_tmMeasuring(h, "100ms");
@@ -305,6 +308,66 @@ VI_OPTIMIZE_ON
 
 		std::cout << "Test vi_tmReport - done" << std::endl;
 	}
+
+	void test_sleep2()
+	{	VI_TM("test_sleep2");
+		std::cout << "\nTest test_sleep2:\n";
+
+		{	std::mt19937 gen(std::random_device{}());
+			std::normal_distribution dist(0.1, 0.01);
+			for (int i = 0; i < 100; ++i)
+			{	double val;
+				do
+				{	val = dist(gen);
+				} while (val < 0.015 || val > 1.5);
+
+				{	VI_TM("SLEEP_FOR");
+					std::this_thread::sleep_for(std::chrono::duration<double>(val));
+				}
+			}
+		}
+		std::cout << "Test test_sleep2 - done" << std::endl;
+	}
+
+VI_OPTIMIZE_OFF
+	void test_access()
+	{	VI_TM("Test test_access");
+		std::cout << "\nTest test_access:\n";
+
+		static int v1 = 0;
+		static volatile int v2 = 0;
+		static std::atomic<int> v3 = 0;
+		thread_local int v4 = 0;
+		static std::shared_mutex smtx;
+		static std::mutex mtx;
+		static std::recursive_mutex rmtx;
+		static std::timed_mutex tmtx;
+
+		auto a0 = [] { VI_TM("a0"); };
+		auto a1 = [] { VI_TM("a1"); v1 = 777; };
+		auto a2 = [] { VI_TM("a2"); v2 = 777; };
+		auto a3 = [] { VI_TM("a3"); v3.store(777, std::memory_order_relaxed); };
+		auto a4 = [] { VI_TM("a4"); v4 = 777; };
+		auto a5 = [] { VI_TM("a5"); v3 = 777; };
+		auto a6 = [] { VI_TM("a6"); std::lock_guard lg{ smtx  }; v1 = 777; };
+		auto a7 = [] { VI_TM("a7"); std::lock_guard lg{ mtx }; v1 = 777; };
+		auto a8 = [] { VI_TM("a8"); std::lock_guard lg{ rmtx }; v1 = 777; };
+		auto a9 = [] { VI_TM("a9"); std::lock_guard lg{ tmtx }; v1 = 777; };
+
+		void(*arr[])() = { a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, };
+		std::sort(std::begin(arr), std::end(arr));
+		for (unsigned n = 1; n; --n)
+		{	do
+			{	for (auto &&f : arr)
+				{	std::this_thread::yield();
+					f();
+				}
+			} while (std::next_permutation(std::begin(arr), std::end(arr)));
+		}
+
+		std::cout << "Test test_access - done" << std::endl;
+	}
+VI_OPTIMIZE_ON
 } // namespace
 
 int main()
@@ -325,6 +388,8 @@ int main()
 
 	test_report();
 	test_multithreaded();
+	test_sleep2();
+	test_access();
 
 	report_RAW(nullptr);
 
