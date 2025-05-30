@@ -44,7 +44,7 @@ namespace
 	constexpr char TitleName[] = "Name";
 	constexpr char TitleAverage[] = "Avg.";
 	constexpr char TitleTotal[] = "Total";
-	constexpr char TitlePrecision[] = "StdDev";
+	constexpr char TitlePrecision[] = "CV";
 	constexpr char TitleAmount[] = "Amount";
 	constexpr char Ascending[] = " [^]";
 	constexpr char Descending[] = " [v]";
@@ -77,7 +77,7 @@ namespace
 		duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
 #if defined(VI_TM_STAT_USE_WELFORD)
 		double precision_{ .0 }; // standard deviation in ticks
-		std::string precision_txt_{ NotAvailable };
+		std::string precision_txt_{ "" };
 #endif
 		std::size_t amt_{}; // Number of measured units
 
