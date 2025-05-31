@@ -31,8 +31,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <atomic>
 #include <cassert>
-#include <cstdint> // std::uint64_t, std::size_t
 #include <cmath> // std::sqrt
+#include <cstdint> // std::uint64_t, std::size_t
+#include <functional>
 #include <memory> // std::unique_ptr
 #include <mutex> // std::mutex, std::lock_guard
 #include <numeric> // std::accumulate
@@ -129,12 +130,12 @@ private:
 	std::mutex storage_guard_;
 	storage_t storage_;
 public:
-	static auto& from_handle(VI_TM_HJOUR journal) { static vi_tmJournal_t global; return journal ? *journal : global; }
+	static auto &from_handle(VI_TM_HJOUR journal) { static vi_tmJournal_t global; return journal ? *journal : global; } // Get the journal from the handle or return the global journal.
 	explicit vi_tmJournal_t() { storage_.max_load_factor(MAX_LOAD_FACTOR); storage_.reserve(DEFAULT_STORAGE_CAPACITY); }
 	int init() { return 0; }
-	auto& at(const char *name) { std::lock_guard lock{ storage_guard_ }; return *storage_.try_emplace(name).first; }
-	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data);
-	void reset(const char *name = nullptr);
+	auto& at(const char *name) { std::lock_guard lock{ storage_guard_ }; return *storage_.try_emplace(name).first; } // Get a reference to the measurement by name, creating it if it does not exist.
+	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
+	void reset(const char *name = nullptr); // Resets a specific measurement by name or all measurements if name is nullptr.
 };
 
 int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
@@ -147,7 +148,7 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 		assert(it.second.amt_ >= it.second.calls_);
 #endif
 		if (!it.first.empty())
-		{	if (const auto interrupt = fn(static_cast<VI_TM_HMEAS>(&it), data))
+		{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data))
 			{	return interrupt;
 			}
 		}
@@ -223,34 +224,17 @@ namespace
 {
 	const auto nanotest = []
 		{
-#	if false
-			static constexpr VI_TM_TDIFF samples_simple[] = { 34, 81, 17 };
-			static constexpr VI_TM_TDIFF samples_multiple[] = { 34, };
+			static constexpr VI_TM_TDIFF samples_simple[] = { 34, 32, 36 }; // Samples that will be added one at a time.
 			static constexpr auto M = 2;
-#	else
-			static constexpr VI_TM_TDIFF samples_simple[] =
-			{	46, 52, 50, 49, 51, 50, 48, 48, 52, 46, 49, 51, 49, 52, 54, 47, 48, 51, 46, 49,
-				51, 48, 52, 50, 50, 49, 51, 51, 53, 51, 48, 51, 52, 52, 49, 53, 52, 48, 46, 49,
-				51, 52, 52, 47, 50, 49, 50, 52, 47, 54, 51, 48, 49, 51, 51, 49, 50, 53, 50, 49,
-				50, 51, 50, 45, 51, 51, 52, 49, 50, 49, 50, 51, 53, 49, 51, 48, 49, 52, 52, 50,
-				53, 47, 52, 52, 50, 46, 49, 50, 49, 51, 50, 50, 51, 49, 49, 52, 48, 50, 47, 53,
-				49, 48, 48, 52, 53, 53, 49, 52, 52, 53, 48, 50, 49, 51, 51, 46, 49, 52, 47, 48,
-				50, 50, 50, 51, 48, 49, 52, 51, 51, 46, 50, 48, 50, 48, 48, 51, 52, 53, 51, 47,
-				48, 51, 49, 48, 47, 50, 52, 50, 53, 52, 49, 48, 53, 53, 47, 52, 48, 48, 51, 53,
-				49, 50, 49, 49, 50, 52, 49, 49, 53, 51, 48, 50, 51, 48, 53, 46, 50, 48, 48, 50,
-				52, 52, 51, 49, 52, 46, 49, 49, 49, 48, 49, 49, 49, 48, 52, 52, 52, 51, 54, 48,
-			};
-			static constexpr VI_TM_TDIFF samples_multiple[] = { 50, 45, 52, 48, 50, 50, 47, 46, 46, 49, };
-			static constexpr auto M = 10;
-#	endif
-			static constexpr VI_TM_TDIFF samples_exclue[] = { 93, 98, 97, 100, 99, 99, 110, 97, 100, 98, };
+			static constexpr VI_TM_TDIFF samples_multiple[] = { 34, }; // Samples that will be added M times at once.
+			static constexpr VI_TM_TDIFF samples_exclude[] = { 68 }; // Samples that will be excluded from the statistics.
 
-			static constexpr auto n = std::size(samples_simple) + M * std::size(samples_multiple);
+			static constexpr auto n = std::size(samples_simple) + M * std::size(samples_multiple); // The total number of samples that will be counted.
 			static const auto mean = 
 				(	std::accumulate(std::cbegin(samples_simple), std::cend(samples_simple), 0.0) +
 					M * std::accumulate(std::cbegin(samples_multiple), std::cend(samples_multiple), 0.0)
-				) / n;
-			static const auto S = []
+					) / n; // The mean value of the samples that will be counted.
+			static const auto S = [] // The standard deviation of the samples that will be counted.
 				{	const auto m2 = std::accumulate
 					(	std::cbegin(samples_simple),
 						std::cend(samples_simple),
@@ -264,29 +248,29 @@ namespace
 					);
 					return std::sqrt(m2 / (n - 1));
 				}();
-			static constexpr char NAME[] = "dummy";
+			static constexpr char NAME[] = "dummy"; // The name of the measurement.
 
-			const char *name = nullptr;
-			vi_tmMeasuringRAW_t md;
-			std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose };
-			{	const auto m = vi_tmMeasuring(journal.get(), NAME);
-				for (auto x : samples_simple)
+			const char *name = nullptr; // Name of the measurement to be filled in.
+			vi_tmMeasuringRAW_t md; // Measurement data to be filled in.
+			std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose }; // Journal for measurements, automatically closed on destruction.
+			{	const auto m = vi_tmMeasuring(journal.get(), NAME); // Create a measurement 'NAME'.
+				for (auto x : samples_simple) // Add simple samples one at a time.
 				{	vi_tmMeasuringRepl(m, x);
 				}
-				for (auto x : samples_multiple)
+				for (auto x : samples_multiple) // Add multiple samples M times at once.
 				{	vi_tmMeasuringRepl(m, M * x, M);
 				}
 #	ifdef VI_TM_STAT_USE_WELFORD
-				for (auto x : samples_exclue)
+				for (auto x : samples_exclude) // Add samples that will be excluded from the statistics.
 				{	vi_tmMeasuringRepl(m, x, 1);
 				}
 #	endif
-				vi_tmMeasuringGet(m, &name, &md);
+				vi_tmMeasuringGet(m, &name, &md); // Get the measurement data and name.
 			}
 
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
 #	ifdef VI_TM_STAT_USE_WELFORD
-			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclue));
+			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
 			assert(std::abs(md.mean_ - mean) / mean < 1e-12);
 			const auto s = std::sqrt(md.m2_ / (md.cnt_ - 1));
 			assert(std::abs(s - S) / S < 1e-12);
