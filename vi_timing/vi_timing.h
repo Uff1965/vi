@@ -323,7 +323,7 @@ extern "C" {
 #	define VI_STR(s) VI_STR_AUX(s)
 #	define VI_STR_GUM_AUX( a, b ) a##b
 #	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#	define VI_MAKE_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+#	define VI_UNIC_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
 
 // VI_DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
 #	ifdef NDEBUG
@@ -352,14 +352,12 @@ namespace vi_tm
 		init_t &operator=(init_t &&) = delete;
 
 		void init() const
-		{
-			[[maybe_unused]] const auto result = vi_tmInit();
+		{	[[maybe_unused]] const auto result = vi_tmInit();
 			assert(0 == result);
 		}
 		template<typename T, typename... Args>
 		void init(T &&v, Args&&... args)
-		{
-			if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
+		{	if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
 			{	flags_ |= v;
 			}
 			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmRptCb_t>)
@@ -386,12 +384,10 @@ namespace vi_tm
 		init_t() { init(); };
 		template<typename... Args> explicit init_t(Args&&... args)
 			: flags_{0U}
-		{
-			init(std::forward<Args>(args)...);
+		{	init(std::forward<Args>(args)...);
 		}
 		~init_t()
-		{
-			if (!title_.empty())
+		{	if (!title_.empty())
 			{	callback_function_(title_.c_str(), callback_data_);
 			}
 			vi_tmReport(nullptr, flags_, callback_function_, callback_data_);
@@ -405,26 +401,28 @@ namespace vi_tm
 		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
 		measurer_t(const measurer_t &) = delete;
 		void operator=(const measurer_t &) = delete;
+		measurer_t(measurer_t &&) = delete;
+		void operator=(measurer_t &&) = delete;
 	public:
 		measurer_t(VI_TM_HMEAS m, size_t amt = 1): meas_{m}, amt_{amt} {/**/}
-		~measurer_t() { const auto finish = vi_tmGetTicks(); vi_tmMeasuringRepl(meas_, finish - start_, amt_); }
+		~measurer_t() { const auto finish = vi_tmGetTicks(); assert(meas_);  vi_tmMeasuringRepl(meas_, finish - start_, amt_); }
 	};
 } // namespace vi_tm
 
 #		if defined(VI_TM_DISABLE)
-#			define VI_TM_INIT(...) static const int VI_MAKE_ID(_vi_tm_) = 0
-#			define VI_TM(...) static const int VI_MAKE_ID(_vi_tm_) = 0
+#			define VI_TM_INIT(...) static const int VI_UNIC_ID(_vi_tm_) = 0
+#			define VI_TM(...) static const int VI_UNIC_ID(_vi_tm_) = 0
 #			define VI_TM_FUNC ((void)0)
 #			define VI_TM_REPORT(...) ((void)0)
 #			define VI_TM_RESET ((void)0)
 #			define VI_TM_FULLVERSION ""
 #		else
-#			define VI_TM_INIT(...) vi_tm::init_t VI_MAKE_ID(_vi_tm_) {__VA_ARGS__}
-			//	The macro VI_TM(const char* name, siz_t amount = 1) stores the pointer to the named measurer
-			//	in a static variable to save resources. Therefore, it cannot be used with different names.
+#			define VI_TM_INIT(...) vi_tm::init_t VI_UNIC_ID(_vi_tm_) {__VA_ARGS__}
+			// The macro VI_TM stores the pointer to the named measurer in a static variable.
+			// Therefore, it cannot be used with different names.
 #			define VI_TM(...) \
-				const auto VI_MAKE_ID(_vi_tm_) = [] (const char* name, size_t amount = 1) -> vi_tm::measurer_t { \
-					static const auto meas = vi_tmMeasuring(nullptr, name); /* Static to ensure one measurer per name */ \
+				const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, size_t amount = 1) -> vi_tm::measurer_t { \
+					static const auto meas = vi_tmMeasuring(nullptr, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
 					VI_DEBUG_ONLY( \
 						const char* registered_name = nullptr; \
 						vi_tmMeasuringGet(meas, &registered_name, nullptr); \
