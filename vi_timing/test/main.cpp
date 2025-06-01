@@ -67,7 +67,46 @@ namespace
 		}();
 }
 
-namespace {
+namespace
+{
+	void report_RAW(VI_TM_HJOUR h)
+	{
+		struct data_t
+		{	std::size_t name_max_len_ = 0;
+		} data;
+
+		auto cb_name = [](VI_TM_HMEAS m, void *data)
+			{	auto d = static_cast<data_t *>(data);
+				const char *name = nullptr;
+				vi_tmMeasuringGet(m, &name, nullptr);
+				if (name && *name && d->name_max_len_ < std::strlen(name))
+				{	d->name_max_len_ = std::strlen(name);
+				}
+				return 0;
+			};
+		vi_tmMeasuringEnumerate(h, cb_name, &data);
+
+		auto results_callback = [](VI_TM_HMEAS m, void* data)
+			{	auto d = static_cast<data_t *>(data);
+				const char *name;
+				vi_tmMeasuringRAW_t meas;
+				vi_tmMeasuringGet(m, &name, &meas);
+				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
+				std::right << std::scientific <<
+#ifdef VI_TM_STAT_USE_WELFORD
+				" mean = " << meas.mean_ << ","
+				" ss = " << meas.ss_ << ","
+				" cnt = " << std::setw(12) << meas.cnt_ << ","
+#endif
+				" sum = " << std::setw(15) << meas.sum_ << ","
+				" amt = " << std::setw(12) << meas.amt_ << ","
+				" calls = " << std::setw(12) << meas.calls_ <<
+				std::endl;
+				return 0;
+			};
+		vi_tmMeasuringEnumerate(h, results_callback, &data);
+	}
+
 VI_OPTIMIZE_OFF
 	void test_multithreaded()
 	{	VI_TM("test_multithreaded");
@@ -81,8 +120,8 @@ VI_OPTIMIZE_OFF
 
 		static std::atomic<std::size_t> v{};
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
-		auto load = [h = h.get()]
-		{	static auto j_load = vi_tmMeasuring(h, "load");
+		auto thread_fn = [h = h.get()]
+		{	static auto j_load = vi_tmMeasuring(h, "thread_fn");
 			vi_tm::measurer_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
@@ -96,7 +135,7 @@ VI_OPTIMIZE_OFF
 
 		std::vector<std::thread> threads{ 2 * std::thread::hardware_concurrency() };
 		for (auto& t : threads)
-		{	t = std::thread{ load };
+		{	t = std::thread{ thread_fn };
 		}
 
 		for (auto& t : threads)
@@ -113,6 +152,9 @@ VI_OPTIMIZE_OFF
 		}
 
 		std::cout << "Timing Test multithreaded:\n";
+		std::cout << "RAW:\n";
+		report_RAW(h.get());
+		std::cout << "Report:\n";
 		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		std::cout << "Test multithreaded - done" << std::endl;
 	}
@@ -224,44 +266,6 @@ VI_OPTIMIZE_ON
 		{	std::cout << "\nTick: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
 		std::cout << "\nClock properties - done" << std::endl;
-	}
-
-	void report_RAW(VI_TM_HJOUR h)
-	{
-		struct data_t
-		{	std::size_t name_max_len_ = 0;
-		} data;
-
-		auto cb_name = [](VI_TM_HMEAS m, void *data)
-			{	auto d = static_cast<data_t *>(data);
-				const char *name = nullptr;
-				vi_tmMeasuringGet(m, &name, nullptr);
-				if (name && *name && d->name_max_len_ < std::strlen(name))
-				{	d->name_max_len_ = std::strlen(name);
-				}
-				return 0;
-			};
-		vi_tmMeasuringEnumerate(h, cb_name, &data);
-
-		auto results_callback = [](VI_TM_HMEAS m, void* data)
-			{	auto d = static_cast<data_t *>(data);
-				const char *name;
-				vi_tmMeasuringRAW_t meas;
-				vi_tmMeasuringGet(m, &name, &meas);
-				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
-				std::right << std::scientific <<
-#ifdef VI_TM_STAT_USE_WELFORD
-				" mean = " << meas.mean_ << ","
-				" ss = " << meas.ss_ << ","
-				" cnt = " << std::setw(12) << meas.cnt_ << ","
-#endif
-				" sum = " << std::setw(15) << meas.sum_ << ","
-				" amt = " << std::setw(12) << meas.amt_ << ","
-				" calls = " << std::setw(12) << meas.calls_ <<
-				std::endl;
-				return 0;
-			};
-		vi_tmMeasuringEnumerate(h, results_callback, &data);
 	}
 
 	void test_report()
