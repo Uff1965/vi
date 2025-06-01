@@ -143,7 +143,9 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 	for (auto &it : storage_)
 	{
 #if defined VI_TM_STAT_USE_WELFORD
-		assert(it.second.amt_ >= it.second.calls_ && (!!it.second.sum_ == !!it.second.calls_) && ((0.0 != it.second.mean_) == !!it.second.cnt_));
+		assert(it.second.amt_ >= it.second.calls_);
+		assert(!!it.second.sum_ == !!it.second.calls_);
+		assert((0.0 != it.second.mean_) == !!it.second.cnt_);
 #else
 		assert(it.second.amt_ >= it.second.calls_);
 #endif
