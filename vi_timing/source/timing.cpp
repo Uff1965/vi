@@ -78,7 +78,7 @@ namespace
 				calls_++;
 				sum_ += diff;
 				amt_ += amt;
-				if (auto d = static_cast<double>(diff) / amt - mean_; cnt_ <= 2 || d < K * std::sqrt(ss_ / cnt_)) // Avoids outliers.
+				if (auto d = static_cast<double>(diff) / amt - mean_; cnt_ <= 2 || ss_ < DBL_MIN || d < K * std::sqrt(ss_ / cnt_)) // Avoids outliers.
 				{	const size_t total = cnt_ + amt;
 					mean_ = (cnt_ * mean_ + diff) / total;
 					ss_ += d * d * cnt_ * amt / total;
