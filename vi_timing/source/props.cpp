@@ -31,8 +31,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "build_number_maker.h"
 #include "../vi_timing.h"
 
-#include <thread>
+#include <atomic>
 #include <chrono>
+#include <thread>
 #include <utility>
 
 #if false
