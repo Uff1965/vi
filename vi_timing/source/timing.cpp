@@ -57,8 +57,8 @@ namespace
 		// Welford’s online algorithm for computing variance
 		mutable std::mutex mutex_;
 		double mean_ = 0.0; // Mean value.
-		double m2_ = 0.0; // Sum of squares.
-		size_t cnt_ = 0U; // Number of calls processed.
+		double ss_ = 0.0; // Sum of squares.
+		size_t cnt_ = 0U; // Number of items processed.
 		VI_TM_TDIFF sum_ = 0U; // Sum of all measurements. Not filtered!
 		size_t calls_ = 0U; // Number of calls to 'add()'. Not filtered!
 		size_t amt_ = 0U; // Number of items for measurements. Not filtered!
@@ -78,10 +78,10 @@ namespace
 				calls_++;
 				sum_ += diff;
 				amt_ += amt;
-				if (auto d = static_cast<double>(diff) / amt - mean_; cnt_ <= 2 || d < K * std::sqrt(m2_ / cnt_)) // Avoids outliers.
+				if (auto d = static_cast<double>(diff) / amt - mean_; cnt_ <= 2 || d < K * std::sqrt(ss_ / cnt_)) // Avoids outliers.
 				{	const size_t total = cnt_ + amt;
 					mean_ = (cnt_ * mean_ + diff) / total;
-					m2_ += d * d * cnt_ * amt / total;
+					ss_ += d * d * cnt_ * amt / total;
 					cnt_ = total;
 				}
 #else
@@ -96,7 +96,7 @@ namespace
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::lock_guard lg(mutex_);
 			result.mean_ = mean_;
-			result.m2_ = m2_;
+			result.ss_ = ss_;
 			result.cnt_ = cnt_;
 #endif
 			result.sum_ = sum_;
@@ -108,7 +108,7 @@ namespace
 		{
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::lock_guard lg(mutex_);
-			mean_ = m2_ = 0.0;
+			mean_ = ss_ = 0.0;
 			cnt_ = 0U;
 #endif
 			sum_ = 0U;
@@ -234,8 +234,8 @@ namespace
 				(	std::accumulate(std::cbegin(samples_simple), std::cend(samples_simple), 0.0) +
 					M * std::accumulate(std::cbegin(samples_multiple), std::cend(samples_multiple), 0.0)
 					) / n; // The mean value of the samples that will be counted.
-			static const auto S = [] // The standard deviation of the samples that will be counted.
-				{	const auto m2 = std::accumulate
+			static const auto stddev = [] // The standard deviation of the samples that will be counted.
+				{	const auto sum_squared_deviations = std::accumulate
 					(	std::cbegin(samples_simple),
 						std::cend(samples_simple),
 						0.0,
@@ -246,7 +246,7 @@ namespace
 						0.0,
 						[](auto i, auto v) { const auto d = v - mean; return i + d * d; }
 					);
-					return std::sqrt(m2 / (n - 1));
+					return std::sqrt(sum_squared_deviations / (n - 1));
 				}();
 			static constexpr char NAME[] = "dummy"; // The name of the measurement.
 
@@ -272,8 +272,8 @@ namespace
 #	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
 			assert(std::abs(md.mean_ - mean) / mean < 1e-12);
-			const auto s = std::sqrt(md.m2_ / (md.cnt_ - 1));
-			assert(std::abs(s - S) / S < 1e-12);
+			const auto s = std::sqrt(md.ss_ / (md.cnt_ - 1));
+			assert(std::abs(s - stddev) / stddev < 1e-12);
 #	else
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
 			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - mean) < 1e-12);

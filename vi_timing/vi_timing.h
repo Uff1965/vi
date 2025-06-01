@@ -106,6 +106,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
+// Comment out the next line if you do not need the coefficient of variation and bounce filtering.
 #define VI_TM_STAT_USE_WELFORD // If defined, uses Welford's method for calculating variance and standard deviation.
 
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
@@ -187,7 +188,7 @@ extern "C" {
 #if defined VI_TM_STAT_USE_WELFORD
 		size_t cnt_; // Number of items counted.
 		double mean_; // The mean (average) time taken per processed items. In ticks.
-		double m2_; // The second moment, used for calculating variance and standard deviation. In ticks
+		double ss_; // Sum of Squares. In ticks
 #endif
 	} vi_tmMeasuringRAW_t;
 

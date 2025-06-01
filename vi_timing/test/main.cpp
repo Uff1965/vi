@@ -252,7 +252,7 @@ VI_OPTIMIZE_ON
 				std::right << std::scientific <<
 #ifdef VI_TM_STAT_USE_WELFORD
 				" mean = " << meas.mean_ << ","
-				" m2 = " << meas.m2_ << ","
+				" ss = " << meas.ss_ << ","
 				" cnt = " << std::setw(12) << meas.cnt_ << ","
 #endif
 				" sum = " << std::setw(15) << meas.sum_ << ","

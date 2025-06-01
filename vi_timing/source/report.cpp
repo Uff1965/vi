@@ -34,6 +34,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <cassert>
 #include <cmath>
 #include <iomanip>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -76,8 +77,8 @@ namespace
 		std::string average_txt_{ NotAvailable };
 		duration_t<DURATION_PREC, DURATION_DEC> average_{ .0 }; // seconds
 #if defined(VI_TM_STAT_USE_WELFORD)
-		double precision_{ .0 }; // standard deviation in ticks
-		std::string precision_txt_{ "" };
+		double sd_{ .0 }; // standard deviation in ticks
+		std::string cv_txt_{ "" }; // Coefficient of Variation (CV) in percent
 #endif
 		std::size_t amt_{}; // Number of measured units
 
@@ -104,8 +105,8 @@ namespace
 				sum_txt_ = to_string(sum_);
 				if (meas.calls_ > 1)
 				{	assert(amt_ > 1);
-					precision_ = std::sqrt(meas.m2_ / (meas.cnt_ - 1));
-					precision_txt_ = misc::to_string(precision_ / ave * 100.0, 2, 0) + "%";
+					sd_ = std::sqrt(meas.ss_ / (meas.cnt_ - 1));
+					cv_txt_ = misc::to_string(sd_ / ave * 100.0, 2, 0) + "%";
 				}
 			}
 #else
@@ -270,7 +271,7 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
 		max_len_name_ = std::max(max_len_name_, itm.name_.length());
 #if defined(VI_TM_STAT_USE_WELFORD)
-		max_len_precision_ = std::max(max_len_precision_, itm.precision_txt_.length());
+		max_len_precision_ = std::max(max_len_precision_, itm.cv_txt_.length());
 #endif
 		if (itm.amt_ > max_amount)
 		{	max_amount = itm.amt_;
@@ -343,7 +344,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void
 		std::setw(max_len_name_) << i.name_ << ": " << std::setfill(' ') << std::right <<
 		std::setw(max_len_average_) << i.average_txt_ <<
 #if defined(VI_TM_STAT_USE_WELFORD)
-		" (" << std::setw(max_len_precision_) << i.precision_txt_ << ")" <<
+		" (" << std::setw(max_len_precision_) << i.cv_txt_ << ")" <<
 #endif
 		" [" <<
 		std::setw(max_len_total_) << i.sum_txt_ << " / " <<
