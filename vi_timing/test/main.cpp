@@ -86,8 +86,8 @@ VI_OPTIMIZE_OFF
 			vi_tm::measurer_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
-			{	const volatile auto s = vi_tmGetTicks();
-				const volatile auto f = vi_tmGetTicks();
+			{	const auto s = vi_tmGetTicks();
+				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
 				vi_tmMeasuringRepl(vi_tmMeasuring(h, name.c_str()), f - s, 1);
 				v++;

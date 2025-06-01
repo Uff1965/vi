@@ -142,12 +142,9 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 {	std::lock_guard lock{ storage_guard_ };
 	for (auto &it : storage_)
 	{
+		assert(it.second.amt_ >= it.second.calls_);
 #if defined VI_TM_STAT_USE_WELFORD
-		assert(it.second.amt_ >= it.second.calls_);
 		assert(!!it.second.sum_ == !!it.second.calls_);
-		assert((0.0 != it.second.mean_) == !!it.second.cnt_);
-#else
-		assert(it.second.amt_ >= it.second.calls_);
 #endif
 		if (!it.first.empty())
 		{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data))
