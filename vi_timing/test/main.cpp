@@ -94,9 +94,9 @@ namespace
 				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
 				std::right << std::scientific <<
 #ifdef VI_TM_STAT_USE_WELFORD
-				" mean = " << meas.mean_ << ","
-				" ss = " << meas.ss_ << ","
-				" cnt = " << std::setw(12) << meas.cnt_ << ","
+				" mean = " << meas.flt_mean_ << ","
+				" ss = " << meas.flt_ss_ << ","
+				" cnt = " << std::setw(12) << meas.flt_cnt_ << ","
 #endif
 				" sum = " << std::setw(15) << meas.sum_ << ","
 				" amt = " << std::setw(12) << meas.amt_ << ","
@@ -208,9 +208,9 @@ VI_OPTIMIZE_OFF
 			vi_tmMeasuringRAW_t data;
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &data);
 #ifdef VI_TM_STAT_USE_WELFORD
-			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);
-			std::cout << "empty:\tmean = " << std::setprecision(3)  << data.mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
+			std::cout << "empty:\tmean = " << std::setprecision(3)  << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 #else
 			std::cout << "vi_tm:\tticks = " << std::setw(16) << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);

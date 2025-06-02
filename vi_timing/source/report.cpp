@@ -94,7 +94,7 @@ namespace
 		if (0 != amt_)
 		{	auto &props = misc::properties_t::props();
 #ifdef VI_TM_STAT_USE_WELFORD
-			if (const auto ave = meas.mean_ - props.clock_latency_ticks_; ave <= props.clock_resolution_ticks_ / std::sqrt(meas.calls_))
+			if (const auto ave = meas.flt_mean_ - props.clock_latency_ticks_; ave <= props.clock_resolution_ticks_ / std::sqrt(meas.calls_))
 			{	sum_txt_ = Insignificant;
 				average_txt_ = Insignificant;
 			}
@@ -105,7 +105,7 @@ namespace
 				sum_txt_ = to_string(sum_);
 				if (meas.calls_ > 1)
 				{	assert(amt_ > 1);
-					sd_ = std::sqrt(meas.ss_ / (meas.cnt_ - 1));
+					sd_ = std::sqrt(meas.flt_ss_ / (meas.flt_cnt_ - 1));
 					cv_txt_ = misc::to_string(sd_ / ave * 100.0, 2, 0) + "%";
 				}
 			}

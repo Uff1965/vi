@@ -31,10 +31,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <atomic>
 #include <cassert>
-#include <cfloat>
 #include <cmath> // std::sqrt
 #include <cstdint> // std::uint64_t, std::size_t
-#include <functional>
+#include <functional> // std::invoke
 #include <memory> // std::unique_ptr
 #include <mutex> // std::mutex, std::lock_guard
 #include <numeric> // std::accumulate
@@ -55,70 +54,25 @@ namespace
 	struct measuring_t
 	{
 #ifdef VI_TM_STAT_USE_WELFORD
-		// Welford’s online algorithm for computing variance
+		// Welford’s online algorithm for computing variance and filtering of outliers.
 		mutable std::mutex mutex_;
-		double mean_ = 0.0; // Mean value.
-		double ss_ = 0.0; // Sum of squares.
-		size_t cnt_ = 0U; // Number of items processed.
-		VI_TM_TDIFF sum_ = 0U; // Sum of all measurements. Not filtered!
-		size_t calls_ = 0U; // Number of calls to 'add()'. Not filtered!
-		size_t amt_ = 0U; // Number of items for measurements. Not filtered!
+		double flt_mean_ = 0.0; // Mean value. Filtered!!!
+		double flt_ss_ = 0.0; // Sum of squares. Filtered!!!
+		size_t flt_cnt_ = 0U; // Number of items processed. Filtered!!!
+		VI_TM_TDIFF sum_ = 0U; // Sum of all measurements.
+		size_t calls_ = 0U; // Number of calls to 'add()'.
+		size_t amt_ = 0U; // Number of items for measurements.
 #else
 		// Simple statistics: no standard deviation, only the mean value.
 		std::atomic<VI_TM_TDIFF> sum_ = 0U;
 		std::atomic<size_t> calls_ = 0U;
 		std::atomic<size_t> amt_ = 0U;
 #endif
-
-		void add(VI_TM_TDIFF diff, size_t amt) noexcept
-		{	if(verify(!!amt))
-			{
-#ifdef VI_TM_STAT_USE_WELFORD
-				static constexpr double K = 2.5; // Threshold for outliers.
-				std::lock_guard lg(mutex_);
-				calls_++;
-				sum_ += diff;
-				amt_ += amt;
-				if (auto d = static_cast<double>(diff) / amt - mean_; cnt_ <= 2 || ss_ < DBL_MIN || d < K * std::sqrt(ss_ / cnt_)) // Avoids outliers.
-				{	const size_t total = cnt_ + amt;
-					mean_ = (cnt_ * mean_ + diff) / total;
-					ss_ += d * d * cnt_ * amt / total;
-					cnt_ = total;
-				}
-#else
-				calls_.fetch_add(1, std::memory_order_relaxed);
-				sum_.fetch_add(diff, std::memory_order_relaxed);
-				amt_.fetch_add(amt, std::memory_order_relaxed);
-#endif
-			}
-		}
-		vi_tmMeasuringRAW_t get() const noexcept
-		{	vi_tmMeasuringRAW_t result;
-#ifdef VI_TM_STAT_USE_WELFORD
-			std::lock_guard lg(mutex_);
-			result.mean_ = mean_;
-			result.ss_ = ss_;
-			result.cnt_ = cnt_;
-#endif
-			result.sum_ = sum_;
-			result.amt_ = amt_;
-			result.calls_ = calls_;
-			return result;
-		}
-		void reset() noexcept
-		{
-#ifdef VI_TM_STAT_USE_WELFORD
-			std::lock_guard lg(mutex_);
-			mean_ = ss_ = 0.0;
-			cnt_ = 0U;
-#endif
-			sum_ = 0U;
-			amt_ = calls_ = 0U;
-		}
+		inline void add(VI_TM_TDIFF val, size_t amt) noexcept;
+		vi_tmMeasuringRAW_t get() const noexcept;
+		void reset() noexcept;
 	};
 
-	constexpr auto MAX_LOAD_FACTOR = 0.7F;
-	constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
 	using storage_t = std::unordered_map<std::string, measuring_t>;
 } // namespace
 
@@ -128,6 +82,8 @@ static_assert(sizeof(vi_tmMeasuring_t) == sizeof(storage_t::value_type), "'vi_tm
 struct vi_tmJournal_t
 {
 private:
+	static constexpr auto MAX_LOAD_FACTOR = 0.7F;
+	static constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
 	std::mutex storage_guard_;
 	storage_t storage_;
 public:
@@ -139,14 +95,63 @@ public:
 	void reset(const char *name = nullptr); // Resets a specific measurement by name or all measurements if name is nullptr.
 };
 
+void measuring_t::add(VI_TM_TDIFF val, size_t amt) noexcept
+{	if(verify(!!amt))
+	{
+#ifdef VI_TM_STAT_USE_WELFORD
+		std::lock_guard lg(mutex_);
+		calls_++;
+		sum_ += val;
+		amt_ += amt;
+		static constexpr double K = 2.5; // Threshold for outliers.
+		if 
+		(	auto deviation = static_cast<double>(val) / amt - flt_mean_; // Difference from the mean value.
+			flt_cnt_ <= 2 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
+			flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
+			deviation < K * std::sqrt(flt_ss_ / flt_cnt_) // Avoids positiv outliers. Slowdowns due to external causes are common in multithreaded OS. Random speedups are unreal.
+		)
+		{	const size_t total = flt_cnt_ + amt;
+			flt_mean_ = (flt_cnt_ * flt_mean_ + val) / total;
+			flt_ss_ += deviation * deviation * flt_cnt_ * amt / total;
+			flt_cnt_ = total;
+		}
+#else
+		calls_.fetch_add(1, std::memory_order_relaxed);
+		sum_.fetch_add(diff, std::memory_order_relaxed);
+		amt_.fetch_add(amt, std::memory_order_relaxed);
+#endif
+	}
+}
+
+vi_tmMeasuringRAW_t measuring_t::get() const noexcept
+{	vi_tmMeasuringRAW_t result;
+#ifdef VI_TM_STAT_USE_WELFORD
+	std::lock_guard lg(mutex_);
+	result.flt_mean_ = flt_mean_;
+	result.flt_ss_ = flt_ss_;
+	result.flt_cnt_ = flt_cnt_;
+#endif
+	result.sum_ = sum_;
+	result.amt_ = amt_;
+	result.calls_ = calls_;
+	return result;
+}
+
+void measuring_t::reset() noexcept
+{
+#ifdef VI_TM_STAT_USE_WELFORD
+	std::lock_guard lg(mutex_);
+	flt_mean_ = flt_ss_ = 0.0;
+	flt_cnt_ = 0U;
+#endif
+	sum_ = 0U;
+	amt_ = calls_ = 0U;
+}
+
 int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 {	std::lock_guard lock{ storage_guard_ };
 	for (auto &it : storage_)
-	{
-		assert(it.second.amt_ >= it.second.calls_);
-#if defined VI_TM_STAT_USE_WELFORD
-		assert(!!it.second.sum_ == !!it.second.calls_);
-#endif
+	{	assert(it.second.amt_ >= it.second.calls_);
 		if (!it.first.empty())
 		{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data))
 			{	return interrupt;
@@ -271,8 +276,8 @@ namespace
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
 #	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
-			assert(std::abs(md.mean_ - mean) / mean < 1e-12);
-			const auto s = std::sqrt(md.ss_ / (md.cnt_ - 1));
+			assert(std::abs(md.flt_mean_ - mean) / mean < 1e-12);
+			const auto s = std::sqrt(md.flt_ss_ / (md.flt_cnt_ - 1));
 			assert(std::abs(s - stddev) / stddev < 1e-12);
 #	else
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
