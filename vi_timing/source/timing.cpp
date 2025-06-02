@@ -117,7 +117,7 @@ void measuring_t::add(VI_TM_TDIFF val, size_t amt) noexcept
 		}
 #else
 		calls_.fetch_add(1, std::memory_order_relaxed);
-		sum_.fetch_add(diff, std::memory_order_relaxed);
+		sum_.fetch_add(val, std::memory_order_relaxed);
 		amt_.fetch_add(amt, std::memory_order_relaxed);
 #endif
 	}
@@ -232,26 +232,28 @@ namespace
 			static constexpr VI_TM_TDIFF samples_simple[] = { 34, 32, 36 }; // Samples that will be added one at a time.
 			static constexpr auto M = 2;
 			static constexpr VI_TM_TDIFF samples_multiple[] = { 34, }; // Samples that will be added M times at once.
-			static constexpr VI_TM_TDIFF samples_exclude[] = { 68 }; // Samples that will be excluded from the statistics.
+			static constexpr VI_TM_TDIFF samples_exclude[] = { 1000 }; // Samples that will be excluded from the statistics.
 
-			static constexpr auto n = std::size(samples_simple) + M * std::size(samples_multiple); // The total number of samples that will be counted.
-			static const auto mean = 
+			static constexpr auto exp_flt_cnt = std::size(samples_simple) + M * std::size(samples_multiple); // The total number of samples that will be counted.
+			static const auto exp_flt_mean = 
 				(	std::accumulate(std::cbegin(samples_simple), std::cend(samples_simple), 0.0) +
 					M * std::accumulate(std::cbegin(samples_multiple), std::cend(samples_multiple), 0.0)
-					) / n; // The mean value of the samples that will be counted.
-			static const auto stddev = [] // The standard deviation of the samples that will be counted.
-				{	const auto sum_squared_deviations = std::accumulate
+				) / exp_flt_cnt; // The mean value of the samples that will be counted.
+			const auto exp_flt_stddev = [] // The standard deviation of the samples that will be counted.
+				{	const auto sum_squared_deviations =
+					std::accumulate
 					(	std::cbegin(samples_simple),
 						std::cend(samples_simple),
 						0.0,
-						[](auto i, auto v) { const auto d = v - mean; return i + d * d; }
-					) + M * std::accumulate
+						[](auto i, auto v) { const auto d = v - exp_flt_mean; return i + d * d; }
+					) +
+					M * std::accumulate
 					(	std::cbegin(samples_multiple),
 						std::cend(samples_multiple),
 						0.0,
-						[](auto i, auto v) { const auto d = v - mean; return i + d * d; }
+						[](auto i, auto v) { const auto d = v - exp_flt_mean; return i + d * d; }
 					);
-					return std::sqrt(sum_squared_deviations / (n - 1));
+					return std::sqrt(sum_squared_deviations / (exp_flt_cnt - 1));
 				}();
 			static constexpr char NAME[] = "dummy"; // The name of the measurement.
 
@@ -275,13 +277,16 @@ namespace
 
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
 #	ifdef VI_TM_STAT_USE_WELFORD
+			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
-			assert(std::abs(md.flt_mean_ - mean) / mean < 1e-12);
+			assert(md.flt_cnt_ == exp_flt_cnt);
+			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < 1e-12);
 			const auto s = std::sqrt(md.flt_ss_ / (md.flt_cnt_ - 1));
-			assert(std::abs(s - stddev) / stddev < 1e-12);
+			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < 1e-12);
 #	else
+			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
-			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - mean) < 1e-12);
+			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - exp_flt_mean) < 1e-12);
 #	endif
 			return 0;
 		}();
