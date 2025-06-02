@@ -44,12 +44,13 @@ namespace
 {
 	constexpr char TitleName[] = "Name";
 	constexpr char TitleAverage[] = "Avg.";
-	constexpr char TitleTotal[] = "Total";
+	constexpr char TitleTotal[] = "Sum.";
 	constexpr char TitlePrecision[] = "CV";
-	constexpr char TitleAmount[] = "Amount";
+	constexpr char TitleAmount[] = "Amt.";
 	constexpr char Ascending[] = " [^]";
 	constexpr char Descending[] = " [v]";
 	constexpr char Insignificant[] = "<insig>";
+	constexpr char Excessive[] = "<exces>";
 	constexpr char NotAvailable[] = "<n/a>";
 
 	constexpr unsigned char DURATION_PREC = 2;
@@ -106,7 +107,17 @@ namespace
 				if (meas.calls_ > 1)
 				{	assert(amt_ > 1);
 					sd_ = std::sqrt(meas.flt_ss_ / (meas.flt_cnt_ - 1));
-					cv_txt_ = misc::to_string(sd_ / ave * 100.0, 2, 0) + "%";
+					const auto v = std::round(sd_ / ave * 100.0);
+					if (v < 1.0)
+					{	cv_txt_ = Insignificant;
+					}
+					else if (v < 100.0)
+					{	cv_txt_ = misc::to_string(v, 2, 0);
+						cv_txt_.back() = '%';
+					}
+					else
+					{	cv_txt_ = Excessive;
+					}
 				}
 			}
 #else
@@ -373,7 +384,6 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRptC
 		}
 	}
 
-	(void) misc::properties_t::props(); // Preventing deadlock in traits_t::results_callback().
 	int result = print_props(fn, data, flags);
 
 	std::vector<metering_t> metering_entries = get_meterings(journal_handle);

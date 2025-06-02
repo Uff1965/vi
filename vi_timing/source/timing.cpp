@@ -103,6 +103,7 @@ void measuring_t::add(VI_TM_TDIFF val, size_t amt) noexcept
 		calls_++;
 		sum_ += val;
 		amt_ += amt;
+
 		static constexpr double K = 2.5; // Threshold for outliers.
 		if 
 		(	auto deviation = static_cast<double>(val) / amt - flt_mean_; // Difference from the mean value.
@@ -225,6 +226,7 @@ void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS meas)
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #ifndef NDEBUG
+// This code is only compiled in debug mode to test the library functionality.
 namespace
 {
 	const auto nanotest = []
@@ -245,13 +247,13 @@ namespace
 					(	std::cbegin(samples_simple),
 						std::cend(samples_simple),
 						0.0,
-						[](auto i, auto v) { const auto d = v - exp_flt_mean; return i + d * d; }
+						[](auto i, auto v) { const auto d = v - exp_flt_mean; return std::fma(d, d, i); }
 					) +
 					M * std::accumulate
 					(	std::cbegin(samples_multiple),
 						std::cend(samples_multiple),
 						0.0,
-						[](auto i, auto v) { const auto d = v - exp_flt_mean; return i + d * d; }
+						[](auto i, auto v) { const auto d = v - exp_flt_mean; return std::fma(d, d, i); }
 					);
 					return std::sqrt(sum_squared_deviations / (exp_flt_cnt - 1));
 				}();
