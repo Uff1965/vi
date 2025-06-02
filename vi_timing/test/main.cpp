@@ -168,7 +168,7 @@ VI_OPTIMIZE_ON
 			{	auto m = vi_tmMeasuring(h, "100ms");
 				vi_tm::measurer_t tm{ vi_tmMeasuring(h, "100ms*10"), 10U };
 				for (int n = 0; n < 10; ++n)
-				{	vi_tm::measurer_t tm{ m };
+				{	vi_tm::measurer_t tm2{ m };
 					std::this_thread::sleep_for(100ms);
 				}
 			}

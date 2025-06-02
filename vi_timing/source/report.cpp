@@ -109,14 +109,15 @@ namespace
 					sd_ = std::sqrt(meas.flt_ss_ / (meas.flt_cnt_ - 1));
 					const auto v = std::round(sd_ / ave * 100.0);
 					if (v < 1.0)
-					{	cv_txt_ = Insignificant;
+					{	cv_txt_ = Insignificant; // Coefficient of Variation (CV) is too low.
 					}
 					else if (v < 100.0)
 					{	cv_txt_ = misc::to_string(v, 2, 0);
-						cv_txt_.back() = '%';
+						assert(cv_txt_.back() == ' '); // In these conditions, the last character is always a space.
+						cv_txt_.back() = '%'; // Replace last char with '%'.
 					}
 					else
-					{	cv_txt_ = Excessive;
+					{	cv_txt_ = Excessive; // Coefficient of Variation (CV) is too high.
 					}
 				}
 			}
