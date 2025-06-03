@@ -118,7 +118,7 @@ namespace
 #endif
 
 		class affinity_fix_t
-		{	static thread_local affinity_fix_t s_instance;
+		{	static thread_local affinity_fix_t s_instance; // Thread-local instance!!!
 			std::size_t flt_cnt_ = 0U;
 			thread_affinity_mask_t previous_affinity_{};
 
@@ -150,7 +150,7 @@ namespace
 		{	int exp_;
 			char suffix_[3];
 		} constexpr factors[]
-		{ { -30, " q" }, // quecto
+		{	{ -30, " q" }, // quecto
 			{ -27, " r" }, // ronto
 			{ -24, " y" }, // yocto
 			{ -21, " z" }, // zepto
@@ -186,21 +186,15 @@ namespace
 
 		template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 		constexpr T group(T v) noexcept
-		{	if (v < 0)
-			{	v -= GROUP_SIZE - 1;
-			}
-			return v / GROUP_SIZE;
+		{	return (v < 0 ? v - GROUP_SIZE + 1 : v) / GROUP_SIZE;
 		};
 		static_assert(group(9) == 3 && group(2) == 0 && group(0) == 0 && group(-1) == -1 && group(-6) == -2);
 
 		template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 		constexpr T floor_mod(T v) noexcept
-		{	auto result = v % GROUP_SIZE;
-			if (result < 0)
-			{	result += GROUP_SIZE;
-			}
-			return result;
-		};
+		{	v %= GROUP_SIZE;
+			return v < 0 ? v + GROUP_SIZE : v;
+		}
 		static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
 
 		std::tuple<double, const char *> to_string_aux2(double val_org, int sig_pos, unsigned char const dec, std::array<char, 6> &buff)
@@ -326,7 +320,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
 					std::array<char, (std::size("99.999.9999.YYMMDDHHmm") - 1) + 2 + (std::size(TYPE) - 1) + 1> result;
 					[[maybe_unused]] const auto sz = snprintf
-					(result.data(),
+					(	result.data(),
 						result.size(),
 						VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH) "." "%u%c %s",
 						misc::build_number_get(),
@@ -374,7 +368,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 
 #ifndef NDEBUG
 namespace
-{
+{	// nanotest to array consistency to_str::factors.
 	const auto nanotest_factors = []
 	{	for (auto &v: to_str::factors)
 		{	assert(v.exp_ == to_str::factors[0].exp_ + to_str::GROUP_SIZE * std::distance(to_str::factors, &v));
@@ -382,6 +376,7 @@ namespace
 		return 0;
 	}();
 
+	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 	const auto nanotest_to_string = []
 	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		struct

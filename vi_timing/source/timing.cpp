@@ -29,8 +29,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "../vi_timing.h"
 #include "build_number_maker.h" // For build number generation.
 
-#include <atomic>
-#include <cassert>
+#include <atomic> // std::atomic
+#include <cassert> // assert()
 #include <cmath> // std::sqrt
 #include <cstdint> // std::uint64_t, std::size_t
 #include <functional> // std::invoke
