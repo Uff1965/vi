@@ -87,10 +87,10 @@ private:
 	std::mutex storage_guard_;
 	storage_t storage_;
 public:
-	static auto &from_handle(VI_TM_HJOUR journal) { static vi_tmJournal_t global; return journal ? *journal : global; } // Get the journal from the handle or return the global journal.
-	explicit vi_tmJournal_t() { storage_.max_load_factor(MAX_LOAD_FACTOR); storage_.reserve(DEFAULT_STORAGE_CAPACITY); }
-	int init() { return 0; }
-	auto& at(const char *name) { std::lock_guard lock{ storage_guard_ }; return *storage_.try_emplace(name).first; } // Get a reference to the measurement by name, creating it if it does not exist.
+	static auto& from_handle(VI_TM_HJOUR journal); // Get the journal from the handle or return the global journal.
+	explicit vi_tmJournal_t();
+	int init();
+	auto& at(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
 	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
 	void reset(const char *name = nullptr); // Resets a specific measurement by name or all measurements if name is nullptr.
 };
@@ -99,22 +99,27 @@ void measuring_t::add(VI_TM_TDIFF val, size_t amt) noexcept
 {	if(verify(!!amt))
 	{
 #ifdef VI_TM_STAT_USE_WELFORD
+		static constexpr double K2 = 6.25; // 2.5^2 Threshold for outliers.
+		const auto val_f = static_cast<double>(val);
+		const auto amt_f = static_cast<double>(amt);
+
 		std::lock_guard lg(mutex_);
 		calls_++;
 		sum_ += val;
 		amt_ += amt;
 
-		static constexpr double K = 2.5; // Threshold for outliers.
+		const auto cnt_f = static_cast<double>(flt_cnt_);
+		const auto deviation = val_f / amt_f - flt_mean_; // Difference from the mean value.
+		const auto sum_square_dev = deviation * deviation * cnt_f;
 		if 
-		(	auto deviation = static_cast<double>(val) / amt - flt_mean_; // Difference from the mean value.
-			flt_cnt_ <= 2 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
+		(	flt_cnt_ <= 2 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
 			flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
-			deviation < K * std::sqrt(flt_ss_ / flt_cnt_) // Avoids positiv outliers. Slowdowns due to external causes are common in multithreaded OS. Random speedups are unreal.
+			sum_square_dev < K2 * flt_ss_ // Avoids outliers.
 		)
-		{	const size_t total = flt_cnt_ + amt;
-			flt_mean_ = (flt_cnt_ * flt_mean_ + val) / total;
-			flt_ss_ += deviation * deviation * flt_cnt_ * amt / total;
-			flt_cnt_ = total;
+		{	flt_cnt_ += amt;
+			const auto rev_total_f = 1.0 / static_cast<double>(flt_cnt_);
+			flt_mean_ = (flt_mean_ * cnt_f + val_f) * rev_total_f;
+			flt_ss_ += sum_square_dev * amt_f * rev_total_f;
 		}
 #else
 		calls_.fetch_add(1, std::memory_order_relaxed);
@@ -147,6 +152,25 @@ void measuring_t::reset() noexcept
 #endif
 	sum_ = 0U;
 	amt_ = calls_ = 0U;
+}
+
+inline auto& vi_tmJournal_t::from_handle(VI_TM_HJOUR journal)
+{	static vi_tmJournal_t global;
+	return journal ? *journal : global;
+}
+
+vi_tmJournal_t::vi_tmJournal_t()
+{	storage_.max_load_factor(MAX_LOAD_FACTOR);
+	storage_.reserve(DEFAULT_STORAGE_CAPACITY);
+}
+
+int vi_tmJournal_t::init()
+{	return 0;
+}
+
+inline auto& vi_tmJournal_t::at(const char *name)
+{	std::lock_guard lock{ storage_guard_ };
+	return *storage_.try_emplace(name).first;
 }
 
 int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
