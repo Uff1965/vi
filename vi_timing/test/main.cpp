@@ -61,8 +61,7 @@ namespace
 	const auto init_common = []
 		{	VI_TM("INITIALIZE COMMON");
 			vi_tmCurrentThreadAffinityFixate();
-			vi_tmWarming(1, 500);
-			vi_tmThreadYield();
+			vi_tmWarming(0, 1000);
 			return 0;
 		}();
 }
@@ -306,9 +305,9 @@ VI_OPTIMIZE_ON
 			{	vi_tmMeasuringRepl(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
 			}
 		}
-		vi_tmReport(journal.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		std::cout << "RAW:\n";
 		report_RAW(journal.get());
+		vi_tmReport(journal.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 
 		std::cout << "Test vi_tmReport - done" << std::endl;
 	}
@@ -338,36 +337,48 @@ VI_OPTIMIZE_OFF
 	{	VI_TM("Test test_access");
 		std::cout << "\nTest test_access:\n";
 
-		static int v1 = 0;
-		static volatile int v2 = 0;
-		static std::atomic<int> v3 = 0;
-		thread_local int v4 = 0;
+		static int v_normal = 0;
+		static volatile int v_volatile = 0;
+		static std::atomic<int> v_atomic = 0;
+		thread_local int v_thread_local = 0;
 		static std::shared_mutex smtx;
 		static std::mutex mtx;
 		static std::recursive_mutex rmtx;
 		static std::timed_mutex tmtx;
 
-		auto a0 = [] { VI_TM("*empty"); };
-		auto a1 = [] { VI_TM("*normal"); v1 = 777; };
-		auto a2 = [] { VI_TM("*volatile"); v2 = 777; };
-		auto a3 = [] { VI_TM("*atomic_relax"); v3.store(777, std::memory_order_relaxed); };
-		auto a4 = [] { VI_TM("*thread_local"); v4 = 777; };
-		auto a5 = [] { VI_TM("*atomic"); v3 = 777; };
-		auto a6 = [] { VI_TM("*shared_mutex"); std::lock_guard lg{ smtx  }; v1 = 777; };
-		auto a7 = [] { VI_TM("*mutex"); std::lock_guard lg{ mtx }; v1 = 777; };
-		auto a8 = [] { VI_TM("*recursive_m"); std::lock_guard lg{ rmtx }; v1 = 777; };
-		auto a9 = [] { VI_TM("*timed_mutex"); std::lock_guard lg{ tmtx }; v1 = 777; };
+#define VI_TM_EX(j, name) \
+static const auto m = vi_tmMeasuring(j, name); \
+vi_tm::measurer_t _{m};
 
-		void(*arr[])() = { a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, };
+		void(*arr[])(VI_TM_HJOUR) = {
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*empty"); },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*normal"); v_normal = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*volatile"); v_volatile = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic_relax"); v_atomic.store(777, std::memory_order_relaxed); },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*thread_local"); v_thread_local = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic"); v_atomic = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*shared_mutex"); std::lock_guard lg{ smtx }; v_normal = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex"); std::lock_guard lg{ mtx }; v_normal = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*recursive_m"); std::lock_guard lg{ rmtx }; v_normal = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*timed_mutex"); std::lock_guard lg{ tmtx }; v_normal = 777; },
+		};
+
+#undef VI_TM_EX
+
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose };
 		std::sort(std::begin(arr), std::end(arr));
-		for (unsigned n = 1; n; --n)
-		{	do
-			{	for (auto &&f : arr)
-				{	std::this_thread::yield();
-					f();
-				}
-			} while (std::next_permutation(std::begin(arr), std::end(arr)));
-		}
+
+		do
+		{	for (auto f : arr)
+			{	std::this_thread::yield();
+				f(journal.get());
+			}
+		} while (std::next_permutation(std::begin(arr), std::end(arr)));
+
+		std::cout << "RAW report:\n";
+		report_RAW(journal.get());
+		std::cout << "Report:\n";
+		vi_tmReport(journal.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution | vi_tmSortBySpeed);
 
 		std::cout << "Test test_access - done" << std::endl;
 	}
@@ -380,21 +391,21 @@ int main()
 
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
-	vi_tmWarming(1, 500);
 	vi_tmThreadYield();
 
-	foo_c();
+	//foo_c();
 
-	test_empty();
-	test_sleep();
-	test_sleep2();
+	//test_empty();
+	//test_sleep();
+	//test_sleep2();
 	prn_clock_properties();
 
-	test_report();
-	test_multithreaded();
+	//test_report();
+	//test_multithreaded();
 	test_access();
 
-	report_RAW(nullptr);
+	//std::cout << "\nRAW report:\n";
+	//report_RAW(nullptr);
 
 	vi_tmCurrentThreadAffinityRestore();
 
