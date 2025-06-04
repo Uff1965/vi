@@ -352,15 +352,15 @@ vi_tm::measurer_t _{m};
 
 		void(*arr[])(VI_TM_HJOUR) = {
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*empty"); },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*normal"); v_normal = 777; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*volatile"); v_volatile = 777; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic_relax"); v_atomic.store(777, std::memory_order_relaxed); },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*thread_local"); v_thread_local = 777; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic"); v_atomic = 777; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*shared_mutex"); std::lock_guard lg{ smtx }; v_normal = 777; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex"); std::lock_guard lg{ mtx }; v_normal = 777; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*recursive_m"); std::lock_guard lg{ rmtx }; v_normal = 777; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*timed_mutex"); std::lock_guard lg{ tmtx }; v_normal = 777; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*normal"); ++v_normal; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*volatile"); ++v_volatile; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic_relax"); v_atomic.fetch_add(1, std::memory_order_relaxed); },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*thread_local"); ++v_thread_local; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic"); ++v_atomic; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*shared_mutex"); std::lock_guard lg{ smtx }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex"); std::lock_guard lg{ mtx }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*recursive_m"); std::lock_guard lg{ rmtx }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*timed_mutex"); std::lock_guard lg{ tmtx }; ++v_normal; },
 		};
 
 #undef VI_TM_EX
