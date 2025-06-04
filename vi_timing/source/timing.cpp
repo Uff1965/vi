@@ -265,6 +265,7 @@ namespace
 				(	std::accumulate(std::cbegin(samples_simple), std::cend(samples_simple), 0.0) +
 					M * std::accumulate(std::cbegin(samples_multiple), std::cend(samples_multiple), 0.0)
 				) / exp_flt_cnt; // The mean value of the samples that will be counted.
+#	ifdef VI_TM_STAT_USE_WELFORD
 			const auto exp_flt_stddev = [] // The standard deviation of the samples that will be counted.
 				{	const auto sum_squared_deviations =
 					std::accumulate
@@ -281,6 +282,7 @@ namespace
 					);
 					return std::sqrt(sum_squared_deviations / (exp_flt_cnt - 1));
 				}();
+#	endif
 			static constexpr char NAME[] = "dummy"; // The name of the measurement.
 
 			const char *name = nullptr; // Name of the measurement to be filled in.

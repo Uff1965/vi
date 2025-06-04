@@ -380,19 +380,18 @@ int main()
 
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
-	{
-		vi_tmWarming(1, 500);
-		vi_tmThreadYield();
+	vi_tmWarming(1, 500);
+	vi_tmThreadYield();
 
-		foo_c();
-		test_empty();
-		test_sleep();
-		prn_clock_properties();
-	}
+	foo_c();
+
+	test_empty();
+	test_sleep();
+	test_sleep2();
+	prn_clock_properties();
 
 	test_report();
 	test_multithreaded();
-	test_sleep2();
 	test_access();
 
 	report_RAW(nullptr);
