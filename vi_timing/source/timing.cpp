@@ -114,6 +114,7 @@ void measuring_t::add(VI_TM_TDIFF val, size_t amt) noexcept
 		if 
 		(	flt_cnt_ <= 2 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
 			flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
+			deviation < 0.0 || // The minimum value is usually closest to the true value.
 			sum_square_dev < K2 * flt_ss_ // Avoids outliers.
 		)
 		{	flt_cnt_ += amt;
