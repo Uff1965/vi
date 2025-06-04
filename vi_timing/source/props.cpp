@@ -148,7 +148,7 @@ VI_OPTIMIZE_OFF
 	}
 VI_OPTIMIZE_ON
 
-VI_OPTIMIZE_OFF
+//VI_OPTIMIZE_OFF
 	double measurement_cost()
 	{	constexpr auto CNT = 500U;
 
@@ -183,7 +183,7 @@ VI_OPTIMIZE_OFF
 
 		return static_cast<double>(dirty - pure) / (EXT * CNT);
 	}
-VI_OPTIMIZE_ON
+//VI_OPTIMIZE_ON
 
 VI_OPTIMIZE_OFF
 	double resolution()
