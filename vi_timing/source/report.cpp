@@ -72,14 +72,14 @@ namespace
 
 	struct metering_t
 	{	std::string name_; // Name of the measured.
-		duration_t<DURATION_PREC, DURATION_DEC> sum_; // seconds
+		duration_t<DURATION_PREC, DURATION_DEC> sum_{}; // seconds
 		std::string sum_txt_{ NotAvailable };
-		duration_t<DURATION_PREC, DURATION_DEC> average_; // seconds
+		duration_t<DURATION_PREC, DURATION_DEC> average_{}; // seconds
 		std::string average_txt_{ NotAvailable };
 		std::size_t amt_{}; // Number of measured units
 		std::string amt_txt_{ "0" };
 #if defined(VI_TM_STAT_USE_WELFORD)
-		double cv_{ .0 }; // Coefficient of Variation.
+		double cv_{}; // Coefficient of Variation.
 		std::string cv_txt_; // Coefficient of Variation (CV) in percent
 #endif
 
