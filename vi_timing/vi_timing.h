@@ -254,6 +254,7 @@ extern "C" {
 		vi_tmShowMask = 0xF0,
 
 		vi_tmHideHeader = 0x0100,
+		vi_tmDoNotSubtractOverhead = 0x0200, // If set, the overhead is not subtracted from the measured time in report.
 	} vi_tmReportFlags_e;
 
 	/// <summary>

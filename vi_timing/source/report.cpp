@@ -83,7 +83,7 @@ namespace
 		std::string cv_txt_; // Coefficient of Variation (CV) in percent
 #endif
 
-		metering_t(const char *name, const vi_tmMeasuringRAW_t &meas) noexcept;
+		metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsigned flags) noexcept;
 	};
 
 	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);
@@ -160,20 +160,23 @@ namespace
 		std::string item_column(vi_tmReportFlags_e clmn, const char* txt = nullptr) const;
 	};
 
-	std::vector<metering_t> get_meterings(VI_TM_HJOUR journal_handle)
+	std::vector<metering_t> get_meterings(VI_TM_HJOUR journal_handle, unsigned flags)
 	{	std::vector<metering_t> result;
+		auto data = std::tie(result, flags);
+		using data_t = decltype(data);
 		vi_tmMeasuringEnumerate
 		(	journal_handle,
 			[](VI_TM_HMEAS h, void *callback_data)
 			{	const char *name;
 				vi_tmMeasuringRAW_t meas;
 				vi_tmMeasuringGet(h, &name, &meas);
-				static_cast<std::vector<metering_t> *>(callback_data)->emplace_back(name, std::move(meas));
+				auto& [data, flags] = *static_cast<data_t*>(callback_data);
+				data.emplace_back(name, std::move(meas), flags);
 				return 0; // Ok, continue enumerate.
 			},
-			&result
+			&data
 		);
-		return result;
+		return std::get<0>(data);
 	}
 
 	int print_props(vi_tmRptCb_t fn, void *data, unsigned flags)
@@ -224,7 +227,7 @@ namespace
 
 } // namespace
 
-metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas) noexcept
+metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsigned flags) noexcept
 :	name_{ name },
 	amt_{ meas.amt_ }
 {	assert(amt_ >= meas.calls_);
@@ -239,9 +242,10 @@ metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas) noexce
 			amt_txt_ = str.str();
 		}
 
+		const bool subtract_overhead{ 0U == (flags & vi_tmDoNotSubtractOverhead) };
 #ifdef VI_TM_STAT_USE_WELFORD
 		assert(meas.flt_cnt_); // Since amt_ is not zero.
-		const auto ave = meas.flt_mean_ - props.clock_latency_ticks_;
+		const auto ave = meas.flt_mean_ - (subtract_overhead? props.clock_latency_ticks_: 0.0);
 		if (ave <= props.clock_resolution_ticks_ / std::sqrt(meas.flt_cnt_))
 		{	sum_txt_ = Insignificant;
 			average_txt_ = Insignificant;
@@ -269,7 +273,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas) noexce
 			}
 		}
 #else
-		if (const auto ticks = static_cast<double>(meas.sum_) - props.clock_latency_ticks_ * static_cast<double>(meas.calls_);
+		if (const auto ticks = static_cast<double>(meas.sum_) - (subtract_overhead? props.clock_latency_ticks_ * static_cast<double>(meas.calls_): 0.0);
 			ticks <= props.clock_resolution_ticks_ * std::sqrt(meas.calls_)
 		)
 		{	sum_txt_ = Insignificant;
@@ -422,7 +426,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRptC
 
 	int result = print_props(fn, data, flags);
 
-	std::vector<metering_t> metering_entries = get_meterings(journal_handle);
+	std::vector<metering_t> metering_entries = get_meterings(journal_handle, flags);
 	const formatter_t formatter{ metering_entries, flags };
 	result += formatter.print_header(fn, data);
 

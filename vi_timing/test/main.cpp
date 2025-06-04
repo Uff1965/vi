@@ -378,7 +378,11 @@ vi_tm::measurer_t _{m};
 		std::cout << "RAW report:\n";
 		report_RAW(journal.get());
 		std::cout << "Report:\n";
-		vi_tmReport(journal.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution | vi_tmSortBySpeed);
+		unsigned flags = 0U;
+		flags |= vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution;
+		flags |= vi_tmSortBySpeed;
+		flags |= vi_tmDoNotSubtractOverhead;
+		vi_tmReport(journal.get(), flags);
 
 		std::cout << "Test test_access - done" << std::endl;
 	}
