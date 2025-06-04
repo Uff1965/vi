@@ -153,12 +153,12 @@ VI_OPTIMIZE_OFF
 	{	constexpr auto CNT = 500U;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		volatile VI_TM_TICK s;
+		VI_TM_TICK s;
 		for (auto cnt = cache_warmup + 1U; --cnt; )
 		{	s = vi_tmGetTicks(); // Preloading a function into cache
 		}
 
-		volatile VI_TM_TICK e;
+		VI_TM_TICK e;
 		for (auto cnt = CNT + 1U; --cnt; )
 		{	e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 		}
