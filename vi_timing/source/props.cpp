@@ -154,23 +154,23 @@ VI_OPTIMIZE_ON
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
 		VI_TM_TICK s;
-		for (auto cnt = cache_warmup + 1U; --cnt; )
+		for (auto cnt = cache_warmup; cnt; --cnt)
 		{	s = vi_tmGetTicks(); // Preloading a function into cache
 		}
 
 		VI_TM_TICK e;
-		for (auto cnt = CNT + 1U; --cnt; )
+		for (auto cnt = CNT; cnt; --cnt)
 		{	e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 		}
 		const auto pure = e - s;
 
 		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		for (auto cnt = cache_warmup + 1U; --cnt; )
+		for (auto cnt = cache_warmup; cnt; --cnt)
 		{	s = vi_tmGetTicks();
 		}
 
 		constexpr auto EXT = 20U;
-		for (auto cnt = CNT + 1U; --cnt; )
+		for (auto cnt = CNT; cnt; cnt--)
 		{	e = vi_tmGetTicks(); e = vi_tmGetTicks();  e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
 
 			// EXT calls
