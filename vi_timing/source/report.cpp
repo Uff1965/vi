@@ -240,9 +240,9 @@ metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas) noexce
 		}
 
 #ifdef VI_TM_STAT_USE_WELFORD
-		assert(!!meas.flt_cnt_ == !!meas.amt_);
+		assert(meas.flt_cnt_); // Since amt_ is not zero.
 		const auto ave = meas.flt_mean_ - props.clock_latency_ticks_;
-		if (ave <= props.clock_resolution_ticks_ / std::sqrt(meas.calls_))
+		if (ave <= props.clock_resolution_ticks_ / std::sqrt(meas.flt_cnt_))
 		{	sum_txt_ = Insignificant;
 			average_txt_ = Insignificant;
 		}
