@@ -186,9 +186,10 @@ extern "C" {
 		size_t amt_; // The number of all measured elements, including discarded ones.
 		VI_TM_TDIFF sum_; // Total time spent measuring all elements, in ticks.
 #if defined VI_TM_STAT_USE_WELFORD
-		size_t flt_cnt_; // Number of items counted. Filtered!
+		size_t flt_amt_; // Number of items counted. Filtered!
 		double flt_mean_; // The mean (average) time taken per processed items. In ticks. Filtered!
 		double flt_ss_; // Sum of Squares. In ticks. Filtered!
+		size_t flt_calls_; // Number of invoks processed. Filtered!
 #endif
 	} vi_tmMeasuringRAW_t;
 
@@ -329,8 +330,10 @@ extern "C" {
 
 // VI_DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
 #	ifdef NDEBUG
-#		define VI_DEBUG_ONLY(t) /**/
+#		define VI_NDEBUG_ONLY(t) t
+#		define VI_DEBUG_ONLY(t)
 #	else
+#		define VI_NDEBUG_ONLY(t)
 #		define VI_DEBUG_ONLY(t) t
 #	endif
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -36,12 +36,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <thread>
 #include <utility>
 
-#if false
+#if true
 #	undef VI_OPTIMIZE_ON
-#	define VI_OPTIMIZE_ON /**/
+#	define VI_OPTIMIZE_ON
 
 #	undef VI_OPTIMIZE_OFF
-#	define VI_OPTIMIZE_OFF /**/
+#	define VI_OPTIMIZE_OFF
 #endif
 
 using namespace std::chrono_literals;

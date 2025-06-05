@@ -95,7 +95,7 @@ namespace
 #ifdef VI_TM_STAT_USE_WELFORD
 				" mean = " << meas.flt_mean_ << ","
 				" ss = " << meas.flt_ss_ << ","
-				" cnt = " << std::setw(12) << meas.flt_cnt_ << ","
+				" cnt = " << std::setw(12) << meas.flt_amt_ << ","
 #endif
 				" sum = " << std::setw(15) << meas.sum_ << ","
 				" amt = " << std::setw(12) << meas.amt_ << ","
@@ -316,23 +316,45 @@ VI_OPTIMIZE_ON
 	{	VI_TM("test_sleep2");
 		std::cout << "\nTest test_sleep2:\n";
 
-		{	std::mt19937 gen(std::random_device{}());
-			std::normal_distribution dist(0.1, 0.01);
-			for (int i = 0; i < 100; ++i)
-			{	double val;
-				do
-				{	val = dist(gen);
-				} while (val < 0.015 || val > 1.5);
+		constexpr auto MEAN = 1e6;
+		constexpr auto CV = 0.05;
 
-				{	VI_TM("SLEEP_FOR");
-					std::this_thread::sleep_for(std::chrono::duration<double>(val));
-				}
-			}
+		const auto j = vi_tmJournalCreate();
+		const auto m = vi_tmMeasuring(j, "ITEM");
+		
+		std::mt19937 gen{ VI_DEBUG_ONLY(std::random_device{}()) };
+		std::normal_distribution dist(MEAN, CV * MEAN);
+
+		constexpr auto CNT = 1'000'000;
+		for (int i = 0; i < CNT; ++i)
+		{	const auto v = dist(gen);
+			assert(v >= 0);
+			vi_tmMeasuringRepl(m, static_cast<VI_TM_TICK>(std::round(v)), 1);
 		}
+
+		constexpr auto MULT = 1'000;
+		std::normal_distribution distM(MEAN * MULT, CV * MEAN * MULT);
+		for (int i = 0; i < CNT / MULT; ++i)
+		{	const auto v = distM(gen);
+			assert(v >= 0);
+			vi_tmMeasuringRepl(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
+		}
+
+		vi_tmReport(j, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+
+		vi_tmMeasuringRAW_t raw;
+		vi_tmMeasuringGet(m, nullptr, &raw);
+		assert(raw.amt_ == CNT + CNT);
+		assert(raw.calls_ == CNT + CNT / MULT);
+		assert(std::abs(raw.flt_mean_ - MEAN) / MEAN < 0.01);
+		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_amt_) / MEAN - CV) < 0.01);
+
+		vi_tmJournalClose(j);
+
 		std::cout << "Test test_sleep2 - done" << std::endl;
 	}
 
-VI_OPTIMIZE_OFF
+//VI_OPTIMIZE_OFF
 	void test_access()
 	{	VI_TM("Test test_access");
 		std::cout << "\nTest test_access:\n";
@@ -340,40 +362,61 @@ VI_OPTIMIZE_OFF
 		static int v_normal = 0;
 		static volatile int v_volatile = 0;
 		static std::atomic<int> v_atomic = 0;
-		thread_local int v_thread_local = 0;
-		static std::shared_mutex smtx;
+		static thread_local int v_thread_local = 0;
 		static std::mutex mtx;
-		static std::recursive_mutex rmtx;
-		static std::timed_mutex tmtx;
+		static std::recursive_mutex mtx_r;
+		static std::timed_mutex mtx_t;
+		static std::shared_mutex mtx_s;
 
-#define VI_TM_EX(j, name) \
-static const auto m = vi_tmMeasuring(j, name); \
-vi_tm::measurer_t _{m};
-
-		void(*arr[])(VI_TM_HJOUR) = {
+#define VI_TM_EX(j, name) static const auto m = vi_tmMeasuring(j, name); vi_tm::measurer_t _{m}
+		static void(*arr[])(VI_TM_HJOUR) = {
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*empty"); },
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*normal"); ++v_normal; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*volatile"); ++v_volatile; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic_relax"); v_atomic.fetch_add(1, std::memory_order_relaxed); },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*volatile"); v_volatile = v_volatile + 1; },
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*thread_local"); ++v_thread_local; },
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic"); ++v_atomic; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*shared_mutex"); std::lock_guard lg{ smtx }; ++v_normal; },
+//			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*atomic_relax"); v_atomic.fetch_add(1, std::memory_order_relaxed); },
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex"); std::lock_guard lg{ mtx }; ++v_normal; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*recursive_m"); std::lock_guard lg{ rmtx }; ++v_normal; },
-			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*timed_mutex"); std::lock_guard lg{ tmtx }; ++v_normal; },
+//			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex_shared"); std::lock_guard lg{ mtx_s }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex_recurs"); std::lock_guard lg{ mtx_r }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex_timed"); std::lock_guard lg{ mtx_t }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ static const auto m = vi_tmMeasuring(h, "*VI_TM"); vi_tm::measurer_t _{ m }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ vi_tm::measurer_t _{ vi_tmMeasuring(h, "*VI_XX") }; ++v_normal; },
 		};
-
 #undef VI_TM_EX
 
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose };
 		std::sort(std::begin(arr), std::end(arr));
 
+		constexpr static auto CNT = []
+			{	std::size_t result = 1;
+				std::size_t n = std::size(arr);
+				for (std::size_t i = 2; i <= n; ++i)
+				{	result *= i;
+				}
+				return result;
+			}();
+
+		endl(std::cout);
+		std::size_t n = 0;
 		do
 		{	for (auto f : arr)
 			{	std::this_thread::yield();
 				f(journal.get());
 			}
+			if (0 == ++n % 1'000)
+			{	std::cout << "\r" << std::setw(9) << n << " / " << CNT << std::flush;
+			}
 		} while (std::next_permutation(std::begin(arr), std::end(arr)));
+		endl(std::cout);
+
+		for (int n = 0; n < 1'000'000; ++n)
+		{
+			static const auto m = vi_tmMeasuring(journal.get(), "*mutex_r***");
+			vi_tm::measurer_t _{ m };
+			std::lock_guard lg{ mtx_r };
+			++v_normal;
+		}
 
 		std::cout << "RAW report:\n";
 		report_RAW(journal.get());
@@ -381,12 +424,12 @@ vi_tm::measurer_t _{m};
 		unsigned flags = 0U;
 		flags |= vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution;
 		flags |= vi_tmSortBySpeed;
-		flags |= vi_tmDoNotSubtractOverhead;
+//		flags |= vi_tmDoNotSubtractOverhead;
 		vi_tmReport(journal.get(), flags);
 
 		std::cout << "Test test_access - done" << std::endl;
 	}
-VI_OPTIMIZE_ON
+//VI_OPTIMIZE_ON
 } // namespace
 
 int main()
@@ -401,7 +444,7 @@ int main()
 
 	//test_empty();
 	//test_sleep();
-	//test_sleep2();
+	test_sleep2();
 	prn_clock_properties();
 
 	//test_report();

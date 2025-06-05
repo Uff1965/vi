@@ -42,12 +42,12 @@ VI_OPTIMIZE_OFF
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	uint32_t _; // Will be removed by the optimizer.
 		// «The RDTSCP instruction is not a serializing instruction, but it does wait until all previous instructions have executed».
-		const uint64_t result = __rdtscp(&_);
+		const uint64_t result = __rdtscp(&_); // Read the TSC.
 		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
 		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
 		//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
 		//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
-		_mm_lfence();
+		_mm_lfence(); // Ensure that the read of the time stamp is complete before any subsequent instructions
 		return result;
 	}
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)

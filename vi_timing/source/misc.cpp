@@ -119,13 +119,13 @@ namespace
 
 		class affinity_fix_t
 		{	static thread_local affinity_fix_t s_instance; // Thread-local instance!!!
-			std::size_t flt_cnt_ = 0U;
+			std::size_t flt_amt_ = 0U;
 			thread_affinity_mask_t previous_affinity_{};
 
-			~affinity_fix_t() { assert(0 == flt_cnt_); }
+			~affinity_fix_t() { assert(0 == flt_amt_); }
 		public:
 			static void fixate()
-			{	if (0 == s_instance.flt_cnt_++)
+			{	if (0 == s_instance.flt_amt_++)
 				{	if (auto prev = set_affinity(); verify(!!prev))
 					{	s_instance.previous_affinity_ = *prev;
 					}
@@ -133,8 +133,8 @@ namespace
 				return;
 			}
 			static void restore()
-			{	assert(s_instance.flt_cnt_ > 0);
-				if (0 == --s_instance.flt_cnt_ && restore_affinity(s_instance.previous_affinity_))
+			{	assert(s_instance.flt_amt_ > 0);
+				if (0 == --s_instance.flt_amt_ && restore_affinity(s_instance.previous_affinity_))
 				{	s_instance.previous_affinity_ = thread_affinity_mask_t{};
 				}
 			}

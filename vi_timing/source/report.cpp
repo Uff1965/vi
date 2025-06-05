@@ -244,9 +244,11 @@ metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsign
 
 		const bool subtract_overhead{ 0U == (flags & vi_tmDoNotSubtractOverhead) };
 #ifdef VI_TM_STAT_USE_WELFORD
-		assert(meas.flt_cnt_); // Since amt_ is not zero.
-		const auto ave = meas.flt_mean_ - (subtract_overhead? props.clock_latency_ticks_: 0.0);
-		if (ave <= props.clock_resolution_ticks_ / std::sqrt(meas.flt_cnt_))
+		assert(meas.flt_amt_ && meas.flt_calls_); // Since amt_ is not zero.
+		assert(meas.flt_calls_ <= meas.flt_amt_);
+
+		const auto ave = meas.flt_mean_ - (subtract_overhead? props.clock_latency_ticks_ * meas.flt_calls_ / meas.flt_amt_: 0.0);
+		if (ave <= props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_))
 		{	sum_txt_ = Insignificant;
 			average_txt_ = Insignificant;
 		}
@@ -257,8 +259,8 @@ metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsign
 			sum_txt_ = to_string(sum_);
 			if (meas.calls_ >= 2)
 			{	assert(amt_ >= 2); // Zero amt_ values are not included in meas.calls_.
-				assert(meas.flt_cnt_ >= 2); // The first two measurements cannot be filtered out.
-				cv_ = std::sqrt(meas.flt_ss_ / static_cast<double>(meas.flt_cnt_ - 1)) / ave;
+				assert(meas.flt_amt_ >= 2); // The first two measurements cannot be filtered out.
+				cv_ = std::sqrt(meas.flt_ss_ / static_cast<double>(meas.flt_amt_ - 1)) / ave;
 				if (const auto cv = std::round(cv_ * 100.0); cv < 1.0)
 				{	cv_txt_ = Insignificant; // Coefficient of Variation (CV) is too low.
 				}
@@ -274,7 +276,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsign
 		}
 #else
 		if (const auto ticks = static_cast<double>(meas.sum_) - (subtract_overhead? props.clock_latency_ticks_ * static_cast<double>(meas.calls_): 0.0);
-			ticks <= props.clock_resolution_ticks_ * std::sqrt(meas.calls_)
+			ticks <= props.clock_resolution_ticks_ * std::sqrt(amt_)
 		)
 		{	sum_txt_ = Insignificant;
 			average_txt_ = Insignificant;
