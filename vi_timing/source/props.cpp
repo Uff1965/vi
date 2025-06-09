@@ -33,6 +33,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <thread>
 #include <utility>
 
@@ -49,153 +50,106 @@ namespace ch = std::chrono;
 
 namespace
 {
-	using duration = ch::duration<double>;
-
-	class thread_affinity_fix_t
+	namespace detail
 	{
-		thread_affinity_fix_t(const thread_affinity_fix_t &) = delete;
-		thread_affinity_fix_t(thread_affinity_fix_t &&) = delete;
-		void operator=(const thread_affinity_fix_t &) = delete;
-		void operator=(thread_affinity_fix_t &&) = delete;
-	public:
-		thread_affinity_fix_t() { vi_tmCurrentThreadAffinityFixate(); }
-		~thread_affinity_fix_t() { vi_tmCurrentThreadAffinityRestore(); }
-	};
+		using duration = ch::duration<double>;
 
-	constexpr auto cache_warmup = 10U;
-	constexpr auto now = ch::steady_clock::now;
-	using time_point_t = std::invoke_result_t<decltype(now)>;
+		class thread_affinity_fix_t
+		{	thread_affinity_fix_t(const thread_affinity_fix_t &) = delete;
+			void operator=(const thread_affinity_fix_t &) = delete;
+		public:
+			thread_affinity_fix_t() { vi_tmCurrentThreadAffinityFixate(); }
+			~thread_affinity_fix_t() { vi_tmCurrentThreadAffinityRestore(); }
+		};
 
-	duration seconds_per_tick()
-	{	// Lambda to get current time and tick after waiting for a new time interval
-		auto time_point = []
-			{	std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
-				// Preload functions into cache to minimize cold start effects.
-				for (auto n = cache_warmup; n; --n)
-				{	// I hope that the compiler considers these functions to have side effects and does not discard their calls.
-					std::ignore = now();
-					std::ignore = vi_tmGetTicks();
+		const auto now = ch::steady_clock::now;
+		using time_point_t = std::invoke_result_t<decltype(now)>;
+
+		inline auto tick_time() noexcept
+		{	return std::pair{ vi_tmGetTicks(), now() };
+		}
+
+		template <typename F, typename... Args>
+		auto cache_warming(F&& fn, Args&&... args) // Preload functions into cache to minimize cold start effects.
+		{	constexpr auto CACHE_WARMUP = 10U;
+			using return_t = std::invoke_result_t<F, Args...>;
+
+			std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
+
+			if constexpr (std::is_void_v<return_t> )
+			{	for (auto n = 0U; n < CACHE_WARMUP; n++)
+				{	std::invoke(fn, args...);
 				}
-
-				time_point_t time;
-				// Wait for the start of a new time interval.
-				for (const auto s = time; s == time;)
-				{	time = now();
-				}
-				VI_TM_TICK tick = vi_tmGetTicks();
-
-				return std::pair{ time, tick };
-			};
-
-		const auto [s_time, s_ticks] = time_point();
-		const auto stop = s_time + 64ms;
-		time_point_t f_time;
-		VI_TM_TICK f_tick;
-		do
-		{	std::tie(f_time, f_tick) = time_point();
-		}
-		while (f_time < stop);
-
-		return (f_tick == s_ticks) ? duration{ 0 } : duration{ f_time - s_time } / (f_tick - s_ticks);
-	}
-
-VI_OPTIMIZE_OFF
-	duration measurement_duration()
-	{	static vi_tmMeasuring_t* const meas_point = vi_tmMeasuring(nullptr, ""); // Create a service item with empty name "".
-		static const auto gauge_zero = []
-			{	const auto start = vi_tmGetTicks();
-				std::atomic_signal_fence(std::memory_order_seq_cst); // Ensure that the measurement is not optimized out.
-				const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringRepl(meas_point, finish - start, 1U);
-			};
-		auto time_point = []
-			{	std::this_thread::yield(); // To minimize the chance of interrupting the flow between measurements.
-				for (auto cnt = cache_warmup; cnt; --cnt)
-				{	gauge_zero(); // Preloading a functions into cache
-				}
-
-				// Are waiting for the start of a new time interval.
-				auto result = now();
-				for (const auto s = result; s == result; result = now())
-				{/**/}
-
-				return result;
-			};
-
-		constexpr auto CNT = 500U;
-		auto s = time_point();
-		for (auto cnt = CNT + 1; --cnt; )
-		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); // 5 calls
-		}
-		auto e = now();
-		const auto pure = e - s;
-
-		constexpr auto EXT = 20U;
-		s = time_point();
-		for (auto cnt = CNT + 1; --cnt; )
-		{	gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); // 5 calls
-
-			// EXT calls
-			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
-			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
-			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
-			gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero(); gauge_zero();
-		}
-		e = now();
-		const auto dirty = e - s;
-
-		return duration{ dirty - pure } / (EXT * CNT);
-	}
-VI_OPTIMIZE_ON
-
-//VI_OPTIMIZE_OFF
-	double measurement_cost()
-	{	constexpr auto CNT = 500U;
-
-		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		VI_TM_TICK s;
-		for (auto cnt = cache_warmup; cnt; --cnt)
-		{	s = vi_tmGetTicks(); // Preloading a function into cache
-		}
-
-		VI_TM_TICK e;
-		for (auto cnt = CNT; cnt; --cnt)
-		{	e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-		}
-		const auto pure = e - s;
-
-		std::this_thread::yield(); // To minimize the likelihood of interrupting the flow between measurements.
-		for (auto cnt = cache_warmup; cnt; --cnt)
-		{	s = vi_tmGetTicks();
-		}
-
-		constexpr auto EXT = 20U;
-		for (auto cnt = CNT; cnt; cnt--)
-		{	e = vi_tmGetTicks(); e = vi_tmGetTicks();  e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-
-			// EXT calls
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-			e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks(); e = vi_tmGetTicks();
-		}
-		const auto dirty = e - s;
-
-		return static_cast<double>(dirty - pure) / (EXT * CNT);
-	}
-//VI_OPTIMIZE_ON
-
-VI_OPTIMIZE_OFF
-	double resolution()
-	{	for (auto CNT = 8;; CNT *= 8) //-V1044 Loop break conditions do not depend on the number of iterations.
-		{	volatile VI_TM_TICK first = 0;
-			volatile VI_TM_TICK last = 0;
-
-			std::this_thread::yield(); // Reduce the likelihood of interrupting measurements by switching threads.
-			const auto limit = now() + 256us;
-			for (auto n = cache_warmup; n; --n)
-			{	first = last = vi_tmGetTicks();
 			}
+			else
+			{	return_t result;
+				for (auto n = 0U; n < CACHE_WARMUP; n++)
+				{	// volatile variable cannot be initialized by an STL object.
+					// const_cast<volatile return_t&>(result) = std::invoke(fn, args...);
+					result = std::invoke(fn, args...); // TODO: The optimizer will probably remove the assignments.
+				}
+				return result; // Return the last result.
+			}
+		}
+
+		template <std::size_t... Is, typename F, typename... Args>
+		constexpr auto multiple_invoke_impl(std::index_sequence<Is...>, F &&fn, Args&&... args)
+		{	using return_t = std::invoke_result_t<F, Args...>;
+
+			if constexpr (std::is_void_v<return_t>) {
+				((static_cast<void>(Is), std::invoke(fn, args...)), ...);
+			}
+			else
+			{	return_t result{};
+				((static_cast<void>(Is), const_cast<volatile return_t&>(result) = std::invoke(fn, args...)), ...);
+				return result; // Return the last result.
+			}
+		}
+
+		template <std::size_t N, typename F, typename... Args>
+		constexpr auto multiple_invoke(F &&fn, Args&&... args)
+		{	static_assert(N > 0);
+			return multiple_invoke_impl
+			(	std::make_index_sequence<N>{},
+				std::forward<F>(fn),
+				std::forward<Args>(args)...
+			);
+		}
+
+		auto time_point()
+		{
+			auto result = tick_time();
+
+			// Wait for the start of a new time interval.
+			for (const auto s = result.second; s == result.second;)
+			{
+				result = tick_time();
+			}
+
+			return result;
+		};
+	}
+
+	detail::duration meas_seconds_per_tick()
+	{	auto f = detail::cache_warming(detail::time_point);
+		auto const [s_ticks, s_time] = f;
+		auto const stop = s_time + 64ms;
+		do
+		{	f = detail::time_point();
+		}
+		while (f.second < stop);
+
+		return (f.first == s_ticks) ?
+			detail::duration{ 0 } :
+			detail::duration{ f.second - s_time } / (f.first - s_ticks);
+	}
+
+	double meas_resolution()
+	{	for (auto CNT = 8U;; CNT *= 8U) //-V1044 Loop break conditions do not depend on the number of iterations.
+		{	const auto limit = detail::now() + 256us;
+
+			const VI_TM_TICK first = detail::cache_warming(vi_tmGetTicks);
+			auto last = first;
 
 			for (auto cnt = CNT; cnt; )
 			{	if (const auto current = vi_tmGetTicks(); current != last)
@@ -204,23 +158,76 @@ VI_OPTIMIZE_OFF
 				}
 			}
 
-			if (now() > limit)
+			if (detail::now() > limit)
 			{	return static_cast<double>(last - first) / CNT;
 			}
 		}
+	}
+
+VI_OPTIMIZE_OFF
+	detail::duration meas_duration()
+	{	constexpr auto CNT = 128U;
+		constexpr auto BASE = 4U;
+		constexpr auto EXT = 64U;
+		static vi_tmMeasuring_t* const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
+		static const auto gauge_zero = []
+			{	const auto start = vi_tmGetTicks();
+				const auto finish = vi_tmGetTicks();
+				vi_tmMeasuringRepl(service_item, finish - start, 1U);
+			};
+		detail::cache_warming([] { (void)gauge_zero(); (void)detail::now(); }); // Preload the functions into cache to minimize cold start effects.
+
+		auto s = detail::now();
+		for (auto cnt = CNT + 1; --cnt; )
+		{	detail::multiple_invoke<BASE>(gauge_zero);
+		}
+		auto e = detail::now();
+		const auto pure = e - s;
+
+		s = detail::now();
+		for (auto cnt = CNT + 1; --cnt; )
+		{	detail::multiple_invoke<BASE + EXT>(gauge_zero); // + EXT calls
+		}
+		e = detail::now();
+		const auto dirty = e - s;
+
+		return detail::duration{ dirty - pure } / (EXT * CNT);
+	}
+VI_OPTIMIZE_ON
+
+VI_OPTIMIZE_OFF
+	double meas_cost()
+	{	constexpr auto CNT = 128U;
+		constexpr auto BASE = 4U;
+		constexpr auto EXT = 64U;
+
+		auto s = detail::cache_warming(vi_tmGetTicks);
+		auto e = s;
+		for (auto cnt = CNT; cnt; --cnt)
+		{	e = detail::multiple_invoke<BASE>(vi_tmGetTicks);
+		}
+		const auto pure = e - s;
+
+		s = detail::cache_warming(vi_tmGetTicks);
+		for (auto cnt = CNT; cnt; --cnt)
+		{	e = detail::multiple_invoke<BASE + EXT>(vi_tmGetTicks); // + EXT calls
+		}
+		const auto dirty = e - s;
+
+		return static_cast<double>(dirty - pure) / (EXT * CNT);
 	}
 VI_OPTIMIZE_ON
 }
 
 misc::properties_t::properties_t()
-{	thread_affinity_fix_t thread_affinity_fix_guard;
+{	detail::thread_affinity_fix_t thread_affinity_fix_guard;
 	vi_tmJournalReset(nullptr, ""); // Reset a service item with empty name "".
 	vi_tmWarming(1, 500);
 
-	seconds_per_tick_ = seconds_per_tick(); // Get the duration of a single tick in seconds.
-	clock_latency_ticks_ = measurement_cost(); // Get the cost of a single call of vi_tmGetTicks.
-	all_latency_ = measurement_duration(); // Get the cost of a single measurement in seconds.
-	clock_resolution_ticks_ = resolution(); // Get the resolution of the clock in ticks.
+	seconds_per_tick_ = meas_seconds_per_tick(); // Get the duration of a single tick in seconds.
+	clock_latency_ticks_ = meas_cost(); // Get the cost of a single call of vi_tmGetTicks.
+	all_latency_ = meas_duration(); // Get the cost of a single measurement in seconds.
+	clock_resolution_ticks_ = meas_resolution(); // Get the resolution of the clock in ticks.
 }
 
 const misc::properties_t& misc::properties_t::props()

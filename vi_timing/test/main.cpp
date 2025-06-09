@@ -404,18 +404,18 @@ VI_OPTIMIZE_ON
 			{	std::this_thread::yield();
 				f(journal.get());
 			}
-			if (0 == ++n % 1'000)
+			if (0 == ++n % 10'000)
 			{	std::cout << "\r" << std::setw(9) << n << " / " << CNT << std::flush;
 			}
 		} while (std::next_permutation(std::begin(arr), std::end(arr)));
 		endl(std::cout);
 
-		for (int n = 0; n < 1'000'000; ++n)
-		{
-			static const auto m = vi_tmMeasuring(journal.get(), "*mutex_r***");
-			vi_tm::measurer_t _{ m };
-			std::lock_guard lg{ mtx_r };
-			++v_normal;
+		{	static const auto m = vi_tmMeasuring(journal.get(), "*mutex_r***");
+			for (int n = 0; n < 1'000'000; ++n)
+			{	vi_tm::measurer_t _{ m };
+				std::lock_guard lg{ mtx_r };
+				++v_normal;
+			}
 		}
 
 		std::cout << "RAW report:\n";
