@@ -130,6 +130,10 @@ namespace
 		};
 	}
 
+	constexpr auto CNT = 256U;
+	constexpr auto BASE = 4U;
+	constexpr auto EXT = 64U;
+
 	detail::duration meas_seconds_per_tick()
 	{	auto f = detail::cache_warming(detail::time_point);
 		auto const [s_ticks, s_time] = f;
@@ -165,11 +169,27 @@ namespace
 	}
 
 VI_OPTIMIZE_OFF
+	double meas_cost()
+	{	auto s = detail::cache_warming(vi_tmGetTicks);
+		auto e = s;
+		for (auto cnt = CNT; cnt; --cnt)
+		{	e = detail::multiple_invoke<BASE>(vi_tmGetTicks);
+		}
+		const auto pure = e - s;
+
+		s = detail::cache_warming(vi_tmGetTicks);
+		for (auto cnt = CNT; cnt; --cnt)
+		{	e = detail::multiple_invoke<BASE + EXT>(vi_tmGetTicks); // + EXT calls
+		}
+		const auto dirty = e - s;
+
+		return static_cast<double>(dirty - pure) / (EXT * CNT);
+	}
+VI_OPTIMIZE_ON
+
+VI_OPTIMIZE_OFF
 	detail::duration meas_duration()
-	{	constexpr auto CNT = 128U;
-		constexpr auto BASE = 4U;
-		constexpr auto EXT = 64U;
-		static vi_tmMeasuring_t* const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
+	{	static vi_tmMeasuring_t* const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
 		static const auto gauge_zero = []
 			{	const auto start = vi_tmGetTicks();
 				const auto finish = vi_tmGetTicks();
@@ -192,29 +212,6 @@ VI_OPTIMIZE_OFF
 		const auto dirty = e - s;
 
 		return detail::duration{ dirty - pure } / (EXT * CNT);
-	}
-VI_OPTIMIZE_ON
-
-VI_OPTIMIZE_OFF
-	double meas_cost()
-	{	constexpr auto CNT = 128U;
-		constexpr auto BASE = 4U;
-		constexpr auto EXT = 64U;
-
-		auto s = detail::cache_warming(vi_tmGetTicks);
-		auto e = s;
-		for (auto cnt = CNT; cnt; --cnt)
-		{	e = detail::multiple_invoke<BASE>(vi_tmGetTicks);
-		}
-		const auto pure = e - s;
-
-		s = detail::cache_warming(vi_tmGetTicks);
-		for (auto cnt = CNT; cnt; --cnt)
-		{	e = detail::multiple_invoke<BASE + EXT>(vi_tmGetTicks); // + EXT calls
-		}
-		const auto dirty = e - s;
-
-		return static_cast<double>(dirty - pure) / (EXT * CNT);
 	}
 VI_OPTIMIZE_ON
 }
