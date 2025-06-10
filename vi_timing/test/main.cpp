@@ -229,15 +229,14 @@ VI_OPTIMIZE_ON
 			"\n"
 	#pragma warning(suppress: 4996)
 			"Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
-			"Build type: " << CONFIG << "\n" <<
+			"Version: " << VI_TM_FULLVERSION << "\n" <<
 			std::endl;
 
 		std::cout <<
 			"Information about the \'vi_timing\' library:" << "\n"
-			"\tBuild type: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
-			"\tVer: " << *static_cast<const unsigned*>(vi_tmStaticInfo(VI_TM_INFO_VER)) << "\n"
-			"\tBuild number: " << *static_cast<const unsigned*>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n"
-			"\tVersion: " << VI_TM_FULLVERSION << std::endl;
+			"\tBuild type: " << static_cast<const char *>(vi_tmStaticInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
+			"\tVer: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_VER)) << "\n"
+			"\tBuild number: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n";
 	}
 
 	void warming()
@@ -312,12 +311,18 @@ VI_OPTIMIZE_ON
 		std::cout << "Test vi_tmReport - done" << std::endl;
 	}
 
-	void test_sleep2()
-	{	VI_TM("test_sleep2");
-		std::cout << "\nTest test_sleep2:\n";
+	void normal_distribution()
+	{	VI_TM("normal_distribution");
+		std::cout << "\nTest normal_distribution:\n";
 
+		constexpr auto MULT = 1'000;
+		constexpr auto CNT = 1'000'000;
 		constexpr auto MEAN = 1e6;
 		constexpr auto CV = 0.05;
+		std::cout << "This test generates normally distributed numbers "
+			"with mean = " << MEAN << " ticks and CV = " << CV << ".\n"
+			"There are " << CNT + MULT * CNT / MULT << " numbers in total, " << CNT <<
+			" are added one by one and " << CNT / MULT <<  " by " << MULT << ".\n";
 
 		const auto j = vi_tmJournalCreate();
 		const auto m = vi_tmMeasuring(j, "ITEM");
@@ -325,14 +330,12 @@ VI_OPTIMIZE_ON
 		std::mt19937 gen{ VI_DEBUG_ONLY(std::random_device{}()) };
 		std::normal_distribution dist(MEAN, CV * MEAN);
 
-		constexpr auto CNT = 1'000'000;
 		for (int i = 0; i < CNT; ++i)
 		{	const auto v = dist(gen);
 			assert(v >= 0);
 			vi_tmMeasuringRepl(m, static_cast<VI_TM_TICK>(std::round(v)), 1);
 		}
 
-		constexpr auto MULT = 1'000;
 		std::normal_distribution distM(MEAN * MULT, CV * MEAN * MULT);
 		for (int i = 0; i < CNT / MULT; ++i)
 		{	const auto v = distM(gen);
@@ -351,7 +354,7 @@ VI_OPTIMIZE_ON
 
 		vi_tmJournalClose(j);
 
-		std::cout << "Test test_sleep2 - done" << std::endl;
+		std::cout << "Test normal_distribution - done" << std::endl;
 	}
 
 //VI_OPTIMIZE_OFF
@@ -444,7 +447,7 @@ int main()
 
 	//test_empty();
 	//test_sleep();
-	test_sleep2();
+	normal_distribution();
 	prn_clock_properties();
 
 	//test_report();
