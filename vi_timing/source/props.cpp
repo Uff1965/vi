@@ -84,28 +84,21 @@ namespace
 			}
 		}
 
-		template <std::size_t... Is, typename F, typename... Args>
-		constexpr auto multiple_invoke_impl(std::index_sequence<Is...>, F &&fn, Args&&... args)
-		{	using return_t = std::invoke_result_t<F, Args...>;
+		template <std::size_t N, typename F, typename... Args>
+		constexpr auto multiple_invoke(F &fn, Args&... args)
+		{	if constexpr (N > 1U)
+			{	multiple_invoke<N - 1>(fn, args...);
+			}
 
-			if constexpr (std::is_void_v<return_t>) {
-				((static_cast<void>(Is), std::invoke(fn, args...)), ...);
+			using return_t = std::invoke_result_t<F, Args...>;
+			if constexpr (std::is_void_v<return_t>)
+			{	std::invoke(fn, args...);
 			}
 			else
-			{	return_t result{};
-				((static_cast<void>(Is), const_cast<volatile return_t&>(result) = std::invoke(fn, args...)), ...);
-				return result; // Return the last result.
+			{	return_t result;
+				const_cast<volatile return_t&>(result) = std::invoke(fn, args...);
+				return result;
 			}
-		}
-
-		template <std::size_t N, typename F, typename... Args>
-		constexpr auto multiple_invoke(F &&fn, Args&&... args)
-		{	static_assert(N > 0);
-			return multiple_invoke_impl
-			(	std::make_index_sequence<N>{},
-				std::forward<F>(fn),
-				std::forward<Args>(args)...
-			);
 		}
 
 		auto time_point()
@@ -150,7 +143,7 @@ namespace
 
 	constexpr auto RPT = 128U;
 	constexpr auto BASE = 4U;
-	constexpr auto EXT = 32U;
+	constexpr auto CNT = 32U;
 
 	double meas_cost()
 	{	auto s = detail::cache_warming(vi_tmGetTicks);
@@ -162,11 +155,11 @@ namespace
 
 		s = detail::cache_warming(vi_tmGetTicks);
 		for (auto n = RPT; n; --n)
-		{	f = detail::multiple_invoke<BASE + EXT>(vi_tmGetTicks); // + EXT calls
+		{	f = detail::multiple_invoke<BASE + CNT>(vi_tmGetTicks); // + EXT calls
 		}
 		const auto full = f - s;
 
-		return static_cast<double>(full - base) / (EXT * RPT);
+		return static_cast<double>(full - base) / (CNT * RPT);
 	}
 
 	detail::duration meas_duration()
@@ -187,12 +180,12 @@ namespace
 
 		s = detail::now();
 		for (auto n = RPT; n; --n)
-		{	detail::multiple_invoke<BASE + EXT>(gauge_zero); // + EXT calls
+		{	detail::multiple_invoke<BASE + CNT>(gauge_zero); // + EXT calls
 		}
 		f = detail::now();
 		const auto full = f - s;
 
-		return detail::duration{ full - base } / (EXT * RPT);
+		return detail::duration{ full - base } / (CNT * RPT);
 	}
 }
 
