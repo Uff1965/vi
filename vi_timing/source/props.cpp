@@ -199,7 +199,7 @@ namespace
 misc::properties_t::properties_t()
 {	detail::thread_affinity_fix_t thread_affinity_fix_guard;
 	vi_tmJournalReset(nullptr, ""); // Reset a service item with empty name "".
-	vi_tmWarming(1, 500);
+	vi_tmWarming(1);
 
 	seconds_per_tick_ = meas_seconds_per_tick(); // Get the duration of a single tick in seconds.
 	clock_latency_ticks_ = meas_cost(); // Get the cost of a single call of vi_tmGetTicks.

@@ -279,26 +279,36 @@ void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
 	{	return;
 	}
 
-	if(const auto cores_qty = std::max(1U, std::thread::hardware_concurrency()); 0 == threads_qty || cores_qty < threads_qty)
-	{	threads_qty = cores_qty;
+	if (threads_qty == 0U || threads_qty > std::thread::hardware_concurrency())
+	{	threads_qty = std::thread::hardware_concurrency();
+	}
+	if (threads_qty)
+	{	threads_qty--;
 	}
 
+	auto load_dummy = [] { volatile auto f = 0.0; for (auto n = 10'000U; n; --n) f = f + std::sin(n) * std::cos(n); };
 	std::atomic_bool done = false;
-	static auto load_dummy = [] { volatile auto f = 0.0; for (auto n = 10'000U; n; --n) f += std::sin(n) * std::cos(n); };
-	auto thread_func = [&done] { while (!done) load_dummy(); };
 
-	std::vector<std::thread> additional_threads(threads_qty - 1); // Additional threads
-	for (auto &t : additional_threads)
-	{	t = std::thread{ thread_func };
+	std::vector<std::thread> additional_threads;
+	additional_threads.reserve(threads_qty);
+	try
+	{	for (unsigned i = 0; i < threads_qty; ++i)
+		{	additional_threads.emplace_back([&done, load_dummy] { while (!done) load_dummy(); });
+		}
 	}
+	catch (...)
+	{	assert(false); // An exception occurred while starting threads.
+	}
+
 	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
 	{	load_dummy();
 	}
 
 	done = true;
-
 	for (auto &t : additional_threads)
-	{	t.join();
+	{	if (t.joinable())
+		{	t.join();
+		}
 	}
 }
 

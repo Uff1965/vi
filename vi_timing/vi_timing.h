@@ -274,7 +274,7 @@ extern "C" {
 	/// <param name="threads_qty">The number of threads to use for the warming routine. If zero or greater than the number of available hardware threads, the function uses the maximum available.</param>
 	/// <param name="ms">The duration of the warming routine in milliseconds. If zero, the function returns immediately.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
+	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(2000));
 
 	/// <summary>
 	/// Fixates the CPU affinity of the current thread.

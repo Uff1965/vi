@@ -61,7 +61,7 @@ namespace
 	const auto init_common = []
 		{	VI_TM("INITIALIZE COMMON");
 			vi_tmCurrentThreadAffinityFixate();
-			vi_tmWarming(0, 1000);
+			vi_tmWarming();
 			return 0;
 		}();
 }
