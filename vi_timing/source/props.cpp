@@ -84,21 +84,28 @@ namespace
 			}
 		}
 
-		template <std::size_t N, typename F, typename... Args>
-		constexpr auto multiple_invoke(F &fn, Args&... args)
-		{	if constexpr (N > 1U)
-			{	multiple_invoke<N - 1>(fn, args...);
-			}
+		template <std::size_t... Is, typename F, typename... Args>
+		constexpr auto multiple_invoke_impl(std::index_sequence<Is...>, F &fn, Args&... args)
+		{	using return_t = std::invoke_result_t<F, Args...>;
 
-			using return_t = std::invoke_result_t<F, Args...>;
-			if constexpr (std::is_void_v<return_t>)
-			{	std::invoke(fn, args...);
+			if constexpr (std::is_void_v<return_t>) {
+				((static_cast<void>(Is), std::invoke(fn, args...)), ...);
 			}
 			else
-			{	return_t result;
-				const_cast<volatile return_t&>(result) = std::invoke(fn, args...);
-				return result;
+			{	return_t result{};
+				((static_cast<void>(Is), const_cast<volatile return_t&>(result) = std::invoke(fn, args...)), ...);
+				return result; // Return the last result.
 			}
+		}
+
+		template <std::size_t N, typename F, typename... Args>
+		constexpr auto multiple_invoke(F &&fn, Args&&... args)
+		{	static_assert(N > 0);
+			return multiple_invoke_impl
+			(	std::make_index_sequence<N>{},
+				std::forward<F>(fn),
+				std::forward<Args>(args)...
+			);
 		}
 
 		auto time_point()
@@ -187,7 +194,7 @@ namespace
 
 		return detail::duration{ full - base } / (CNT * RPT);
 	}
-}
+} // namespace
 
 misc::properties_t::properties_t()
 {	detail::thread_affinity_fix_t thread_affinity_fix_guard;
