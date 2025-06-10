@@ -54,11 +54,11 @@ VI_OPTIMIZE_OFF
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	uint64_t result;
 		asm volatile
-		(	"dmb ish\n\t" // Ensure all previous memory accesses are complete before reading the timer
+		(	// too slow: "dmb ish\n\t" // Ensure all previous memory accesses are complete before reading the timer
 			"isb\n\t" // Ensure the instruction stream is synchronized
 			"mrs %0, cntvct_el0\n\t" // Read the current value of the system timer
 			"isb\n\t" // Ensure the instruction stream is synchronized again
-			: "=r"(result) 
+			: "=r"(result) // Output operand: result will hold the current timer value
 			: // No input operands
 			: "memory" // Clobber memory to ensure the compiler does not reorder instructions
 		);

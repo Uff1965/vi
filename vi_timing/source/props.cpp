@@ -37,19 +37,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <thread>
 #include <utility>
 
-#if true
-#	undef VI_OPTIMIZE_ON
-#	define VI_OPTIMIZE_ON
-
-#	undef VI_OPTIMIZE_OFF
-#	define VI_OPTIMIZE_OFF
-#endif
-
-using namespace std::chrono_literals;
-namespace ch = std::chrono;
-
 namespace
 {
+	using namespace std::chrono_literals;
+	namespace ch = std::chrono;
+
 	namespace detail
 	{
 		using duration = ch::duration<double>;
@@ -117,22 +109,14 @@ namespace
 		}
 
 		auto time_point()
-		{
-			auto result = tick_time();
-
+		{	auto result = tick_time();
 			// Wait for the start of a new time interval.
 			for (const auto s = result.second; s == result.second;)
-			{
-				result = tick_time();
+			{	result = tick_time();
 			}
-
 			return result;
 		};
-	}
-
-	constexpr auto CNT = 256U;
-	constexpr auto BASE = 4U;
-	constexpr auto EXT = 64U;
+	} //namespace detail
 
 	detail::duration meas_seconds_per_tick()
 	{	auto f = detail::cache_warming(detail::time_point);
@@ -141,21 +125,17 @@ namespace
 		do
 		{	f = detail::time_point();
 		}
-		while (f.second < stop);
+		while (f.second < stop || f.first - s_ticks < 10);
 
-		return (f.first == s_ticks) ?
-			detail::duration{ 0 } :
-			detail::duration{ f.second - s_time } / (f.first - s_ticks);
+		return detail::duration{ f.second - s_time } / (f.first - s_ticks);
 	}
 
 	double meas_resolution()
-	{	for (auto CNT = 8U;; CNT *= 8U) //-V1044 Loop break conditions do not depend on the number of iterations.
+	{	for (auto N = 8U;; N *= 8U) //-V1044
 		{	const auto limit = detail::now() + 256us;
-
-			const VI_TM_TICK first = detail::cache_warming(vi_tmGetTicks);
+			const auto first = detail::cache_warming(vi_tmGetTicks);
 			auto last = first;
-
-			for (auto cnt = CNT; cnt; )
+			for (auto cnt = N; cnt; )
 			{	if (const auto current = vi_tmGetTicks(); current != last)
 				{	last = current;
 					--cnt;
@@ -163,31 +143,32 @@ namespace
 			}
 
 			if (detail::now() > limit)
-			{	return static_cast<double>(last - first) / CNT;
+			{	return static_cast<double>(last - first) / N;
 			}
 		}
 	}
 
-VI_OPTIMIZE_OFF
+	constexpr auto RPT = 128U;
+	constexpr auto BASE = 4U;
+	constexpr auto EXT = 32U;
+
 	double meas_cost()
 	{	auto s = detail::cache_warming(vi_tmGetTicks);
-		auto e = s;
-		for (auto cnt = CNT; cnt; --cnt)
-		{	e = detail::multiple_invoke<BASE>(vi_tmGetTicks);
+		auto f = s;
+		for (auto n = RPT; n; --n)
+		{	f = detail::multiple_invoke<BASE>(vi_tmGetTicks);
 		}
-		const auto pure = e - s;
+		const auto pure = f - s;
 
 		s = detail::cache_warming(vi_tmGetTicks);
-		for (auto cnt = CNT; cnt; --cnt)
-		{	e = detail::multiple_invoke<BASE + EXT>(vi_tmGetTicks); // + EXT calls
+		for (auto n = RPT; n; --n)
+		{	f = detail::multiple_invoke<BASE + EXT>(vi_tmGetTicks); // + EXT calls
 		}
-		const auto dirty = e - s;
+		const auto dirty = f - s;
 
-		return static_cast<double>(dirty - pure) / (EXT * CNT);
+		return static_cast<double>(dirty - pure) / (EXT * RPT);
 	}
-VI_OPTIMIZE_ON
 
-VI_OPTIMIZE_OFF
 	detail::duration meas_duration()
 	{	static vi_tmMeasuring_t* const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
 		static const auto gauge_zero = []
@@ -198,22 +179,21 @@ VI_OPTIMIZE_OFF
 		detail::cache_warming([] { (void)gauge_zero(); (void)detail::now(); }); // Preload the functions into cache to minimize cold start effects.
 
 		auto s = detail::now();
-		for (auto cnt = CNT + 1; --cnt; )
+		for (auto n = RPT; n; --n )
 		{	detail::multiple_invoke<BASE>(gauge_zero);
 		}
-		auto e = detail::now();
-		const auto pure = e - s;
+		auto f = detail::now();
+		const auto pure = f - s;
 
 		s = detail::now();
-		for (auto cnt = CNT + 1; --cnt; )
+		for (auto n = RPT; n; --n)
 		{	detail::multiple_invoke<BASE + EXT>(gauge_zero); // + EXT calls
 		}
-		e = detail::now();
-		const auto dirty = e - s;
+		f = detail::now();
+		const auto dirty = f - s;
 
-		return detail::duration{ dirty - pure } / (EXT * CNT);
+		return detail::duration{ dirty - pure } / (EXT * RPT);
 	}
-VI_OPTIMIZE_ON
 }
 
 misc::properties_t::properties_t()
