@@ -158,15 +158,15 @@ namespace
 		for (auto n = RPT; n; --n)
 		{	f = detail::multiple_invoke<BASE>(vi_tmGetTicks);
 		}
-		const auto pure = f - s;
+		const auto base = f - s;
 
 		s = detail::cache_warming(vi_tmGetTicks);
 		for (auto n = RPT; n; --n)
 		{	f = detail::multiple_invoke<BASE + EXT>(vi_tmGetTicks); // + EXT calls
 		}
-		const auto dirty = f - s;
+		const auto full = f - s;
 
-		return static_cast<double>(dirty - pure) / (EXT * RPT);
+		return static_cast<double>(full - base) / (EXT * RPT);
 	}
 
 	detail::duration meas_duration()
@@ -183,16 +183,16 @@ namespace
 		{	detail::multiple_invoke<BASE>(gauge_zero);
 		}
 		auto f = detail::now();
-		const auto pure = f - s;
+		const auto base = f - s;
 
 		s = detail::now();
 		for (auto n = RPT; n; --n)
 		{	detail::multiple_invoke<BASE + EXT>(gauge_zero); // + EXT calls
 		}
 		f = detail::now();
-		const auto dirty = f - s;
+		const auto full = f - s;
 
-		return detail::duration{ dirty - pure } / (EXT * RPT);
+		return detail::duration{ full - base } / (EXT * RPT);
 	}
 }
 
