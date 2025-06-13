@@ -65,7 +65,7 @@ namespace
 		}
 
 		template <typename F, typename... Args>
-		auto cache_warming(F&& fn, Args&&... args) // Preload functions into cache to minimize cold start effects.
+		auto cache_warming_and_invoke(F&& fn, Args&&... args) // Preload functions into cache to minimize cold start effects.
 		{	constexpr auto CACHE_WARMUP = 10U;
 			using return_t = std::invoke_result_t<F, Args...>;
 
@@ -120,6 +120,7 @@ namespace
 			return result;
 		};
 
+		VI_NOINLINE
 		auto meas_cost_base()
 		{	auto s = vi_tmGetTicks();
 			auto f = s;
@@ -129,6 +130,7 @@ namespace
 			return f - s;
 		}
 
+		VI_NOINLINE
 		auto meas_cost_full()
 		{	auto s = vi_tmGetTicks();
 			auto f = s;
@@ -145,6 +147,7 @@ namespace
 			vi_tmMeasuringRepl(service_item, finish - start, 1U);
 		};
 
+		VI_NOINLINE
 		auto meas_duration_base()
 		{	auto s = detail::now();
 			for (auto n = RPT; n; --n )
@@ -154,6 +157,7 @@ namespace
 			return f - s;
 		}
 
+		VI_NOINLINE
 		auto meas_duration_full()
 		{	auto s = detail::now();
 			for (auto n = RPT; n; --n )
@@ -195,14 +199,14 @@ namespace
 	}
 
 	double meas_cost()
-	{	const auto base = detail::cache_warming(detail::meas_cost_base);
-		const auto full = detail::cache_warming(detail::meas_cost_full);
+	{	const auto base = detail::cache_warming_and_invoke(detail::meas_cost_base);
+		const auto full = detail::cache_warming_and_invoke(detail::meas_cost_full);
 		return static_cast<double>(full - base) / (CNT * RPT);
 	}
 
 	detail::duration meas_duration()
-	{	const auto base = detail::cache_warming(detail::meas_duration_base);
-		const auto full = detail::cache_warming(detail::meas_duration_full);
+	{	const auto base = detail::cache_warming_and_invoke(detail::meas_duration_base);
+		const auto full = detail::cache_warming_and_invoke(detail::meas_duration_full);
 		return detail::duration{ full - base } / (CNT * RPT);
 	}
 } // namespace

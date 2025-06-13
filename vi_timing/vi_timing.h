@@ -304,17 +304,21 @@ extern "C" {
 //   // ... code with optimizations disabled ...
 //   VI_OPTIMIZE_ON
 #	if defined(_MSC_VER)
+#		define VI_NOINLINE		__declspec(noinline)       
 #		define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
 #		define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
 #	elif defined(__clang__)
+#		define VI_NOINLINE		[[gnu::noinline]]
 #		define VI_OPTIMIZE_OFF	_Pragma("clang optimize push") \
 								_Pragma("clang optimize off")
 #		define VI_OPTIMIZE_ON	_Pragma("clang optimize pop")
 #	elif defined(__GNUC__)
+#		define VI_NOINLINE		[[gnu::noinline]]
 #		define VI_OPTIMIZE_OFF	_Pragma("GCC push_options") \
 								_Pragma("GCC optimize(\"O0\")")
 #		define VI_OPTIMIZE_ON	_Pragma("GCC pop_options")
 #	else
+#		define VI_NOINLINE
 #		define VI_OPTIMIZE_OFF
 #		define VI_OPTIMIZE_ON
 #	endif
