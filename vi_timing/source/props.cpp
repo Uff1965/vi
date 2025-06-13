@@ -42,6 +42,10 @@ namespace
 	using namespace std::chrono_literals;
 	namespace ch = std::chrono;
 
+	constexpr auto RPT = 128U;
+	constexpr auto BASE = 4U;
+	constexpr auto CNT = 32U;
+
 	namespace detail
 	{
 		using duration = ch::duration<double>;
@@ -116,12 +120,55 @@ namespace
 			}
 			return result;
 		};
+
+		auto meas_cost_base()
+		{	auto s = vi_tmGetTicks();
+			auto f = s;
+			for (auto n = RPT; n; --n)
+			{	f = multiple_invoke<BASE>(vi_tmGetTicks);
+			}
+			return f - s;
+		}
+
+		auto meas_cost_full()
+		{	auto s = vi_tmGetTicks();
+			auto f = s;
+			for (auto n = RPT; n; --n)
+			{	f = detail::multiple_invoke<BASE + CNT>(vi_tmGetTicks); // + EXT calls
+			}
+			return f - s;
+		}
+
+		void gauge_zero()
+		{	static vi_tmMeasuring_t* const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
+			const auto start = vi_tmGetTicks();
+			const auto finish = vi_tmGetTicks();
+			vi_tmMeasuringRepl(service_item, finish - start, 1U);
+		};
+
+		detail::duration meas_duration_base()
+		{	auto s = detail::now();
+			for (auto n = RPT; n; --n )
+			{	detail::multiple_invoke<BASE>(gauge_zero);
+			}
+			auto f = detail::now();
+			return f - s;
+		}
+
+		detail::duration meas_duration_full()
+		{	auto s = detail::now();
+			for (auto n = RPT; n; --n )
+			{	detail::multiple_invoke<BASE + CNT>(gauge_zero); // + EXT calls
+			}
+			auto f = detail::now();
+			return f - s;
+		}
 	} //namespace detail
 
 	detail::duration meas_seconds_per_tick()
-	{	auto f = detail::cache_warming(detail::time_point);
+	{	auto f = detail::time_point();
 		auto const [s_ticks, s_time] = f;
-		auto const stop = s_time + 64ms;
+		auto const stop = s_time + 1ms;
 		do
 		{	f = detail::time_point();
 		}
@@ -133,7 +180,7 @@ namespace
 	double meas_resolution()
 	{	for (auto N = 8U;; N *= 8U) //-V1044
 		{	const auto limit = detail::now() + 256us;
-			const auto first = detail::cache_warming(vi_tmGetTicks);
+			const auto first = vi_tmGetTicks();
 			auto last = first;
 			for (auto cnt = N; cnt; )
 			{	if (const auto current = vi_tmGetTicks(); current != last)
@@ -148,50 +195,15 @@ namespace
 		}
 	}
 
-	constexpr auto RPT = 128U;
-	constexpr auto BASE = 4U;
-	constexpr auto CNT = 32U;
-
 	double meas_cost()
-	{	auto s = detail::cache_warming(vi_tmGetTicks);
-		auto f = s;
-		for (auto n = RPT; n; --n)
-		{	f = detail::multiple_invoke<BASE>(vi_tmGetTicks);
-		}
-		const auto base = f - s;
-
-		s = detail::cache_warming(vi_tmGetTicks);
-		for (auto n = RPT; n; --n)
-		{	f = detail::multiple_invoke<BASE + CNT>(vi_tmGetTicks); // + EXT calls
-		}
-		const auto full = f - s;
-
+	{	const auto base = detail::cache_warming(detail::meas_cost_base);
+		const auto full = detail::cache_warming(detail::meas_cost_full);
 		return static_cast<double>(full - base) / (CNT * RPT);
 	}
 
 	detail::duration meas_duration()
-	{	static vi_tmMeasuring_t* const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
-		static const auto gauge_zero = []
-			{	const auto start = vi_tmGetTicks();
-				const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringRepl(service_item, finish - start, 1U);
-			};
-		detail::cache_warming([] { (void)gauge_zero(); (void)detail::now(); }); // Preload the functions into cache to minimize cold start effects.
-
-		auto s = detail::now();
-		for (auto n = RPT; n; --n )
-		{	detail::multiple_invoke<BASE>(gauge_zero);
-		}
-		auto f = detail::now();
-		const auto base = f - s;
-
-		s = detail::now();
-		for (auto n = RPT; n; --n)
-		{	detail::multiple_invoke<BASE + CNT>(gauge_zero); // + EXT calls
-		}
-		f = detail::now();
-		const auto full = f - s;
-
+	{	const auto base = detail::cache_warming(detail::meas_duration_base);
+		const auto full = detail::cache_warming(detail::meas_duration_full);
 		return detail::duration{ full - base } / (CNT * RPT);
 	}
 } // namespace

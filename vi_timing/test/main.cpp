@@ -445,14 +445,14 @@ int main()
 
 	//foo_c();
 
-	//test_empty();
+	test_empty();
 	//test_sleep();
-	normal_distribution();
+//	normal_distribution();
 	prn_clock_properties();
 
 	//test_report();
 	//test_multithreaded();
-	test_access();
+//	test_access();
 
 	//std::cout << "\nRAW report:\n";
 	//report_RAW(nullptr);
