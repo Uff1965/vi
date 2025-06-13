@@ -88,7 +88,7 @@ namespace
 		}
 
 		template <std::size_t... Is, typename F, typename... Args>
-		constexpr auto multiple_invoke_impl(std::index_sequence<Is...>, F &fn, Args&... args)
+		constexpr auto multiple_invoke_impl(std::index_sequence<Is...>, F &fn, Args&&... args)
 		{	using return_t = std::invoke_result_t<F, Args...>;
 
 			if constexpr (std::is_void_v<return_t>) {
@@ -145,7 +145,7 @@ namespace
 			vi_tmMeasuringRepl(service_item, finish - start, 1U);
 		};
 
-		detail::duration meas_duration_base()
+		auto meas_duration_base()
 		{	auto s = detail::now();
 			for (auto n = RPT; n; --n )
 			{	detail::multiple_invoke<BASE>(gauge_zero);
@@ -154,7 +154,7 @@ namespace
 			return f - s;
 		}
 
-		detail::duration meas_duration_full()
+		auto meas_duration_full()
 		{	auto s = detail::now();
 			for (auto n = RPT; n; --n )
 			{	detail::multiple_invoke<BASE + CNT>(gauge_zero); // + CNT calls
