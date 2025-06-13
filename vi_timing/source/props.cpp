@@ -141,7 +141,7 @@ namespace
 		}
 
 		void gauge_zero()
-		{	static auto const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
+		{	static auto const service_item = vi_tmMeasuring(VI_TM_HGLOBAL, ""); // Get/Create a service item with empty name "".
 			const auto start = vi_tmGetTicks();
 			const auto finish = vi_tmGetTicks();
 			vi_tmMeasuringRepl(service_item, finish - start, 1U);
@@ -213,7 +213,7 @@ namespace
 
 misc::properties_t::properties_t()
 {	detail::thread_affinity_fix_t thread_affinity_fix_guard;
-	vi_tmJournalReset(nullptr, ""); // Reset a service item with empty name "".
+	vi_tmJournalReset(VI_TM_HGLOBAL, ""); // Reset a service item with empty name "".
 	vi_tmWarming(1);
 
 	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.

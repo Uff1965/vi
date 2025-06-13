@@ -163,7 +163,8 @@ void measuring_t::reset() noexcept
 
 inline auto& vi_tmJournal_t::from_handle(VI_TM_HJOUR journal)
 {	static vi_tmJournal_t global;
-	return journal ? *journal : global;
+	assert(journal > reinterpret_cast<VI_TM_HJOUR>(0xFF));
+	return VI_TM_HGLOBAL == journal ? global : *journal;
 }
 
 vi_tmJournal_t::vi_tmJournal_t()
@@ -207,11 +208,11 @@ void vi_tmJournal_t::reset(const char *name)
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 int VI_TM_CALL vi_tmInit()
-{	return vi_tmJournal_t::from_handle(nullptr).init();
+{	return vi_tmJournal_t::from_handle(VI_TM_HGLOBAL).init();
 }
 
 void VI_TM_CALL vi_tmFinit(void)
-{	vi_tmJournal_t::from_handle(nullptr).reset();
+{	vi_tmJournal_t::from_handle(VI_TM_HGLOBAL).reset();
 }
 
 VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate()

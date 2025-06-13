@@ -115,6 +115,8 @@ typedef struct vi_tmJournal_t *VI_TM_HJOUR; // Opaque handle to a timing journal
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS; // Opaque handle to a measurement entry within a journal.
 typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
 
+#define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
+
 #	ifdef __cplusplus
 extern "C" {
 #	endif
@@ -356,9 +358,7 @@ namespace vi_tm
 		unsigned flags_ = vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution | vi_tmSortBySpeed;
 
 		init_t(const init_t &) = delete;
-		init_t(init_t &&) = delete;
-		init_t &operator=(const init_t &) = delete;
-		init_t &operator=(init_t &&) = delete;
+		init_t& operator=(const init_t &) = delete;
 
 		void init() const
 		{	[[maybe_unused]] const auto result = vi_tmInit();
@@ -399,7 +399,7 @@ namespace vi_tm
 		{	if (!title_.empty())
 			{	callback_function_(title_.c_str(), callback_data_);
 			}
-			vi_tmReport(nullptr, flags_, callback_function_, callback_data_);
+			vi_tmReport(VI_TM_HGLOBAL, flags_, callback_function_, callback_data_);
 			vi_tmFinit();
 		}
 	}; // class init_t
@@ -408,10 +408,9 @@ namespace vi_tm
 	{	VI_TM_HMEAS meas_;
 		size_t amt_;
 		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
+		measurer_t() = delete;
 		measurer_t(const measurer_t &) = delete;
 		void operator=(const measurer_t &) = delete;
-		measurer_t(measurer_t &&) = delete;
-		void operator=(measurer_t &&) = delete;
 	public:
 		measurer_t(VI_TM_HMEAS m, size_t amt = 1): meas_{m}, amt_{amt} {/**/}
 		~measurer_t() { const auto finish = vi_tmGetTicks(); assert(meas_);  vi_tmMeasuringRepl(meas_, finish - start_, amt_); }
@@ -431,7 +430,7 @@ namespace vi_tm
 			// Therefore, it cannot be used with different names.
 #			define VI_TM(...) \
 				const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, size_t amount = 1) -> vi_tm::measurer_t { \
-					static const auto meas = vi_tmMeasuring(nullptr, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
+					static const auto meas = vi_tmMeasuring(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
 					VI_DEBUG_ONLY( \
 						const char* registered_name = nullptr; \
 						vi_tmMeasuringGet(meas, &registered_name, nullptr); \
@@ -441,8 +440,8 @@ namespace vi_tm
 					return vi_tm::measurer_t{meas, amount}; \
 				}(__VA_ARGS__)
 #			define VI_TM_FUNC VI_TM(VI_FUNCNAME)
-#			define VI_TM_REPORT(...) vi_tmReport(nullptr, __VA_ARGS__)
-#			define VI_TM_RESET(name) vi_tmJournalReset(nullptr, (name)) // If 'name' is zero, then all the meters in the log are reset (but not deleted!).
+#			define VI_TM_REPORT(...) vi_tmReport(VI_TM_HGLOBAL, __VA_ARGS__)
+#			define VI_TM_RESET(name) vi_tmJournalReset(VI_TM_HGLOBAL, (name)) // If 'name' is zero, then all the meters in the log are reset (but not deleted!).
 #			define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
 #		endif
 #	endif // #ifdef __cplusplus

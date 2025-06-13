@@ -447,15 +447,14 @@ int main()
 
 	test_empty();
 	//test_sleep();
-//	normal_distribution();
+	normal_distribution();
 	prn_clock_properties();
 
-	//test_report();
-	//test_multithreaded();
-//	test_access();
-
+	test_report();
+	test_multithreaded();
+	//test_access();
 	//std::cout << "\nRAW report:\n";
-	//report_RAW(nullptr);
+	//report_RAW(VI_TM_HGLOBAL);
 
 	vi_tmCurrentThreadAffinityRestore();
 
