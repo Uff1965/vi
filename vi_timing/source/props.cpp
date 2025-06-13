@@ -48,6 +48,8 @@ namespace
 
 	namespace detail
 	{
+		const auto now = ch::steady_clock::now;
+		using time_point_t = std::invoke_result_t<decltype(now)>;
 		using duration = ch::duration<double>;
 
 		class thread_affinity_fix_t
@@ -57,9 +59,6 @@ namespace
 			thread_affinity_fix_t() { vi_tmCurrentThreadAffinityFixate(); }
 			~thread_affinity_fix_t() { vi_tmCurrentThreadAffinityRestore(); }
 		};
-
-		const auto now = ch::steady_clock::now;
-		using time_point_t = std::invoke_result_t<decltype(now)>;
 
 		inline auto tick_time() noexcept
 		{	return std::pair{ vi_tmGetTicks(), now() };
@@ -134,13 +133,13 @@ namespace
 		{	auto s = vi_tmGetTicks();
 			auto f = s;
 			for (auto n = RPT; n; --n)
-			{	f = detail::multiple_invoke<BASE + CNT>(vi_tmGetTicks); // + EXT calls
+			{	f = detail::multiple_invoke<BASE + CNT>(vi_tmGetTicks); // + CNT calls
 			}
 			return f - s;
 		}
 
 		void gauge_zero()
-		{	static vi_tmMeasuring_t* const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
+		{	static auto const service_item = vi_tmMeasuring(nullptr, ""); // Get/Create a service item with empty name "".
 			const auto start = vi_tmGetTicks();
 			const auto finish = vi_tmGetTicks();
 			vi_tmMeasuringRepl(service_item, finish - start, 1U);
@@ -158,7 +157,7 @@ namespace
 		detail::duration meas_duration_full()
 		{	auto s = detail::now();
 			for (auto n = RPT; n; --n )
-			{	detail::multiple_invoke<BASE + CNT>(gauge_zero); // + EXT calls
+			{	detail::multiple_invoke<BASE + CNT>(gauge_zero); // + CNT calls
 			}
 			auto f = detail::now();
 			return f - s;
@@ -213,10 +212,10 @@ misc::properties_t::properties_t()
 	vi_tmJournalReset(nullptr, ""); // Reset a service item with empty name "".
 	vi_tmWarming(1);
 
-	seconds_per_tick_ = meas_seconds_per_tick(); // Get the duration of a single tick in seconds.
-	clock_latency_ticks_ = meas_cost(); // Get the cost of a single call of vi_tmGetTicks.
-	all_latency_ = meas_duration(); // Get the cost of a single measurement in seconds.
-	clock_resolution_ticks_ = meas_resolution(); // Get the resolution of the clock in ticks.
+	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
+	clock_latency_ticks_ = meas_cost(); // The cost of a single call of vi_tmGetTicks.
+	all_latency_ = meas_duration(); // The cost of a single measurement in seconds.
+	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
 }
 
 const misc::properties_t& misc::properties_t::props()
