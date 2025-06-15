@@ -332,7 +332,10 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 					[[maybe_unused]] const auto sz = snprintf
 					(	result.data(),
 						result.size(),
-						VI_STR(VI_TM_VERSION_MAJOR) "." VI_STR(VI_TM_VERSION_MINOR) "." VI_STR(VI_TM_VERSION_PATCH) "." "%u%c %s",
+						"%u.%u.%u.%u%c %s",
+						VI_TM_VERSION_MAJOR,
+						VI_TM_VERSION_MINOR,
+						VI_TM_VERSION_PATCH,
 						misc::build_number_get(),
 						CONFIG[0],
 						TYPE

@@ -145,7 +145,7 @@ extern "C" {
 	/// <summary>
 	/// Resets journal items in the storage, either all items or a specific one by name.
 	/// </summary>
-	/// <param name="journal">The handle to the journal to reset.</param>
+	/// <param name="j">The handle to the journal to reset.</param>
 	/// <param name="name">The name of the journal item to reset. If null, all items are reset.</param>
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR j, const char* name VI_DEF(NULL)) VI_NOEXCEPT;
@@ -153,14 +153,14 @@ extern "C" {
 	/// <summary>
 	/// Closes and deletes a journal handle.
 	/// </summary>
-	/// <param name="journal">The handle to the journal to be closed and deleted.</param>
+	/// <param name="j">The handle to the journal to be closed and deleted.</param>
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR j);
 	
 	/// <summary>
 	/// Retrieves a handle to the measurement associated with the given name, creating it if it does not exist.
 	/// </summary>
-	/// <param name="journal">The handle to the journal containing the measurement.</param>
+	/// <param name="j">The handle to the journal containing the measurement.</param>
 	/// <param name="name">The name of the measurement entry to retrieve.</param>
 	/// <returns>A handle to the specified measurement entry within the journal.</returns>
 	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR j, const char* name);
@@ -168,7 +168,7 @@ extern "C" {
 	/// <summary>
 	/// Invokes a callback function for each measurement in the journal, allowing early interruption.
 	/// </summary>
-	/// <param name="journal">The handle to the journal containing the measurements.</param>
+	/// <param name="j">The handle to the journal containing the measurements.</param>
 	/// <param name="fn">A callback function to be called for each measurement. It receives a handle to the measurement and the user-provided data pointer.</param>
 	/// <param name="data">A pointer to user-defined data that is passed to the callback function.</param>
 	/// <returns>Returns 0 if all measurements were processed. If the callback returns a non-zero value, iteration stops and that value is returned.</returns>
@@ -192,7 +192,7 @@ extern "C" {
 		size_t flt_amt_; // Number of items counted. Filtered!
 		double flt_mean_; // The mean (average) time taken per processed items. In ticks. Filtered!
 		double flt_ss_; // Sum of Squares. In ticks. Filtered!
-		size_t flt_calls_; // Number of invoks processed. Filtered!
+		size_t flt_calls_; // Number of invokes processed. Filtered!
 #endif
 	} vi_tmMeasuringRAW_t;
 
@@ -332,8 +332,6 @@ extern "C" {
 #	ifndef __COUNTER__
 #		define __COUNTER__ __LINE__ // If __COUNTER__ is not defined, use __LINE__ as a fallback.
 #	endif
-#	define VI_STR_AUX(s) #s
-#	define VI_STR(s) VI_STR_AUX(s)
 #	define VI_STR_GUM_AUX( a, b ) a##b
 #	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
 #	define VI_UNIC_ID( prefix ) VI_STR_GUM( prefix, __COUNTER__ )
