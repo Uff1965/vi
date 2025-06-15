@@ -38,6 +38,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <cassert>
 #	include <cstring>
 #	include <string>
+#	include <utility>
 #endif
 
 #ifdef __cplusplus
@@ -328,11 +329,14 @@ extern "C" {
  
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 // Stringification and token-pasting macros for unique identifier generation.
+#	ifndef __COUNTER__
+#		define __COUNTER__ __LINE__ // If __COUNTER__ is not defined, use __LINE__ as a fallback.
+#	endif
 #	define VI_STR_AUX(s) #s
 #	define VI_STR(s) VI_STR_AUX(s)
 #	define VI_STR_GUM_AUX( a, b ) a##b
 #	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#	define VI_UNIC_ID( prefix ) VI_STR_GUM( prefix, __LINE__ )
+#	define VI_UNIC_ID( prefix ) VI_STR_GUM( prefix, __COUNTER__ )
 
 // VI_DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
 #	ifdef NDEBUG
@@ -404,30 +408,68 @@ namespace vi_tm
 		}
 	}; // class init_t
 
+	// measurer_t class: A RAII-style class for measuring code execution time.
+	// Unlike the API, this class is not thread-safe!!!
 	class measurer_t
 	{	VI_TM_HMEAS meas_;
 		size_t amt_;
-		const VI_TM_TICK start_ = vi_tmGetTicks(); // Order matters!!! 'start_' must be initialized last!
+		VI_TM_TICK start_ = 0; // Order matters!!! 'start_' must be initialized last!
+	public:
 		measurer_t() = delete;
 		measurer_t(const measurer_t &) = delete;
+		measurer_t(measurer_t &&src) noexcept
+		:	meas_{ std::exchange(src.meas_, nullptr) },
+			amt_{ std::exchange(src.amt_, 0U) },
+			start_{ src.start_ }
+		{	assert(meas_);
+		}
+		measurer_t(VI_TM_HMEAS m, size_t amt = 1) noexcept
+		:	meas_{ m },
+			amt_{ amt }
+		{	assert(meas_);
+			if (amt_)
+			{	start_ = vi_tmGetTicks();
+			}
+		}
+		~measurer_t() { finish(); }
 		void operator=(const measurer_t &) = delete;
-	public:
-		measurer_t(VI_TM_HMEAS m, size_t amt = 1): meas_{m}, amt_{amt} {/**/}
-		~measurer_t() { const auto finish = vi_tmGetTicks(); assert(meas_);  vi_tmMeasuringRepl(meas_, finish - start_, amt_); }
+		measurer_t &operator=(measurer_t &&src) noexcept
+		{	if (this != &src)
+			{	meas_ = std::exchange(src.meas_, nullptr);
+				amt_ = std::exchange(src.amt_, 0U);
+				start_ = src.start_;
+			}
+			assert(meas_);
+			return *this;
+		};
+		bool is_active() const noexcept
+		{	return !!amt_;
+		}
+		void start(size_t amt = 1) noexcept
+		{	assert(!is_active() && amt); // Ensure that the measurer is not already running and that a valid amount is provided.
+			amt_ = amt;
+			start_ = vi_tmGetTicks(); // Reset start time.
+		}
+		void stop() noexcept // Stop the measurer without saved time.
+		{	amt_ = 0U;
+		}
+		void finish()
+		{	if (is_active())
+			{	const auto finish = vi_tmGetTicks();
+				vi_tmMeasuringRepl(meas_, finish - start_, amt_);
+				amt_ = 0;
+			}
+		}
 	};
 } // namespace vi_tm
 
-#		if defined(VI_TM_DISABLE)
-#			define VI_TM_INIT(...) static const int VI_UNIC_ID(_vi_tm_) = 0
-#			define VI_TM(...) static const int VI_UNIC_ID(_vi_tm_) = 0
-#			define VI_TM_FUNC ((void)0)
-#			define VI_TM_REPORT(...) ((void)0)
-#			define VI_TM_RESET ((void)0)
-#			define VI_TM_FULLVERSION ""
-#		else
+#		ifndef VI_TM_DISABLE
+			// Initializes the global journal and sets up the report callback.
 #			define VI_TM_INIT(...) vi_tm::init_t VI_UNIC_ID(_vi_tm_) {__VA_ARGS__}
-			// The macro VI_TM stores the pointer to the named measurer in a static variable.
-			// Therefore, it cannot be used with different names.
+
+			// The VI_TM macro creates a measurer_t object with a unique identifier based on the line number.
+			// It stores the pointer to the named measurer entry in a static variable. Therefore, it cannot 
+			// be called with different measurement names.
 #			define VI_TM(...) \
 				const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, size_t amount = 1) -> vi_tm::measurer_t { \
 					static const auto meas = vi_tmMeasuring(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
@@ -439,10 +481,27 @@ namespace vi_tm
 					) \
 					return vi_tm::measurer_t{meas, amount}; \
 				}(__VA_ARGS__)
+
+			// This macro is used to create a measurer_t object with the function name as the measurement name.
 #			define VI_TM_FUNC VI_TM(VI_FUNCNAME)
+
+			// Generates a report for the global journal.
 #			define VI_TM_REPORT(...) vi_tmReport(VI_TM_HGLOBAL, __VA_ARGS__)
+
+			// Resets (but not deleted!) the global journal or a specific measurement by name.
+			// If you want to reset a specific measurement, pass its name as a string literal, e.g. "my_measurement".
+			// If you want to reset all measurements, pass NULL or 0.
 #			define VI_TM_RESET(name) vi_tmJournalReset(VI_TM_HGLOBAL, (name)) // If 'name' is zero, then all the meters in the log are reset (but not deleted!).
+
+			// Full version string of the library (Example: 0.1.0.2506151515R static).
 #			define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
+#		else
+#			define VI_TM_INIT(...) static const int VI_UNIC_ID(_vi_tm_) = 0
+#			define VI_TM(...) static const int VI_UNIC_ID(_vi_tm_) = 0
+#			define VI_TM_FUNC ((void)0)
+#			define VI_TM_REPORT(...) ((void)0)
+#			define VI_TM_RESET ((void)0)
+#			define VI_TM_FULLVERSION ""
 #		endif
 #	endif // #ifdef __cplusplus
 #endif // #ifndef VI_TIMING_VI_TIMING_H

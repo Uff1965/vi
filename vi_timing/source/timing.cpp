@@ -163,7 +163,7 @@ void measuring_t::reset() noexcept
 
 inline auto& vi_tmJournal_t::from_handle(VI_TM_HJOUR journal)
 {	static vi_tmJournal_t global;
-	assert(journal > reinterpret_cast<VI_TM_HJOUR>(0xFF));
+	assert(journal);
 	return VI_TM_HGLOBAL == journal ? global : *journal;
 }
 

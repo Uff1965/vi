@@ -452,7 +452,7 @@ int main()
 
 	test_report();
 	test_multithreaded();
-	//test_access();
+	test_access();
 	//std::cout << "\nRAW report:\n";
 	//report_RAW(VI_TM_HGLOBAL);
 
