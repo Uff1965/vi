@@ -57,7 +57,7 @@ namespace
 	};
 
 	// The time_stamp function converts date and time strings in the __DATE__ and __TIME__ formats to
-	// a single unsigned integer representing a timestamp in the YYMMDDhhmm format.
+	// a number representing a timestamp in the YYMMDDhhmm format.
 	constexpr unsigned time_stamp(const char (&date)[12], const char (&time)[9])
 	{	assert(0 == date[11] && 0 == time[8]);
 		// "__DATE__ <...> a character string literal of the form 'Mmm dd yyyy'" [15.11 Predefined macro names ISO/IEC JTC1 SC22 WG21 N4860]
@@ -74,9 +74,9 @@ namespace
 	}
 
 #ifndef	NDEBUG // Nanotest for time_stamp() function.
-	constexpr char date[] = "Jun 17 2025";
-	constexpr char time[] = "09:33:00";
-	static_assert(time_stamp(date, time) == 2506170933U, "time_stamp() is not working correctly.");
+	constexpr char sample__DATE__[] = "Jun 17 2025";
+	constexpr char sample__TIME__[] = "09:33:00";
+	static_assert(time_stamp(sample__DATE__, sample__TIME__) == 2506170933U, "time_stamp() is not working correctly.");
 #endif
 
 	unsigned build_number = 0U; // build_number is initialized by the compilation time of the last unit of translation in the YYMMDDhhmm format.

@@ -115,6 +115,50 @@ typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts
 typedef struct vi_tmJournal_t *VI_TM_HJOUR; // Opaque handle to a timing journal object.
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS; // Opaque handle to a measurement entry within a journal.
 typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
+typedef int (VI_SYS_CALL *vi_tmRptCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
+typedef struct vi_tmMeasuringRAW_t
+{	size_t calls_; // The number of times the measurement was invoked.
+	size_t amt_; // The number of all measured elements, including discarded ones.
+	VI_TM_TDIFF sum_; // Total time spent measuring all elements, in ticks.
+#if defined VI_TM_STAT_USE_WELFORD
+	size_t flt_amt_; // Number of items counted. Filtered!
+	double flt_mean_; // The mean (average) time taken per processed items. In ticks. Filtered!
+	double flt_ss_; // Sum of Squares. In ticks. Filtered!
+	size_t flt_calls_; // Number of invokes processed. Filtered!
+#endif
+} vi_tmMeasuringRAW_t;
+typedef enum // Enumeration for various timing information types.
+{	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
+	VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
+	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
+	VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
+	VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
+	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
+	VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
+	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
+	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
+
+	VI_TM_INFO__COUNT,      // Number of information types.
+} vi_tmInfo_e;
+typedef enum
+{	vi_tmSortByTime = 0x00,
+	vi_tmSortByName = 0x01,
+	vi_tmSortBySpeed = 0x02,
+	vi_tmSortByAmount = 0x03,
+	vi_tmSortMask = 0x07,
+
+	vi_tmSortDescending = 0x00,
+	vi_tmSortAscending = 0x08,
+
+	vi_tmShowOverhead = 0x10,
+	vi_tmShowUnit = 0x20,
+	vi_tmShowDuration = 0x40,
+	vi_tmShowResolution = 0x80,
+	vi_tmShowMask = 0xF0,
+
+	vi_tmHideHeader = 0x0100,
+	vi_tmDoNotSubtractOverhead = 0x0200, // If set, the overhead is not subtracted from the measured time in report.
+} vi_tmReportFlags_e;
 
 #define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
 
@@ -183,19 +227,6 @@ extern "C" {
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
 
-	typedef struct vi_tmMeasuringRAW_t
-	{
-		size_t calls_; // The number of times the measurement was invoked.
-		size_t amt_; // The number of all measured elements, including discarded ones.
-		VI_TM_TDIFF sum_; // Total time spent measuring all elements, in ticks.
-#if defined VI_TM_STAT_USE_WELFORD
-		size_t flt_amt_; // Number of items counted. Filtered!
-		double flt_mean_; // The mean (average) time taken per processed items. In ticks. Filtered!
-		double flt_ss_; // Sum of Squares. In ticks. Filtered!
-		size_t flt_calls_; // Number of invokes processed. Filtered!
-#endif
-	} vi_tmMeasuringRAW_t;
-
 	/// <summary>
 	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
 	/// </summary>
@@ -214,21 +245,6 @@ extern "C" {
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS m);
 
-	typedef enum // Enumeration for various timing information types.
-	{
-		VI_TM_INFO_VER,         // unsigned*: Version number of the library.
-		VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
-		VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
-		VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
-		VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
-		VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
-		VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
-		VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
-		VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
-
-		VI_TM_INFO__COUNT,      // Number of information types.
-	} vi_tmInfo_e;
-
 	/// <summary>
 	/// Retrieves static information about the timing module based on the specified info type.
 	/// </summary>
@@ -238,28 +254,7 @@ extern "C" {
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	typedef int (VI_SYS_CALL *vi_tmRptCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
 	static inline int VI_SYS_CALL vi_tmRptCb(const char *str, void *data) { return fputs(str, (FILE *)data); }
-	typedef enum
-	{
-		vi_tmSortByTime = 0x00,
-		vi_tmSortByName = 0x01,
-		vi_tmSortBySpeed = 0x02,
-		vi_tmSortByAmount = 0x03,
-		vi_tmSortMask = 0x07,
-
-		vi_tmSortDescending = 0x00,
-		vi_tmSortAscending = 0x08,
-
-		vi_tmShowOverhead = 0x10,
-		vi_tmShowUnit = 0x20,
-		vi_tmShowDuration = 0x40,
-		vi_tmShowResolution = 0x80,
-		vi_tmShowMask = 0xF0,
-
-		vi_tmHideHeader = 0x0100,
-		vi_tmDoNotSubtractOverhead = 0x0200, // If set, the overhead is not subtracted from the measured time in report.
-	} vi_tmReportFlags_e;
 
 	/// <summary>
 	/// Generates a report for the specified journal handle, using a callback function to output the report data.
@@ -293,7 +288,6 @@ extern "C" {
 
 	VI_TM_API void VI_TM_CALL vi_tmThreadYield(void);
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 #	ifdef __cplusplus
 } // extern "C"
 #	endif

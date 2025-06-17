@@ -9,8 +9,8 @@
 
 #include "header.h"
 
-//#include "../vi_timing.h"
-#include "../vi_timing_proxy.h"
+#include "../vi_timing_proxy.h" //#include "../vi_timing.h"
+#include "../source/build_number_maker.h"
 
 #include <algorithm>
 #include <atomic>
