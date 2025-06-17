@@ -3,7 +3,8 @@
 
 #include "header.h"
 
-#include "../vi_timing.h"
+//#include "../vi_timing.h"
+#include "../vi_timing_proxy.h"
 
 #include <assert.h>
 #include <inttypes.h>

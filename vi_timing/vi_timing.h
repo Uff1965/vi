@@ -475,7 +475,7 @@ namespace vi_tm
 						const char* registered_name = nullptr; \
 						vi_tmMeasuringGet(meas, &registered_name, nullptr); \
 						assert(registered_name && 0 == std::strcmp(name, registered_name) && \
-							"VI_TM macro used with different names at the same location!"); \
+							"The VI_TM macro cannot be reused with a different name value!"); \
 					) \
 					return vi_tm::measurer_t{meas, amount}; \
 				}(__VA_ARGS__)
@@ -495,7 +495,7 @@ namespace vi_tm
 #			define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
 #		else
 #			define VI_TM_INIT(...) static const int VI_UNIC_ID(_vi_tm_) = 0
-#			define VI_TM(...) static const int VI_UNIC_ID(_vi_tm_) = 0
+#			define VI_TM(...) const int VI_UNIC_ID(_vi_tm_) = 0
 #			define VI_TM_FUNC ((void)0)
 #			define VI_TM_REPORT(...) ((void)0)
 #			define VI_TM_RESET ((void)0)

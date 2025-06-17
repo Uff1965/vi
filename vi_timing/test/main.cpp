@@ -9,7 +9,8 @@
 
 #include "header.h"
 
-#include "../vi_timing.h"
+//#include "../vi_timing.h"
+#include "../vi_timing_proxy.h"
 
 #include <algorithm>
 #include <atomic>
@@ -47,7 +48,7 @@ namespace
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
 
-	VI_TM_INIT(vi_tmSortBySpeed, "Global timing report:\n", vi_tmShowDuration, vi_tmShowOverhead, vi_tmShowUnit, vi_tmShowResolution);
+	VI_TM_INIT(vi_tmSortByName, "Global timing report:\n", vi_tmShowDuration, vi_tmShowOverhead, vi_tmShowUnit, vi_tmShowResolution);
 	VI_TM("GLOBAL");
 
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -64,10 +65,7 @@ namespace
 			vi_tmWarming();
 			return 0;
 		}();
-}
 
-namespace
-{
 	void report_RAW(VI_TM_HJOUR h)
 	{
 		struct data_t
@@ -162,16 +160,16 @@ VI_OPTIMIZE_ON
 	void test_sleep()
 	{	VI_TM("Test sleep");
 		std::cout << "\nTest sleep:\n";
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
-		{	auto h = handler.get();
-			{	auto m = vi_tmMeasuring(h, "100ms");
-				vi_tm::measurer_t tm{ vi_tmMeasuring(h, "100ms*10"), 10U };
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), &vi_tmJournalClose };
+		{	auto j = journal.get();
+			{	auto m = vi_tmMeasuring(j, "100ms");
+				vi_tm::measurer_t tm{ vi_tmMeasuring(j, "100ms*10"), 10U };
 				for (int n = 0; n < 10; ++n)
 				{	vi_tm::measurer_t tm2{ m };
 					std::this_thread::sleep_for(100ms);
 				}
 			}
-			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
+			vi_tmReport(j, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		}
 		std::cout << "Test sleep - done" << std::endl;
 	}
@@ -181,14 +179,14 @@ VI_OPTIMIZE_OFF
 	{	VI_TM("test_empty");
 		std::cout << "\nTest test_empty:\n";
 
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> handler{ vi_tmJournalCreate(), &vi_tmJournalClose };
-		{	auto const h = handler.get();
+		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), &vi_tmJournalClose };
+		{	auto const j = journal.get();
 
-			vi_tmJournalReset(h, "vi_tm");
-			vi_tmJournalReset(h, "empty");
+			vi_tmJournalReset(j, "vi_tm");
+			vi_tmJournalReset(j, "empty");
 
-			static auto const jTm = vi_tmMeasuring(h, "vi_tm");
-			static auto const jEmpty = vi_tmMeasuring(h, "empty");
+			static auto const jTm = vi_tmMeasuring(j, "vi_tm");
+			static auto const jEmpty = vi_tmMeasuring(j, "empty");
 
 			for (int n = 0; n < 1'000'000; ++n)
 			{
@@ -205,17 +203,17 @@ VI_OPTIMIZE_OFF
 
 			const char *name = nullptr;
 			vi_tmMeasuringRAW_t data;
-			vi_tmMeasuringGet(vi_tmMeasuring(h, "vi_tm"), &name, &data);
+			vi_tmMeasuringGet(vi_tmMeasuring(j, "vi_tm"), &name, &data);
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);
+			vi_tmMeasuringGet(vi_tmMeasuring(j, "empty"), &name, &data);
 			std::cout << "empty:\tmean = " << std::setprecision(3)  << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 #else
 			std::cout << "vi_tm:\tticks = " << std::setw(16) << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-			vi_tmMeasuringGet(vi_tmMeasuring(h, "empty"), &name, &data);
+			vi_tmMeasuringGet(vi_tmMeasuring(j, "empty"), &name, &data);
 			std::cout << "empty:\tticks = " << std::setw(16)  << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 #endif
-			vi_tmReport(h, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+			vi_tmReport(j, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 		}
 
 		std::cout << "Test test_empty - Done" << std::endl;
@@ -433,6 +431,40 @@ VI_OPTIMIZE_ON
 		std::cout << "Test test_access - done" << std::endl;
 	}
 //VI_OPTIMIZE_ON
+
+	void test_misc()
+	{
+		{	VI_TM("test_misc:");
+			std::cout << "\nTest test_misc:\n";
+
+			static VI_TM("test_misc: Local Static");
+
+			if (VI_TM("test_misc: In IF"); false)
+				VI_TM("test_misc: Local If");
+			else
+				VI_TM("test_misc: Local Else");
+
+			std::this_thread::sleep_for(1s);
+		}
+
+		{	vi_tm::measurer_t m{vi_tmMeasuring(VI_TM_HGLOBAL, "test_misc: xxx")};
+			std::this_thread::sleep_for(1s);
+			m.finish();
+
+			m.start(100);
+			std::this_thread::sleep_for(1ms);
+			m.stop();
+
+			m.start(3);
+			std::this_thread::sleep_for(3s);
+			m.finish();
+
+			m.start(1);
+			std::this_thread::sleep_for(1s);
+		}
+
+		std::cout << "Test test_misc - done" << std::endl;
+	}
 } // namespace
 
 int main()
@@ -445,6 +477,7 @@ int main()
 
 	//foo_c();
 
+	test_misc();
 	test_empty();
 	//test_sleep();
 	normal_distribution();
