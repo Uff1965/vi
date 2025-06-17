@@ -268,12 +268,6 @@ VI_OPTIMIZE_ON
 	{	VI_TM("test_report");
 		std::cout << "\nTest vi_tmReport:" << std::endl;
 
-//#	define TINY_SET_SAMPLES
-#	ifdef TINY_SET_SAMPLES
-		static constexpr VI_TM_TDIFF samples_simple[] = { 34, 81, 17 }; // 132/3=44; 2198/2=1099
-		static constexpr VI_TM_TDIFF samples_multiple[] = { 34, }; // 34/1=34; 1156/0=...
-		static constexpr auto M = 2;
-#	else
 		static constexpr VI_TM_TDIFF samples_simple[] =
 		{	40, 60, 37, 16, 44, 37, 22, 48, 37, 37, 48, 40, 39, 37, 52, 33, 44, 55, 42, 19,
 			36, 33, 43, 26, 41, 34, 40, 13, 27, 35, 21, 41, 35, 40, 41, 54, 37, 29, 35, 56,
@@ -290,7 +284,6 @@ VI_OPTIMIZE_ON
 		{	35, 39, 43, 40, 38, 43, 41, 33, 39, 37,
 		}; // 388/10=38.8; 93.60/9=10.40
 		static constexpr auto M = 10; // (8139+10*388)/(200+10*10)=12019/300=40,063(3); (19798,39442+10*93,60)=20734,39442
-#	endif
 
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose };
 		{	const auto unit = *static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT));
@@ -475,11 +468,11 @@ int main()
 
 	vi_tmThreadYield();
 
-	//foo_c();
+	foo_c();
 
 	test_misc();
 	test_empty();
-	//test_sleep();
+	test_sleep();
 	normal_distribution();
 	prn_clock_properties();
 
