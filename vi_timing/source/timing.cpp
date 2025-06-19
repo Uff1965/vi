@@ -96,7 +96,7 @@ public:
 	int init();
 	auto& at(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
 	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
-	void reset(const char *name = nullptr); // Resets a specific measurement by name or all measurements if name is nullptr.
+	void clear();
 };
 
 void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
@@ -194,16 +194,9 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 	return 0;
 }
 
-void vi_tmJournal_t::reset(const char *name)
+void vi_tmJournal_t::clear()
 {	std::lock_guard lock{ storage_guard_ };
-	if (!name)
-	{	for (auto &[dummy_size, item] : storage_)
-		{	item.reset();
-		}
-	}
-	else if (const auto [it, b] = storage_.try_emplace(name); !b)
-	{	it->second.reset();
-	}
+	storage_.clear();
 }
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -212,7 +205,7 @@ int VI_TM_CALL vi_tmInit()
 }
 
 void VI_TM_CALL vi_tmFinit(void)
-{	vi_tmJournal_t::from_handle(VI_TM_HGLOBAL).reset();
+{	vi_tmJournal_t::from_handle(VI_TM_HGLOBAL).clear();
 }
 
 VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate()
@@ -229,8 +222,8 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR journal)
 {	delete journal;
 }
 
-void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal, const char* name) noexcept
-{	vi_tmJournal_t::from_handle(journal).reset(name);
+void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR journal) noexcept
+{	vi_tmJournal_t::from_handle(journal).clear();
 }
 
 int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCallback_t fn, void *data)

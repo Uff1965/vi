@@ -19,7 +19,7 @@ set(SOURCE_FILES)
 
 set(FILE_GROUP
   "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
-  "${VI_ROOT_DIR}/vi_timing/vi_timing_proxy.h"
+  "${VI_ROOT_DIR}/vi_timing/vi_timing_c.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})

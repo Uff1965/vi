@@ -14,7 +14,8 @@ source_group("Source Files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "../vi_timing_proxy.h"
+  "../vi_timing.h"
+  "../vi_timing_c.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})

@@ -9,7 +9,7 @@
 
 #include "header.h"
 
-#include "../vi_timing_proxy.h" //#include "../vi_timing.h"
+#include <vi_timing/vi_timing.h> //#include "../vi_timing.h"
 #include "../source/build_number_maker.h"
 
 #include <algorithm>
@@ -182,8 +182,8 @@ VI_OPTIMIZE_OFF
 		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), &vi_tmJournalClose };
 		{	auto const j = journal.get();
 
-			vi_tmJournalReset(j, "vi_tm");
-			vi_tmJournalReset(j, "empty");
+			vi_tmMeasuringReset(vi_tmMeasuring(j, "vi_tm"));
+			vi_tmMeasuringReset(vi_tmMeasuring(j, "empty"));
 
 			static auto const jTm = vi_tmMeasuring(j, "vi_tm");
 			static auto const jEmpty = vi_tmMeasuring(j, "empty");

@@ -3,7 +3,7 @@
 
 #include "header.h"
 
-#include "../vi_timing_proxy.h" //#include "../vi_timing.h"
+#include <vi_timing/vi_timing_c.h> //#include "../vi_timing.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -38,8 +38,8 @@ void bar_c(void)
 		puts("After vi_tmMeasuringReset(m1) (Clear \"xxx\"):");
 		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
 
-		vi_tmJournalReset(journal, NULL);
-		puts("After vi_tmJournalReset(htimer, NULL):");
+		vi_tmJournalClear(journal);
+		puts("After vi_tmJournalClear(htimer):");
 		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
 		vi_tmJournalClose(journal);
 	}

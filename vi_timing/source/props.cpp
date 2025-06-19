@@ -213,7 +213,7 @@ namespace
 
 misc::properties_t::properties_t()
 {	detail::thread_affinity_fix_t thread_affinity_fix_guard;
-	vi_tmJournalReset(VI_TM_HGLOBAL, ""); // Reset a service item with empty name "".
+	vi_tmMeasuringReset(vi_tmMeasuring(VI_TM_HGLOBAL, "")); // Reset a service item with empty name "".
 	vi_tmWarming(1);
 
 	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
