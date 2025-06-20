@@ -9,7 +9,7 @@
 
 #include "header.h"
 
-#include <vi_timing/vi_timing.h> //#include "../vi_timing.h"
+#include "vi_timing/vi_timing_proxy.h"
 #include "../source/build_number_maker.h"
 
 #include <algorithm>
@@ -104,6 +104,10 @@ namespace
 		vi_tmMeasuringEnumerate(h, results_callback, &data);
 	}
 
+	inline std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> create_journal()
+	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
+	}
+
 VI_OPTIMIZE_OFF
 	void test_multithreaded()
 	{	VI_TM("test_multithreaded");
@@ -116,7 +120,7 @@ VI_OPTIMIZE_OFF
 		std::cout << "\nTest multithreaded():" << std::endl;
 
 		static std::atomic<std::size_t> v{};
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> h{ vi_tmJournalCreate(), &vi_tmJournalClose };
+		auto h = create_journal();
 		auto thread_fn = [h = h.get()]
 		{	static auto j_load = vi_tmMeasuring(h, "thread_fn");
 			vi_tm::measurer_t tm{ j_load };
@@ -160,14 +164,13 @@ VI_OPTIMIZE_ON
 	void test_sleep()
 	{	VI_TM("Test sleep");
 		std::cout << "\nTest sleep:\n";
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), &vi_tmJournalClose };
-		{	auto j = journal.get();
-			{	auto m = vi_tmMeasuring(j, "100ms");
-				vi_tm::measurer_t tm{ vi_tmMeasuring(j, "100ms*10"), 10U };
-				for (int n = 0; n < 10; ++n)
-				{	vi_tm::measurer_t tm2{ m };
-					std::this_thread::sleep_for(100ms);
-				}
+		auto journal = create_journal();
+		if(	auto j = journal.get())
+		{	auto m = vi_tmMeasuring(j, "100ms");
+			vi_tm::measurer_t tm{ vi_tmMeasuring(j, "100ms*10"), 10U };
+			for (int n = 0; n < 10; ++n)
+			{	vi_tm::measurer_t tm2{ m };
+				std::this_thread::sleep_for(100ms);
 			}
 			vi_tmReport(j, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
 		}
@@ -179,7 +182,7 @@ VI_OPTIMIZE_OFF
 	{	VI_TM("test_empty");
 		std::cout << "\nTest test_empty:\n";
 
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), &vi_tmJournalClose };
+		auto journal = create_journal();
 		{	auto const j = journal.get();
 
 			vi_tmMeasuringReset(vi_tmMeasuring(j, "vi_tm"));
@@ -223,15 +226,13 @@ VI_OPTIMIZE_ON
 	void prn_header()
 	{	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
 
-		std::cout <<
-			"\n"
 	#pragma warning(suppress: 4996)
-			"Start: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
-			"Version: " << VI_TM_FULLVERSION << "\n" <<
+		std::cout << "\nStart: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
 			std::endl;
 
 		std::cout <<
-			"Information about the \'vi_timing\' library:" << "\n"
+			"Information about the \'vi_timing\' library:\n"
+			"\tVersion: " << VI_TM_FULLVERSION << "\n"
 			"\tBuild type: " << static_cast<const char *>(vi_tmStaticInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
 			"\tVer: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_VER)) << "\n"
 			"\tBuild number: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n";
@@ -285,7 +286,7 @@ VI_OPTIMIZE_ON
 		}; // 388/10=38.8; 93.60/9=10.40
 		static constexpr auto M = 10; // (8139+10*388)/(200+10*10)=12019/300=40,063(3); (19798,39442+10*93,60)=20734,39442
 
-		std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose };
+		auto journal = create_journal();
 		{	const auto unit = *static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT));
 			const auto m = vi_tmMeasuring(journal.get(), "Sample");
 			for (auto x : samples_simple)
@@ -315,8 +316,8 @@ VI_OPTIMIZE_ON
 			"There are " << CNT + MULT * CNT / MULT << " numbers in total, " << CNT <<
 			" are added one by one and " << CNT / MULT <<  " by " << MULT << ".\n";
 
-		const auto j = vi_tmJournalCreate();
-		const auto m = vi_tmMeasuring(j, "ITEM");
+		const auto j = create_journal();
+		const auto m = vi_tmMeasuring(j.get(), "ITEM");
 		
 		std::mt19937 gen{ VI_DEBUG_ONLY(std::random_device{}()) };
 		std::normal_distribution dist(MEAN, CV * MEAN);
@@ -334,7 +335,7 @@ VI_OPTIMIZE_ON
 			vi_tmMeasuringRepl(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
 		}
 
-		vi_tmReport(j, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+		vi_tmReport(j.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
 
 		vi_tmMeasuringRAW_t raw;
 		vi_tmMeasuringGet(m, nullptr, &raw);
@@ -342,8 +343,6 @@ VI_OPTIMIZE_ON
 		assert(raw.calls_ == CNT + CNT / MULT);
 		assert(std::abs(raw.flt_mean_ - MEAN) / MEAN < 0.01);
 		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_amt_) / MEAN - CV) < 0.01);
-
-		vi_tmJournalClose(j);
 
 		std::cout << "Test normal_distribution - done" << std::endl;
 	}

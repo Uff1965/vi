@@ -29,9 +29,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "misc.h"
 
 #include "build_number_maker.h"
-#include "../vi_timing.h"
+#include "../vi_timing_c.h"
 
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <functional>
 #include <thread>
@@ -140,28 +141,28 @@ namespace
 			return f - s;
 		}
 
-		void gauge_zero()
-		{	static auto const service_item = vi_tmMeasuring(VI_TM_HGLOBAL, ""); // Get/Create a service item with empty name "".
+		void gauge_zero(VI_TM_HJOUR journal, const char* name)
+		{	static auto const service_item = vi_tmMeasuring(journal, name); // Get/Create a service item with empty name "".
 			const auto start = vi_tmGetTicks();
 			const auto finish = vi_tmGetTicks();
 			vi_tmMeasuringRepl(service_item, finish - start, 1U);
 		};
 
 		VI_NOINLINE
-		auto meas_duration_base()
+		auto meas_duration_base(VI_TM_HJOUR journal, const char* name)
 		{	auto s = detail::now();
 			for (auto n = RPT; n; --n )
-			{	detail::multiple_invoke<BASE>(gauge_zero);
+			{	detail::multiple_invoke<BASE>(gauge_zero, journal, name);
 			}
 			auto f = detail::now();
 			return f - s;
 		}
 
 		VI_NOINLINE
-		auto meas_duration_full()
+		auto meas_duration_full(VI_TM_HJOUR journal, const char* name)
 		{	auto s = detail::now();
 			for (auto n = RPT; n; --n )
-			{	detail::multiple_invoke<BASE + CNT>(gauge_zero); // + CNT calls
+			{	detail::multiple_invoke<BASE + CNT>(gauge_zero, journal, name); // + CNT calls
 			}
 			auto f = detail::now();
 			return f - s;
@@ -204,22 +205,37 @@ namespace
 		return static_cast<double>(full - base) / (CNT * RPT);
 	}
 
+	inline std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> create_journal()
+	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
+	}
+
 	detail::duration meas_duration()
-	{	const auto base = detail::cache_warming_and_invoke(detail::meas_duration_base);
-		const auto full = detail::cache_warming_and_invoke(detail::meas_duration_full);
-		return detail::duration{ full - base } / (CNT * RPT);
+	{	detail::duration result{};
+		auto journal = create_journal();
+		assert(journal);
+		if (auto j = journal.get())
+		{	constexpr auto name = "Bla-bla-blaaa";
+			vi_tmMeasuringReset(vi_tmMeasuring(j, name)); // Reset a service item.
+			const auto base = detail::cache_warming_and_invoke(detail::meas_duration_base, j, name);
+			vi_tmMeasuringReset(vi_tmMeasuring(j, name));
+			const auto full = detail::cache_warming_and_invoke(detail::meas_duration_full, j, name);
+			result = (full - base) / (CNT * RPT);
+		}
+		return result;
 	}
 } // namespace
 
 misc::properties_t::properties_t()
 {	detail::thread_affinity_fix_t thread_affinity_fix_guard;
-	vi_tmMeasuringReset(vi_tmMeasuring(VI_TM_HGLOBAL, "")); // Reset a service item with empty name "".
-	vi_tmWarming(1);
+	if (auto journal = create_journal())
+	{	vi_tmMeasuringReset(vi_tmMeasuring(journal.get(), "")); // Reset a service item with empty name "".
+		vi_tmWarming(1);
 
-	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
-	clock_latency_ticks_ = meas_cost(); // The cost of a single call of vi_tmGetTicks.
-	all_latency_ = meas_duration(); // The cost of a single measurement in seconds.
-	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
+		seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
+		clock_latency_ticks_ = meas_cost(); // The cost of a single call of vi_tmGetTicks.
+		all_latency_ = meas_duration(); // The cost of a single measurement in seconds.
+		clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
+	}
 }
 
 const misc::properties_t& misc::properties_t::props()

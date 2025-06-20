@@ -27,26 +27,20 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TIMING_VI_TIMING_H
 #	pragma once
 
-#if !defined(VI_TM_DISABLE) && !__has_include("vi_timing_c.h")
-// The file "vi_timing_c.h" was not found. Please check the include path.
-#	define VI_TM_DISABLE "The file \"vi_timing_c.h\" was not found"
-#endif
-
-// Check if the timing.h header is available and include it if possible
 #ifdef VI_TM_DISABLE
 #	ifndef __COUNTER__ // __COUNTER__ is not included in the standard yet.
 #		define __COUNTER__ __LINE__
 #	endif
-#	define VI_STR_GUM_AUX( a, b ) a##b
-#	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#	define VI_UNIC_ID( prefix ) VI_STR_GUM( prefix, __COUNTER__ )
+#	define VI_STR_CONCAT_AUX( a, b ) a##b
+#	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
+#	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, __COUNTER__ )
 
 	// Fallback macros for timing functions
 #	define VI_TM_INIT(...) static const int VI_UNIC_ID(vi_tm__) = 0
 #	define VI_TM(...) const int VI_UNIC_ID(vi_tm__) = 0
 #	define VI_TM_FUNC ((void)0)
 #	define VI_TM_REPORT(...) ((void)0)
-#	define VI_TM_RESET ((void)0)
+#	define VI_TM_RESET(...) ((void)0)
 #	define VI_TM_FULLVERSION ""
 #else
 #	include "vi_timing_c.h"
@@ -168,7 +162,7 @@ namespace vi_tm
 				amt_ = 0;
 			}
 		}
-	};
+	}; // class measurer_t
 } // namespace vi_tm
 
 	// Initializes the global journal and sets up the report callback.
@@ -195,13 +189,11 @@ namespace vi_tm
 	// Generates a report for the global journal.
 #	define VI_TM_REPORT(...) vi_tmReport(VI_TM_HGLOBAL, __VA_ARGS__)
 
-	// Resets (but not deleted!) the global journal or a specific measurement by name.
-	// If you want to reset a specific measurement, pass its name as a string literal, e.g. "my_measurement".
-	// If you want to reset all measurements, pass NULL or 0.
-#	define VI_TM_RESET(name) vi_tmMeasuringReset(vi_tmMeasuring(VI_TM_HGLOBAL, (name))) // If 'name' is zero, then all the meters in the log are reset (but not deleted!).
+	// Resets the data of the specified measure entry in global journal. The handle remains valid.
+#	define VI_TM_RESET(name) vi_tmMeasuringReset(vi_tmMeasuring(VI_TM_HGLOBAL, (name)))
 
-	// Full version string of the library (Example: 0.1.0.2506151515R static).
+	// Full version string of the library (Example: "0.1.0.2506151515R static").
 #	define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))
 #endif // #ifdef __cplusplus
-#endif // #if !defined(VI_TM_DISABLE) && __has_include("vi_timing.h")
+#endif // #ifdef VI_TM_DISABLE #else
 #endif // #ifndef VI_TIMING_VI_TIMING_H

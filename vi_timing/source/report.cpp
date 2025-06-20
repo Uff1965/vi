@@ -26,7 +26,7 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
-#include "../vi_timing.h"
+#include "../vi_timing_c.h"
 #include "build_number_maker.h"
 #include "misc.h"
 
@@ -170,13 +170,13 @@ namespace
 			{	const char *name;
 				vi_tmMeasuringRAW_t meas;
 				vi_tmMeasuringGet(h, &name, &meas);
-				auto& [data, flags] = *static_cast<data_t*>(callback_data);
-				data.emplace_back(name, std::move(meas), flags);
+				auto& [vec, flags] = *static_cast<data_t*>(callback_data);
+				vec.emplace_back(name, std::move(meas), flags);
 				return 0; // Ok, continue enumerate.
 			},
 			&data
 		);
-		return std::get<0>(data);
+		return result;
 	}
 
 	int print_props(vi_tmRptCb_t fn, void *data, unsigned flags)

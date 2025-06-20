@@ -132,9 +132,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	ifndef __COUNTER__
 #		define __COUNTER__ __LINE__ // If __COUNTER__ is not defined, use __LINE__ as a fallback.
 #	endif
-#	define VI_STR_GUM_AUX( a, b ) a##b
-#	define VI_STR_GUM( a, b ) VI_STR_GUM_AUX( a, b )
-#	define VI_UNIC_ID( prefix ) VI_STR_GUM( prefix, __COUNTER__ )
+#	define VI_STR_CONCAT_AUX( a, b ) a##b
+#	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
+#	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, __COUNTER__ )
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Comment out the next line if you do not need the coefficient of variation and bounce filtering.
