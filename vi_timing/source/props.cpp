@@ -122,7 +122,7 @@ namespace
 
 	template<unsigned N, unsigned M>
 	struct meas_cost_t
-	{	static VI_NOINLINE auto call()
+	{	VI_NOINLINE static auto call()
 		{	auto s = vi_tmGetTicks();
 			auto f = s;
 			for (auto n = M; n; --n)
@@ -134,7 +134,7 @@ namespace
 
 	template<unsigned N, unsigned M>
 	struct meas_duration_t
-	{	static VI_NOINLINE auto call(VI_TM_HMEAS m)
+	{	VI_NOINLINE static auto call(VI_TM_HMEAS m)
 		{	auto s = now();
 			for (auto n = M; n; --n)
 			{	multiple_invoke<N>(gauge_zero, m);
@@ -146,7 +146,7 @@ namespace
 
 	template<unsigned N, unsigned M>
 	struct meas_duration_ex_t
-	{	static VI_NOINLINE auto call(VI_TM_HJOUR journal, const char *name)
+	{	VI_NOINLINE static auto call(VI_TM_HJOUR journal, const char *name)
 		{	auto s = now();
 			for (auto n = M; n; --n)
 			{	multiple_invoke<N>(gauge_zero_ex, journal, name);
