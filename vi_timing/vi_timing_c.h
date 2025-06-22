@@ -191,8 +191,8 @@ typedef enum
 	vi_tmShowResolution = 0x0100,
 	vi_tmShowMask = 0x1F0,
 
-	vi_tmHideHeader = 0x0100,
-	vi_tmDoNotSubtractOverhead = 0x0200, // If set, the overhead is not subtracted from the measured time in report.
+	vi_tmHideHeader = 0x0200,
+	vi_tmDoNotSubtractOverhead = 0x0400, // If set, the overhead is not subtracted from the measured time in report.
 } vi_tmReportFlags_e;
 
 #define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
