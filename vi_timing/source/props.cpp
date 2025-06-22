@@ -31,159 +31,150 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "build_number_maker.h"
 #include "../vi_timing_c.h"
 
-#include <atomic>
 #include <cassert>
-#include <chrono>
-#include <functional>
-#include <thread>
-#include <utility>
+#include <chrono> // For std::chrono::steady_clock, std::chrono::duration, std::chrono::milliseconds
+#include <functional> // For std::invoke_result_t
+#include <thread> // For std::this_thread::yield()
+#include <utility> // For std::pair, std::index_sequence, std::make_index_sequence, std::forward, std::invoke
+
+using namespace std::chrono_literals;
+namespace ch = std::chrono;
 
 namespace
-{
-	using namespace std::chrono_literals;
-	namespace ch = std::chrono;
-
-	constexpr auto RPT = 128U;
+{	constexpr char SERVICE_NAME[16] = "Bla-bla-bla-bla"; // A service item name for the journal.
+	constexpr auto RPT = 128U; // The number of repetitions for each measurement to reduce the impact of noise.
 	constexpr auto BASE = 4U;
-	constexpr auto CNT = 32U;
+	constexpr auto EXT = 32U;
 
-	namespace detail
-	{
-		const auto now = ch::steady_clock::now;
-		using time_point_t = std::invoke_result_t<decltype(now)>;
-		using duration = ch::duration<double>;
+	const auto now = ch::steady_clock::now;
+	using time_point_t = std::invoke_result_t<decltype(now)>;
+	using duration_t = ch::duration<double>;
 
-		class thread_affinity_fix_t
-		{	thread_affinity_fix_t(const thread_affinity_fix_t &) = delete;
-			void operator=(const thread_affinity_fix_t &) = delete;
-		public:
-			thread_affinity_fix_t() { vi_tmCurrentThreadAffinityFixate(); }
-			~thread_affinity_fix_t() { vi_tmCurrentThreadAffinityRestore(); }
-		};
+	template <typename F, typename... Args>
+	auto cache_warming_and_invoke(F&& fn, Args&&... args) // Preload functions into cache to minimize cold start effects.
+	{	constexpr auto CACHE_WARMUP = 10U;
+		using return_t = std::invoke_result_t<F, Args...>;
 
-		inline auto tick_time() noexcept
-		{	return std::pair{ vi_tmGetTicks(), now() };
-		}
+		std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
 
-		template <typename F, typename... Args>
-		auto cache_warming_and_invoke(F&& fn, Args&&... args) // Preload functions into cache to minimize cold start effects.
-		{	constexpr auto CACHE_WARMUP = 10U;
-			using return_t = std::invoke_result_t<F, Args...>;
-
-			std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
-
-			if constexpr (std::is_void_v<return_t> )
-			{	for (auto n = 0U; n < CACHE_WARMUP; n++)
-				{	std::invoke(fn, args...);
-				}
-			}
-			else
-			{	return_t result;
-				for (auto n = 0U; n < CACHE_WARMUP; n++)
-				{	// volatile variable cannot be initialized by an STL object.
-					// const_cast<volatile return_t&>(result) = std::invoke(fn, args...);
-					result = std::invoke(fn, args...); // TODO: The optimizer will probably remove the assignments.
-				}
-				return result; // Return the last result.
+		if constexpr (std::is_void_v<return_t> )
+		{	for (auto n = 0U; n < CACHE_WARMUP; n++)
+			{	std::invoke(fn, args...);
 			}
 		}
-
-		template <std::size_t... Is, typename F, typename... Args>
-		constexpr auto multiple_invoke_impl(std::index_sequence<Is...>, F &fn, Args&&... args)
-		{	using return_t = std::invoke_result_t<F, Args...>;
-
-			if constexpr (std::is_void_v<return_t>) {
-				((static_cast<void>(Is), std::invoke(fn, args...)), ...);
+		else
+		{	return_t result;
+			for (auto n = 0U; n < CACHE_WARMUP; n++)
+			{	// volatile variable cannot be initialized by an STL object.
+				// const_cast<volatile return_t&>(result) = std::invoke(fn, args...);
+				result = std::invoke(fn, args...); // TODO: The optimizer will probably remove the assignments.
 			}
-			else
-			{	return_t result{};
-				((static_cast<void>(Is), const_cast<volatile return_t&>(result) = std::invoke(fn, args...)), ...);
-				return result; // Return the last result.
-			}
+			return result; // Return the last result.
 		}
+	}
 
-		template <std::size_t N, typename F, typename... Args>
-		constexpr auto multiple_invoke(F &&fn, Args&&... args)
-		{	static_assert(N > 0);
-			return multiple_invoke_impl
-			(	std::make_index_sequence<N>{},
-				std::forward<F>(fn),
-				std::forward<Args>(args)...
-			);
+	template <template <unsigned, unsigned> typename F, typename... Args>
+	auto diff_calc(Args&&... args)
+	{	const auto base = cache_warming_and_invoke(F<BASE, RPT>::call, args...);
+		const auto full = cache_warming_and_invoke(F<BASE + EXT, RPT>::call, args...);
+		return (full - base) / (EXT * RPT);
+	}
+
+	template <std::size_t... Is, typename F, typename... Args>
+	constexpr auto multiple_invoke_impl(std::index_sequence<Is...>, F &fn, Args&&... args)
+	{	using return_t = std::invoke_result_t<F, Args...>;
+		if constexpr (std::is_void_v<return_t>)
+		{	((static_cast<void>(Is), std::invoke(fn, args...)), ...);
 		}
+		else
+		{	return_t result{};
+			((static_cast<void>(Is), const_cast<volatile return_t&>(result) = std::invoke(fn, args...)), ...);
+			return result; // Return the last result.
+		}
+	}
 
-		auto time_point()
-		{	auto result = tick_time();
-			// Wait for the start of a new time interval.
-			for (const auto s = result.second; s == result.second;)
-			{	result = tick_time();
-			}
-			return result;
-		};
+	template <unsigned N, typename F, typename... Args>
+	constexpr auto multiple_invoke(F &&fn, Args&&... args) // Invoke a function N times without overhead costs for organizing the cycle.
+	{	static_assert(N > 0);
+		return multiple_invoke_impl(std::make_index_sequence<N>{}, std::forward<F>(fn), std::forward<Args>(args)...);
+	}
 
-		VI_NOINLINE
-		auto meas_cost_base()
+	auto time_point()
+	{	std::pair result{ vi_tmGetTicks(), now() };
+		// Wait for the start of a new time interval.
+		for (const auto s = result.second; s == result.second;)
+		{	result = { vi_tmGetTicks(), now() };
+		}
+		return result;
+	};
+
+	void gauge_zero(VI_TM_HMEAS m)
+	{	const auto start = vi_tmGetTicks();
+		const auto finish = vi_tmGetTicks();
+		vi_tmMeasuringRepl(m, finish - start, 1U);
+	};
+
+	void gauge_zero_ex(VI_TM_HJOUR journal, const char* name)
+	{	const auto start = vi_tmGetTicks();
+		const auto finish = vi_tmGetTicks();
+		vi_tmMeasuringRepl(vi_tmMeasuring(journal, name), finish - start, 1U);
+	};
+
+	template<unsigned N, unsigned M>
+	struct meas_cost_t
+	{	static VI_NOINLINE auto call()
 		{	auto s = vi_tmGetTicks();
 			auto f = s;
-			for (auto n = RPT; n; --n)
-			{	f = multiple_invoke<BASE>(vi_tmGetTicks);
+			for (auto n = M; n; --n)
+			{	f = multiple_invoke<N>(vi_tmGetTicks);
 			}
 			return f - s;
 		}
+	};
 
-		VI_NOINLINE
-		auto meas_cost_full()
-		{	auto s = vi_tmGetTicks();
-			auto f = s;
-			for (auto n = RPT; n; --n)
-			{	f = detail::multiple_invoke<BASE + CNT>(vi_tmGetTicks); // + CNT calls
+	template<unsigned N, unsigned M>
+	struct meas_duration_t
+	{	static VI_NOINLINE auto call(VI_TM_HMEAS m)
+		{	auto s = now();
+			for (auto n = M; n; --n)
+			{	multiple_invoke<N>(gauge_zero, m);
 			}
+			auto f = now();
 			return f - s;
 		}
+	};
 
-		void gauge_zero(VI_TM_HJOUR journal, const char* name)
-		{	static auto const service_item = vi_tmMeasuring(journal, name); // Get/Create a service item with empty name "".
-			const auto start = vi_tmGetTicks();
-			const auto finish = vi_tmGetTicks();
-			vi_tmMeasuringRepl(service_item, finish - start, 1U);
-		};
-
-		VI_NOINLINE
-		auto meas_duration_base(VI_TM_HJOUR journal, const char* name)
-		{	auto s = detail::now();
-			for (auto n = RPT; n; --n )
-			{	detail::multiple_invoke<BASE>(gauge_zero, journal, name);
+	template<unsigned N, unsigned M>
+	struct meas_duration_ex_t
+	{	static VI_NOINLINE auto call(VI_TM_HJOUR journal, const char *name)
+		{	auto s = now();
+			for (auto n = M; n; --n)
+			{	multiple_invoke<N>(gauge_zero_ex, journal, name);
 			}
-			auto f = detail::now();
+			auto f = now();
 			return f - s;
 		}
+	};
 
-		VI_NOINLINE
-		auto meas_duration_full(VI_TM_HJOUR journal, const char* name)
-		{	auto s = detail::now();
-			for (auto n = RPT; n; --n )
-			{	detail::multiple_invoke<BASE + CNT>(gauge_zero, journal, name); // + CNT calls
-			}
-			auto f = detail::now();
-			return f - s;
-		}
-	} //namespace detail
+	inline std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> create_journal()
+	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
+	}
 
-	detail::duration meas_seconds_per_tick()
-	{	auto f = detail::time_point();
+	duration_t meas_seconds_per_tick()
+	{	auto f = time_point();
 		auto const [s_ticks, s_time] = f;
 		auto const stop = s_time + 1ms;
 		do
-		{	f = detail::time_point();
+		{	f = time_point();
 		}
 		while (f.second < stop || f.first - s_ticks < 10);
 
-		return detail::duration{ f.second - s_time } / (f.first - s_ticks);
+		return duration_t{ f.second - s_time } / (f.first - s_ticks);
 	}
 
 	double meas_resolution()
 	{	for (auto N = 8U;; N *= 8U) //-V1044
-		{	const auto limit = detail::now() + 256us;
+		{	const auto limit = now() + 256us;
 			const auto first = vi_tmGetTicks();
 			auto last = first;
 			for (auto cnt = N; cnt; )
@@ -193,52 +184,47 @@ namespace
 				}
 			}
 
-			if (detail::now() > limit)
+			if (now() > limit)
 			{	return static_cast<double>(last - first) / N;
 			}
 		}
 	}
 
 	double meas_cost()
-	{	const auto base = detail::cache_warming_and_invoke(detail::meas_cost_base);
-		const auto full = detail::cache_warming_and_invoke(detail::meas_cost_full);
-		return static_cast<double>(full - base) / (CNT * RPT);
+	{	return diff_calc<meas_cost_t>();
 	}
 
-	inline std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> create_journal()
-	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
+	duration_t meas_duration()
+	{	duration_t result{};
+		if (const auto journal = create_journal())
+		{	if (const auto m = vi_tmMeasuring(journal.get(), SERVICE_NAME))
+			{	result = diff_calc<meas_duration_t>(m);
+			}
+		}
+		return result;
 	}
 
-	detail::duration meas_duration()
-	{	detail::duration result{};
-		auto journal = create_journal();
-		assert(journal);
-		if (auto j = journal.get())
-		{	constexpr auto name = "Bla-bla-blaaa";
-			vi_tmMeasuringReset(vi_tmMeasuring(j, name)); // Reset a service item.
-			const auto base = detail::cache_warming_and_invoke(detail::meas_duration_base, j, name);
-			vi_tmMeasuringReset(vi_tmMeasuring(j, name));
-			const auto full = detail::cache_warming_and_invoke(detail::meas_duration_full, j, name);
-			result = (full - base) / (CNT * RPT);
+	duration_t meas_duration_ex()
+	{	duration_t result{};
+		if (auto journal = create_journal())
+		{	result = diff_calc<meas_duration_ex_t>(journal.get(), SERVICE_NAME);
 		}
 		return result;
 	}
 } // namespace
 
 misc::properties_t::properties_t()
-{	detail::thread_affinity_fix_t thread_affinity_fix_guard;
-	if (auto journal = create_journal())
-	{	vi_tmMeasuringReset(vi_tmMeasuring(journal.get(), "")); // Reset a service item with empty name "".
-		vi_tmWarming(1);
+{
+	struct thread_affinity_fix_guard_t // RAII guard to fixate the current thread's affinity.
+	{	thread_affinity_fix_guard_t() { vi_tmCurrentThreadAffinityFixate(); }
+		~thread_affinity_fix_guard_t() { vi_tmCurrentThreadAffinityRestore(); }
+	} thread_affinity_fix_guard; // Fixate the current thread's affinity to avoid issues with clock resolution measurement.
 
-		seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
-		clock_latency_ticks_ = meas_cost(); // The cost of a single call of vi_tmGetTicks.
-		all_latency_ = meas_duration(); // The cost of a single measurement in seconds.
-		clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
-	}
-}
+	vi_tmWarming(1);
 
-const misc::properties_t& misc::properties_t::props()
-{	static const misc::properties_t inst_;
-	return inst_;
+	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
+	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
+	clock_latency_ticks_ = meas_cost(); // The cost of a single call of vi_tmGetTicks.
+	duration_ = meas_duration(); // The cost of a single measurement with preservation in seconds.
+	duration_ex_ = meas_duration_ex(); // The cost of a single measurement in seconds.
 }

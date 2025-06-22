@@ -48,7 +48,7 @@ namespace
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
 
-	VI_TM_INIT(vi_tmSortByName, "Global timing report:\n", vi_tmShowDuration, vi_tmShowOverhead, vi_tmShowUnit, vi_tmShowResolution);
+	VI_TM_INIT(vi_tmSortByName, "Global timing report:\n", vi_tmShowMask);
 	VI_TM("GLOBAL");
 
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -156,7 +156,7 @@ VI_OPTIMIZE_OFF
 		std::cout << "RAW:\n";
 		report_RAW(h.get());
 		std::cout << "Report:\n";
-		vi_tmReport(h.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+		vi_tmReport(h.get(), vi_tmShowMask);
 		std::cout << "Test multithreaded - done" << std::endl;
 	}
 VI_OPTIMIZE_ON
@@ -172,7 +172,7 @@ VI_OPTIMIZE_ON
 			{	vi_tm::measurer_t tm2{ m };
 				std::this_thread::sleep_for(100ms);
 			}
-			vi_tmReport(j, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit);
+			vi_tmReport(j, vi_tmShowDuration | vi_tmShowDurationEx | vi_tmShowOverhead | vi_tmShowUnit);
 		}
 		std::cout << "Test sleep - done" << std::endl;
 	}
@@ -216,7 +216,7 @@ VI_OPTIMIZE_OFF
 			vi_tmMeasuringGet(vi_tmMeasuring(j, "empty"), &name, &data);
 			std::cout << "empty:\tticks = " << std::setw(16)  << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 #endif
-			vi_tmReport(j, vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+			vi_tmReport(j, vi_tmShowMask);
 		}
 
 		std::cout << "Test test_empty - Done" << std::endl;
@@ -255,6 +255,9 @@ VI_OPTIMIZE_ON
 		}
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION)))
 		{	std::cout << "\nDuration: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		}
+		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION_EX)))
+		{	std::cout << "\nDuration ex: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_OVERHEAD)))
 		{	std::cout << "\nAdditive: " << std::setprecision(3) << *ptr << " ticks";
@@ -298,7 +301,7 @@ VI_OPTIMIZE_ON
 		}
 		std::cout << "RAW:\n";
 		report_RAW(journal.get());
-		vi_tmReport(journal.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+		vi_tmReport(journal.get(), vi_tmShowMask);
 
 		std::cout << "Test vi_tmReport - done" << std::endl;
 	}
@@ -335,7 +338,7 @@ VI_OPTIMIZE_ON
 			vi_tmMeasuringRepl(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
 		}
 
-		vi_tmReport(j.get(), vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution);
+		vi_tmReport(j.get(), vi_tmShowMask);
 
 		vi_tmMeasuringRAW_t raw;
 		vi_tmMeasuringGet(m, nullptr, &raw);
@@ -415,7 +418,7 @@ VI_OPTIMIZE_ON
 		report_RAW(journal.get());
 		std::cout << "Report:\n";
 		unsigned flags = 0U;
-		flags |= vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution;
+		flags |= vi_tmShowMask;
 		flags |= vi_tmSortBySpeed;
 //		flags |= vi_tmDoNotSubtractOverhead;
 		vi_tmReport(journal.get(), flags);

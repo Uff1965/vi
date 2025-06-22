@@ -191,7 +191,10 @@ namespace
 			{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_ticks_);
 			}
 			if (flags & vi_tmShowDuration)
-			{	str << "Duration: " << to_string(props.all_latency_.count());
+			{	str << "Duration: " << to_string(props.duration_.count());
+			}
+			if (flags & vi_tmShowDurationEx)
+			{	str << "Duration ex: " << to_string(props.duration_ex_.count());
 			}
 			if (flags & vi_tmShowUnit)
 			{	str << "One tick: " << to_string(props.seconds_per_tick_.count());

@@ -166,7 +166,8 @@ typedef enum // Enumeration for various timing information types.
 	VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
 	VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
 	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
-	VI_TM_INFO_DURATION,    // const double*: Measure duration in seconds.
+	VI_TM_INFO_DURATION,    // const double*: Measure duration with cache in seconds.
+	VI_TM_INFO_DURATION_EX, // const double*: Measure duration in seconds.
 	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
 	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
 
@@ -183,11 +184,12 @@ typedef enum
 	vi_tmSortDescending = 0x00,
 	vi_tmSortAscending = 0x08,
 
-	vi_tmShowOverhead = 0x10,
-	vi_tmShowUnit = 0x20,
-	vi_tmShowDuration = 0x40,
-	vi_tmShowResolution = 0x80,
-	vi_tmShowMask = 0xF0,
+	vi_tmShowOverhead = 0x0010,
+	vi_tmShowUnit = 0x0020,
+	vi_tmShowDuration = 0x0040,
+	vi_tmShowDurationEx = 0x0080,
+	vi_tmShowResolution = 0x0100,
+	vi_tmShowMask = 0x1F0,
 
 	vi_tmHideHeader = 0x0100,
 	vi_tmDoNotSubtractOverhead = 0x0200, // If set, the overhead is not subtracted from the measured time in report.
