@@ -113,8 +113,8 @@ namespace vi_tm
 	// measurer_t class: A RAII-style class for measuring code execution time.
 	// Unlike the API, this class is not thread-safe!!!
 	class measurer_t
-	{	VI_TM_HMEAS meas_;
-		size_t amt_;
+	{	VI_TM_HMEAS meas_ = nullptr;
+		size_t amt_ = 0;
 		VI_TM_TICK start_ = 0; // Order matters!!! 'start_' must be initialized last!
 	public:
 		measurer_t() = delete;
@@ -174,11 +174,11 @@ namespace vi_tm
 #	define VI_TM(...) \
 		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, size_t amount = 1) -> vi_tm::measurer_t { \
 			static const auto meas = vi_tmMeasuring(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
-			VI_DEBUG_ONLY( \
-				const char* registered_name = nullptr; \
+			VI_DEBUG_ONLY \
+			(	const char* registered_name = nullptr; \
 				vi_tmMeasuringGet(meas, &registered_name, nullptr); \
 				assert(registered_name && 0 == std::strcmp(name, registered_name) && \
-					"The VI_TM macro cannot be reused with a different name value!"); \
+					"One VI_TM macro cannot be reused with a different name value!"); \
 			) \
 			return vi_tm::measurer_t{meas, amount}; \
 		}(__VA_ARGS__)
