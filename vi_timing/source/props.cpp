@@ -31,6 +31,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "build_number_maker.h"
 #include "../vi_timing_c.h"
 
+#include <algorithm> // For std::nth_element
+#include <array>
 #include <cassert>
 #include <chrono> // For std::chrono::steady_clock, std::chrono::duration, std::chrono::milliseconds
 #include <functional> // For std::invoke_result_t
@@ -44,6 +46,9 @@ namespace
 {	const auto now = ch::steady_clock::now;
 	using time_point_t = std::invoke_result_t<decltype(now)>;
 	using duration_t = ch::duration<double>;
+
+	constexpr auto CACHE_WARMUP = 6U;
+	constexpr char SERVICE_NAME[16] = "Bla-bla-bla-bla"; // A service item name for the journal (SSO size).
 
 	template <std::size_t... Is, typename F, typename... Args>
 	constexpr auto multiple_invoke_aux(std::index_sequence<Is...>, F&& fn, Args&&... args)
@@ -66,29 +71,36 @@ namespace
 
 	template <unsigned N, typename F, typename... Args>
 	double diff_calc_aux(F&& fn, Args&&... args)
-	{	constexpr auto CACHE_WARMUP = 6U;
-		constexpr auto RPT = 256U;
+	{	constexpr auto MULTIPLIER = 128U;
 		auto start = []
-			{	auto result = vi_tmGetTicks();
-				// Wait for the start of a new time interval.
-				for (const auto s = result; s == result; result = vi_tmGetTicks())
-				{/**/ }
+			{	VI_TM_TICK result;
+				const auto prev = vi_tmGetTicks();
+				do
+				{	result = vi_tmGetTicks();
+				} while (prev == result); // Wait for the start of a new time interval.
 				return result;
 			};
+		auto func = multiple_invoke<N, F, Args...>;
+		std::array<VI_TM_TICK, 9> diff;
 
-		std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
+		for (auto &d : diff)
+		{	std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
+			for (auto cw = 0U; cw < CACHE_WARMUP; cw++) // Preload functions into cache to minimize cold start effects.
+			{	(void)start();
+				(void)func(fn, args...);
+			}
 
-		VI_TM_TICK diff = 0;
-		for (auto cw = 0U; cw < CACHE_WARMUP; cw++) // Preload functions into cache to minimize cold start effects.
-		{	const auto s = start();
-			for (auto rpt = 0U; rpt < RPT; rpt++)
-			{	multiple_invoke<N>(fn, args...);
+			const auto s = start();
+			for (auto rpt = 0U; rpt < MULTIPLIER; rpt++)
+			{	func(fn, args...);
 			}
 			const auto f = vi_tmGetTicks();
-			diff = { f - s }; // Save last result.
+			d = f - s;
 		}
 
-		return static_cast<double>(diff) / RPT;
+		auto const mid = diff.begin() + diff.size() / 2;
+		std::nth_element(diff.begin(), mid, diff.end());
+		return static_cast<double>(*mid) / MULTIPLIER;
 	}
 
 	template <typename F, typename... Args>
@@ -100,18 +112,22 @@ namespace
 		return (full - base) / (FULL - BASE);
 	}
 
-	void measuring(VI_TM_HJOUR journal, const char* name)
+	VI_NOINLINE void measuring(VI_TM_HJOUR journal, const char* name)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		const auto h = vi_tmMeasuring(journal, name);
 		vi_tmMeasuringRepl(h, finish - start, 1U);
 	};
 
-	void measuring_with_caching(VI_TM_HMEAS m)
+	VI_NOINLINE void measuring_with_caching(VI_TM_HMEAS m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		vi_tmMeasuringRepl(m, finish - start, 1U);
 	};
+
+	VI_NOINLINE auto meas_GetTicks()
+	{	return vi_tmGetTicks();
+	}
 
 	inline
 	std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)>
@@ -143,10 +159,10 @@ namespace
 		return duration_t{ c_time - s_time } / (c_ticks - s_ticks);
 	}
 
-	double meas_resolution()
-	{	constexpr auto N = 8U;
-		const auto first = vi_tmGetTicks();
-		auto last = first;
+	VI_NOINLINE double meas_resolution_aux()
+	{	constexpr auto N = 16U;
+		auto last = vi_tmGetTicks();
+		const auto first = last;
 		for (auto cnt = N; cnt; )
 		{	if (const auto current = vi_tmGetTicks(); current != last)
 			{	last = current;
@@ -156,11 +172,14 @@ namespace
 		return static_cast<double>(last - first) / N;
 	}
 
-	auto meas_cost_calling_tick_function()
-	{	return diff_calc(vi_tmGetTicks);
+	double meas_resolution()
+	{	std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
+		return multiple_invoke<CACHE_WARMUP + 1>(meas_resolution_aux);
 	}
 
-	constexpr char SERVICE_NAME[16] = "Bla-bla-bla-bla"; // A service item name for the journal.
+	auto meas_cost_calling_tick_function()
+	{	return diff_calc(meas_GetTicks);
+	}
 
 	auto meas_duration()
 	{	double result{};
