@@ -48,67 +48,78 @@ namespace
 	using duration_t = ch::duration<double>;
 
 	constexpr auto CACHE_WARMUP = 6U;
-	constexpr char SERVICE_NAME[16] = "Bla-bla-bla-bla"; // A service item name for the journal (SSO size).
+	constexpr char SERVICE_NAME[] = "Bla-bla-bla-bla"; // A service item name for the journal (SSO size).
 
-	template <std::size_t... Is, typename F, typename... Args>
-	constexpr auto multiple_invoke_aux(std::index_sequence<Is...>, F&& fn, Args&&... args)
-	{	using return_t = std::invoke_result_t<F, Args...>;
+	auto start_tick()
+	{	VI_TM_TICK result;
+		const auto prev = vi_tmGetTicks();
+		do
+		{	result = vi_tmGetTicks();
+		} while (prev == result); // Wait for the start of a new time interval.
+		return result;
+	}
+
+	auto start_now()
+	{	time_point_t result;
+		const auto prev = now();
+		do
+		{	result = now();
+		} while (prev == result); // Wait for the start of a new time interval.
+		return result;
+	}
+
+	inline
+	std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)>
+	create_journal()
+	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
+	}
+
+	template <auto F, typename... Args, std::size_t... Is>
+	constexpr auto multiple_invoke_aux(std::index_sequence<Is...>, Args&&... args)
+	{	using return_t = std::invoke_result_t<decltype(F), Args...>;
 		if constexpr (std::is_void_v<return_t>)
-		{	((static_cast<void>(Is), std::invoke(fn, args...)), ...);
+		{	((static_cast<void>(Is), std::invoke(F, args...)), ...);
 		}
 		else
 		{	return_t result{};
-			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(fn, args...)), ...);
+			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(F, args...)), ...);
 			return result; // Return the last result.
 		}
 	}
 
-	template <unsigned N, typename F, typename... Args>
-	constexpr auto multiple_invoke(F&& fn, Args&&... args) // Invoke a function N times without overhead costs for organizing the cycle.
+	// Invoke a F function N times without overhead costs for organizing the cycle.
+	template <auto F, unsigned N, typename... Args>
+	constexpr auto multiple_invoke(Args&&... args)
 	{	static_assert(N > 0);
-		return multiple_invoke_aux(std::make_index_sequence<N>{}, fn, std::forward<Args>(args)...);
+		return multiple_invoke_aux<F, Args...>(std::make_index_sequence<N>{}, std::forward<Args>(args)...);
 	}
 
-	template <unsigned N, typename F, typename... Args>
-	double diff_calc_aux(F&& fn, Args&&... args)
+	template <auto F, unsigned N, typename... Args>
+	double diff_calc_aux(Args&&... args)
 	{	constexpr auto MULTIPLIER = 128U;
-		auto start = []
-			{	VI_TM_TICK result;
-				const auto prev = vi_tmGetTicks();
-				do
-				{	result = vi_tmGetTicks();
-				} while (prev == result); // Wait for the start of a new time interval.
-				return result;
-			};
-		auto func = multiple_invoke<N, F, Args...>;
-		std::array<VI_TM_TICK, 9> diff;
-
+		std::array<VI_TM_TICK, 17 + CACHE_WARMUP> diff;
+		std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
 		for (auto &d : diff)
-		{	std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
-			for (auto cw = 0U; cw < CACHE_WARMUP; cw++) // Preload functions into cache to minimize cold start effects.
-			{	(void)start();
-				(void)func(fn, args...);
-			}
-
-			const auto s = start();
+		{	const auto s = start_tick();
 			for (auto rpt = 0U; rpt < MULTIPLIER; rpt++)
-			{	func(fn, args...);
+			{	std::invoke(multiple_invoke<F, N, Args...>, args...);
 			}
 			const auto f = vi_tmGetTicks();
 			d = f - s;
 		}
 
-		auto const mid = diff.begin() + diff.size() / 2;
-		std::nth_element(diff.begin(), mid, diff.end());
+		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
+		auto const mid = diff.begin() + (diff.size() + CACHE_WARMUP) / 2;
+		std::nth_element(diff.begin() + CACHE_WARMUP, mid, diff.end());
 		return static_cast<double>(*mid) / MULTIPLIER;
 	}
 
-	template <typename F, typename... Args>
-	double diff_calc(F&& fn, Args&&... args)
+	template <auto F, typename... Args>
+	double diff_calc(Args&&... args)
 	{	constexpr auto BASE = 4U;
 		constexpr auto FULL = BASE + 32U;
-		const double base = diff_calc_aux<BASE>(fn, args...);
-		const double full = diff_calc_aux<FULL>(fn, args...);
+		const double full = diff_calc_aux<F, FULL>(args...);
+		const double base = diff_calc_aux<F, BASE>(args...);
 		return (full - base) / (FULL - BASE);
 	}
 
@@ -119,84 +130,73 @@ namespace
 		vi_tmMeasuringRepl(h, finish - start, 1U);
 	};
 
+	auto meas_duration()
+	{	double result{};
+		if (auto journal = create_journal())
+		{	result = diff_calc<measuring>(journal.get(), SERVICE_NAME);
+		}
+		return result;
+	}
+
 	VI_NOINLINE void measuring_with_caching(VI_TM_HMEAS m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		vi_tmMeasuringRepl(m, finish - start, 1U);
 	};
 
+	auto meas_duration_with_caching()
+	{	double result{};
+		if (const auto journal = create_journal())
+		{	if (const auto m = vi_tmMeasuring(journal.get(), SERVICE_NAME))
+			{	result = diff_calc<measuring_with_caching>(m);
+			}
+		}
+		return result;
+	}
+
 	VI_NOINLINE auto meas_GetTicks()
 	{	return vi_tmGetTicks();
 	}
 
-	inline
-	std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)>
-	create_journal()
-	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
+	auto meas_cost_calling_tick_function()
+	{	return diff_calc<meas_GetTicks>();
+	}
+
+	double meas_resolution()
+	{	constexpr auto N = 8U;
+		std::array<VI_TM_TICK, 17U + CACHE_WARMUP> arr;
+		std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
+		for (auto &item : arr)
+		{	const auto first = vi_tmGetTicks();
+			auto last = first;
+			for (auto cnt = N; cnt; )
+			{	if (const auto current = vi_tmGetTicks(); current != last)
+				{	last = current;
+					--cnt;
+				}
+			}
+			item = last - first;
+		}
+		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
+		auto const mid = arr.begin() + (arr.size() + CACHE_WARMUP) / 2;
+		std::nth_element(arr.begin() + CACHE_WARMUP, mid, arr.end());
+		return static_cast<double>(*mid) / N;
 	}
 
 	duration_t meas_seconds_per_tick()
 	{
-		auto start = []
-			{	auto result{ now() };
-				// Wait for the start of a new time interval.
-				for (const auto s = result; s == result; result = now())
-				{/**/}
-				return result;
-			};
-
 		time_point_t c_time;
 		VI_TM_TICK c_ticks;
-		auto const s_time = start();
+		auto const s_time = start_now();
 		auto const s_ticks = vi_tmGetTicks();
 		auto const stop = s_time + 1ms;
 		do
-		{	c_time = start();
+		{	c_time = start_now();
 			c_ticks = vi_tmGetTicks();
 		}
 		while (c_time < stop || c_ticks - s_ticks < 10);
 
 		return duration_t{ c_time - s_time } / (c_ticks - s_ticks);
-	}
-
-	VI_NOINLINE double meas_resolution_aux()
-	{	constexpr auto N = 16U;
-		auto last = vi_tmGetTicks();
-		const auto first = last;
-		for (auto cnt = N; cnt; )
-		{	if (const auto current = vi_tmGetTicks(); current != last)
-			{	last = current;
-				--cnt;
-			}
-		}
-		return static_cast<double>(last - first) / N;
-	}
-
-	double meas_resolution()
-	{	std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
-		return multiple_invoke<CACHE_WARMUP + 1>(meas_resolution_aux);
-	}
-
-	auto meas_cost_calling_tick_function()
-	{	return diff_calc(meas_GetTicks);
-	}
-
-	auto meas_duration()
-	{	double result{};
-		if (auto journal = create_journal())
-		{	result = diff_calc(measuring, journal.get(), SERVICE_NAME);
-		}
-		return result;
-	}
-
-	auto meas_duration_with_caching()
-	{	double result{};
-		if (const auto journal = create_journal())
-		{	if (const auto m = vi_tmMeasuring(journal.get(), SERVICE_NAME))
-			{	result = diff_calc(measuring_with_caching, m);
-			}
-		}
-		return result;
 	}
 } // namespace
 
