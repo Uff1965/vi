@@ -68,7 +68,6 @@ namespace
 		return result;
 	}
 
-	inline
 	std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)>
 	create_journal()
 	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
@@ -107,7 +106,6 @@ namespace
 			const auto f = vi_tmGetTicks();
 			d = f - s;
 		}
-
 		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
 		auto const mid = diff.begin() + (diff.size() + CACHE_WARMUP) / 2;
 		std::nth_element(diff.begin() + CACHE_WARMUP, mid, diff.end());

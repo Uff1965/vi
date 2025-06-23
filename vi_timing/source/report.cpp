@@ -80,7 +80,7 @@ namespace
 		std::string amt_txt_{ "0" };
 #if defined(VI_TM_STAT_USE_WELFORD)
 		double cv_{}; // Coefficient of Variation.
-		std::string cv_txt_; // Coefficient of Variation (CV) in percent
+		std::string cv_txt_{ NotAvailable }; // Coefficient of Variation (CV) in percent
 #endif
 
 		metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsigned flags) noexcept;

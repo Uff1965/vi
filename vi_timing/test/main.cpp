@@ -472,15 +472,15 @@ int main()
 
 	foo_c();
 
-	//test_misc();
+	test_misc();
 	test_empty();
 	test_sleep();
 	normal_distribution();
 	prn_clock_properties();
 
 	test_report();
-	//test_multithreaded();
-	//test_access();
+	test_multithreaded();
+	test_access();
 	//std::cout << "\nRAW report:\n";
 	//report_RAW(VI_TM_HGLOBAL);
 
