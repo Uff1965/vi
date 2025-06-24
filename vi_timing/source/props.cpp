@@ -121,7 +121,7 @@ namespace
 		return (full - base) / (FULL - BASE);
 	}
 
-	VI_NOINLINE void measuring(VI_TM_HJOUR journal, const char* name)
+	void measuring(VI_TM_HJOUR journal, const char* name)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		const auto h = vi_tmMeasuring(journal, name);
@@ -136,7 +136,7 @@ namespace
 		return result;
 	}
 
-	VI_NOINLINE void measuring_with_caching(VI_TM_HMEAS m)
+	void measuring_with_caching(VI_TM_HMEAS m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		vi_tmMeasuringRepl(m, finish - start, 1U);
@@ -152,7 +152,7 @@ namespace
 		return result;
 	}
 
-	VI_NOINLINE auto meas_GetTicks()
+	auto meas_GetTicks()
 	{	return vi_tmGetTicks();
 	}
 

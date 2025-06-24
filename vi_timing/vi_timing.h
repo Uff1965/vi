@@ -96,7 +96,7 @@ namespace vi_tm
 			init(std::forward<Args>(args)...);
 		}
 	public:
-		init_t() { init(); };
+		init_t() { init(); } // Default flags and other settings.
 		template<typename... Args> explicit init_t(Args&&... args)
 			: flags_{0U}
 		{	init(std::forward<Args>(args)...);
