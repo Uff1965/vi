@@ -238,14 +238,13 @@ VI_OPTIMIZE_ON
 			"\tBuild number: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n";
 	}
 
-	void warming()
-	{	endl(std::cout);
-		std::cout << "Warming... ";
+	void test_warming()
+	{	std::cout << "\nTest test_warming:\n";
 		{	VI_TM("Warming in main()");
 			vi_tmWarming(1);
 		}
 		assert(0 == errno);
-		std::cout << "done" << std::endl;
+		std::cout << "Test test_warming - done" << std::endl;
 	}
 
 	void prn_clock_properties()
@@ -473,6 +472,7 @@ int main()
 
 	foo_c();
 
+	test_warming();
 	test_misc();
 	test_empty();
 	test_sleep();
