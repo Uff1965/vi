@@ -344,9 +344,10 @@ VI_OPTIMIZE_ON
 		vi_tmMeasuringGet(m, nullptr, &raw);
 		assert(raw.amt_ == CNT + CNT);
 		assert(raw.calls_ == CNT + CNT / MULT);
+#if defined VI_TM_STAT_USE_WELFORD
 		assert(std::abs(raw.flt_mean_ - MEAN) / MEAN < 0.01);
 		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_amt_) / MEAN - CV) < 0.01);
-
+#endif
 		std::cout << "Test normal_distribution - done" << std::endl;
 	}
 

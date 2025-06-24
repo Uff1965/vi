@@ -29,27 +29,41 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "../vi_timing_c.h"
 #include "build_number_maker.h"
 
-VI_OPTIMIZE_OFF
-#if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__) // MSC or GCC on Intel
+#ifdef VI_TM_USE_STDCLOCK
+	// Use standard clock
+#	include <time.h> // for timespec_get
+	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
+	{	struct timespec ts;
+		(void)timespec_get(&ts, TIME_UTC);
+		return 1000000000U * ts.tv_sec + ts.tv_nsec;
+	}
+#elif defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__) // MSC or GCC on Intel
 #	if _MSC_VER >= 1800
 #		include <intrin.h>
-#		pragma intrinsic(__rdtscp, _mm_lfence)
+#		pragma intrinsic(__rdtscp, __rdtsc, _mm_lfence)
 #	elif defined(__GNUC__)
 #		include <x86intrin.h>
 #	else
 #		error "Undefined compiler"
 #	endif
+//*
+ 	// The RDTSCP instruction is not a serializing instruction, but it does wait until all previous instructions have executed.
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	uint32_t _; // Will be removed by the optimizer.
-		// «The RDTSCP instruction is not a serializing instruction, but it does wait until all previous instructions have executed».
 		const uint64_t result = __rdtscp(&_); // Read the TSC.
-		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction 
-		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» - 
-		//	(Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes:
-		//	1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4. Vol. 2B. P.4-553)
-		_mm_lfence(); // Ensure that the read of the time stamp is complete before any subsequent instructions
+		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction
+		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» -
+		//	Intel® 64 and IA-32 Architectures Software Developer’s Manual: Vol.2B. P.4-553.
+		_mm_lfence();
 		return result;
 	}
+/*/
+	// The RDTSC executes very quickly, but the CPU may reorder instructions around RDTSC, leading to timing inaccuracies 
+	// unless proper serialization (e.g., LFENCE) is used.
+	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
+	{	return __rdtsc();
+	}
+//*/
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	uint64_t result;
@@ -169,4 +183,3 @@ VI_OPTIMIZE_OFF
 #else
 #	error "You need to define function(s) for your OS and CPU"
 #endif
-VI_OPTIMIZE_ON

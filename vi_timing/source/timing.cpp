@@ -314,7 +314,7 @@ namespace
 			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < 1e-12);
 #	else
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
-			assert(md.amt_ == std::size(samples_simple) + o_month * std::size(samples_multiple));
+			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
 			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - exp_flt_mean) < 1e-12);
 #	endif
 			return 0;

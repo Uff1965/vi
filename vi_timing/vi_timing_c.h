@@ -34,6 +34,18 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <stdint.h>
 #	include <stdio.h> // For fputs and stdout
 
+//*******************************************************************************************************************
+//
+// If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
+// Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
+#	define VI_TM_STAT_USE_WELFORD
+//
+// Uses high-performance timing methods (typically platform-specific optimizations like ASM).  
+// To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:  
+//#	define VI_TM_USE_STDCLOCK
+// 
+//*******************************************************************************************************************
+
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
 #	if defined(_MSC_VER)
 #		define VI_FUNCNAME __FUNCSIG__
@@ -136,9 +148,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
 #	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, __COUNTER__ )
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-// Comment out the next line if you do not need the coefficient of variation and bounce filtering.
-#define VI_TM_STAT_USE_WELFORD // If defined, uses Welford's method for calculating variance and standard deviation.
 
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
