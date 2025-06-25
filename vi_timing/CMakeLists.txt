@@ -101,9 +101,9 @@ if (WIN32)
 
     target_compile_options(${PROJECT_NAME}
     PRIVATE
-    /MP /W4 /nologo /EHsc /Zi /arch:AVX2 /fp:fast 
-    $<$<CONFIG:Release>: /O2 /Oi /GL /Gy>
-    $<$<CONFIG:Debug>:   /Od /RTC1>
+    /MP /W4 /nologo /EHsc /Zi /arch:AVX2 /fp:fast # Enable multi-processor compilation, set warning level 4, disable logo, enable C++ exceptions, generate debug info, use AVX2 instruction set, and fast floating-point model.
+    $<$<CONFIG:Release>: /O2 /Oi /GL /Gy> # Optimize for speed, inline functions, enable link-time code generation, enable function-level linking.
+    $<$<CONFIG:Debug>:   /Od /RTC1> # Enable runtime checks, debug info, no optimizations.
     )
 
     if(VI_TM_BUILD_SHARED)
@@ -122,12 +122,12 @@ if (WIN32)
 elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
   PRIVATE
-    -fvisibility=hidden
+    -fvisibility=hidden #Hide symbols by default, only export those marked with VI_TM_EXPORTS.
     -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
-    -march=native
-    -ffast-math
-    $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
-    $<$<CONFIG:Release>: -O3 -s>
+    -march=native #Switch on all instruction sets supported by the host CPU. Support FMA, AVX, AVX2, etc.
+    -ffast-math #Allow floating-point optimizations that may violate strict IEEE or ISO rules.
+    $<$<COMPILE_LANGUAGE:CXX>: -fPIC> #Position Independent Code for shared libraries.
+    $<$<CONFIG:Release>: -O3 -s> #Optimize for speed, strip symbols.
   )
 endif()
 
