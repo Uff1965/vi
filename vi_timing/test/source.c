@@ -38,8 +38,8 @@ void bar_c(void)
 		puts("After vi_tmMeasuringReset(m1) (Clear \"xxx\"):");
 		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
 
-		vi_tmJournalClear(journal);
-		puts("After vi_tmJournalClear(htimer):");
+		vi_tmJournalReset(journal);
+		puts("After vi_tmJournalReset(htimer):");
 		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
 		vi_tmJournalClose(journal);
 	}

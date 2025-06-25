@@ -94,7 +94,7 @@ public:
 	static auto& from_handle(VI_TM_HJOUR journal); // Get the journal from the handle or return the global journal.
 	explicit vi_tmJournal_t();
 	int init();
-	auto& at(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
+	auto& try_emplace(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
 	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
 	void clear();
 };
@@ -177,10 +177,14 @@ vi_tmJournal_t::vi_tmJournal_t()
 }
 
 int vi_tmJournal_t::init()
-{	return 0;
+{	auto &journal = vi_tmJournal_t::from_handle(VI_TM_HGLOBAL);
+	assert(journal.storage_.empty() && "The global journal should not be empty at initialization.");
+	// Initialize the global journal here.
+	((void)journal);
+	return 0;
 }
 
-inline auto& vi_tmJournal_t::at(const char *name)
+inline auto& vi_tmJournal_t::try_emplace(const char *name)
 {	std::lock_guard lock{ storage_guard_ };
 	return *storage_.try_emplace(name).first;
 }
@@ -226,8 +230,8 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR journal)
 {	delete journal;
 }
 
-void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR journal) noexcept
-{	vi_tmJournal_t::from_handle(journal).clear();
+void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal) noexcept
+{	vi_tmMeasuringEnumerate(journal, [](VI_TM_HMEAS m, void*) { vi_tmMeasuringReset(m); return 0; }, nullptr);
 }
 
 int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCallback_t fn, void *data)
@@ -235,7 +239,7 @@ int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCallbac
 }
 
 VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR journal, const char *name)
-{	return static_cast<VI_TM_HMEAS>(&vi_tmJournal_t::from_handle(journal).at(name));
+{	return static_cast<VI_TM_HMEAS>(&vi_tmJournal_t::from_handle(journal).try_emplace(name));
 }
 
 void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, size_t amount) noexcept

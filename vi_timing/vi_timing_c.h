@@ -240,14 +240,14 @@ extern "C" {
 	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(void);
 
 	/// <summary>
-	/// Remove all measurement entries in the specified journal. All A handles to the measurement entrys will become invalid after this call.
+	/// Resets but does not delete all entries in the journal. All entry handles remain valid.
 	/// </summary>
 	/// <param name="j">The handle to the journal to reset.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmJournalClear(VI_TM_HJOUR j) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR j) VI_NOEXCEPT;
 
 	/// <summary>
-	/// Closes and deletes a journal handle.
+	/// Closes and deletes a journal handle. All descriptors associated with the journal become invalid.
 	/// </summary>
 	/// <param name="j">The handle to the journal to be closed and deleted.</param>
 	/// <returns>This function does not return a value.</returns>
