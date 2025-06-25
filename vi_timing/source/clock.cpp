@@ -47,21 +47,21 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		error "Undefined compiler"
 #	endif
 //*
- 	// The RDTSCP instruction is not a serializing instruction, but it does wait until all previous instructions have executed.
-	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
-	{	uint32_t _; // Will be removed by the optimizer.
-		const uint64_t result = __rdtscp(&_); // Read the TSC.
-		//	«If software requires RDTSCP to be executed prior to execution of any subsequent instruction
-		//	(including any memory accesses), it can execute LFENCE immediately after RDTSCP» -
-		//	Intel® 64 and IA-32 Architectures Software Developer’s Manual: Vol.2B. P.4-553.
+ 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
+	{	uint32_t _;
+		// The RDTSCP instruction is not a serializing instruction, but it does wait until all previous instructions have executed.
+		const uint64_t result = __rdtscp(&_);
+		// «If software requires RDTSCP to be executed prior to execution of any subsequent instruction
+		// (including any memory accesses), it can execute LFENCE immediately after RDTSCP» -
+		// Intel® 64 and IA-32 Architectures Software Developer’s Manual: Vol.2B. P.4-553.
 		_mm_lfence();
 		return result;
 	}
 /*/
-	// The RDTSC executes very quickly, but the CPU may reorder instructions around RDTSC, leading to timing inaccuracies 
-	// unless proper serialization (e.g., LFENCE) is used.
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
-	{	return __rdtsc();
+	{	// The RDTSC executes very quickly, but the CPU may reorder instructions around RDTSC, leading to timing inaccuracies 
+		// unless proper serialization (e.g., LFENCE) is used.
+		return __rdtsc();
 	}
 //*/
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
