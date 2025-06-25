@@ -40,6 +40,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <tuple>
 #include <vector>
 
+#ifdef _WIN32
+#	include <windows.h> // For GetStdHandle(STD_OUTPUT_HANDLE)
+#endif
+
 namespace
 {
 	constexpr char TitleNumber[] = "#";
@@ -441,4 +445,16 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRptC
 	}
 
 	return result;
+}
+
+int VI_SYS_CALL vi_tmRptCb(const char *str, void *data)
+{
+#ifdef _WIN32
+	// If the output is directed to stdout and the standard output handle is not available, return 0.
+	// In /SUBSYSTEM:WINDOWS, stdout does not work by default.
+	if (static_cast<FILE*>(data) == stdout && nullptr == GetStdHandle(STD_OUTPUT_HANDLE))
+	{	return 0;
+	}
+#endif
+	return fputs(str, (FILE *)data);
 }

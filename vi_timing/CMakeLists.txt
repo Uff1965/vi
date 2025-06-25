@@ -104,6 +104,7 @@ if (WIN32)
     /MP /W4 /nologo /EHsc /Zi /arch:AVX2 /fp:fast # Enable multi-processor compilation, set warning level 4, disable logo, enable C++ exceptions, generate debug info, use AVX2 instruction set, and fast floating-point model.
     $<$<CONFIG:Release>: /O2 /Oi /GL /Gy> # Optimize for speed, inline functions, enable link-time code generation, enable function-level linking.
     $<$<CONFIG:Debug>:   /Od /RTC1> # Enable runtime checks, debug info, no optimizations.
+    /Zc:__cplusplus # By default, Visual Studio always returns the value 199711L for the __cplusplus preprocessor macro.
     )
 
     if(VI_TM_BUILD_SHARED)

@@ -306,7 +306,7 @@ extern "C" {
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	static inline int VI_SYS_CALL vi_tmRptCb(const char *str, void *data) { return fputs(str, (FILE *)data); }
+	VI_TM_API int VI_SYS_CALL vi_tmRptCb(const char *str, void *data);
 
 	/// <summary>
 	/// Generates a report for the specified journal handle, using a callback function to output the report data.

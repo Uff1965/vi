@@ -10,7 +10,9 @@
 
     <Link>
       <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)\..\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+<!--
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+-->
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

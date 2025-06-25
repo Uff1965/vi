@@ -51,16 +51,19 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		include <string>
 #		include <utility>
 
+// By default, Visual Studio always returns the value 199711L for the __cplusplus preprocessor macro.
+// The Microsoft-specific macro _MSVC_LANG also reports the version standard.
+#		if __cplusplus < 201703L && _MSVC_LANG < 201703L
+#			error "vi_timing requires C++17 or later."
+#		endif
+
 namespace vi_tm
 {
 	class init_t
 	{
-		static constexpr auto default_callback_fn = &vi_tmRptCb;
-		static inline const auto default_callback_data = static_cast<void*>(stdout);
-
 		std::string title_ = "Timing report:\n";
-		vi_tmRptCb_t callback_function_ = default_callback_fn;
-		void* callback_data_ = default_callback_data;
+		vi_tmRptCb_t callback_function_ = vi_tmRptCb;
+		void* callback_data_ = static_cast<void*>(stdout);
 		unsigned flags_ = vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution | vi_tmSortBySpeed;
 
 		init_t(const init_t &) = delete;
@@ -76,7 +79,7 @@ namespace vi_tm
 			{	flags_ |= v;
 			}
 			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmRptCb_t>)
-			{	assert(default_callback_fn == callback_function_ && nullptr != v);
+			{	assert(vi_tmRptCb == callback_function_ && nullptr != v);
 				callback_function_ = v;
 			}
 			else if constexpr (std::is_same_v<T, decltype(title_)>)
@@ -86,7 +89,7 @@ namespace vi_tm
 			{	title_ = v;
 			}
 			else if constexpr (std::is_pointer_v<T>)
-			{	assert(default_callback_data == callback_data_);
+			{	assert(static_cast<void*>(stdout) == callback_data_);
 				callback_data_ = v;
 			}
 			else
