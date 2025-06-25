@@ -128,7 +128,7 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 		{	flt_amt_ += n_f;
 			const auto rev_total_f = 1.0 / flt_amt_;
 			flt_mean_ = std::fma(flt_mean_, flt_amt_f, v_f) * rev_total_f;
-			flt_ss_ += sum_square_dev * n_f * rev_total_f;
+			flt_ss_ = std::fma(sum_square_dev, n_f * rev_total_f, flt_ss_);
 			flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
 		}
 	}
