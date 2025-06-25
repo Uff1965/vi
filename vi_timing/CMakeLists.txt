@@ -100,21 +100,23 @@ if (WIN32)
     )
 
     target_compile_options(${PROJECT_NAME}
-        PRIVATE
-        /MP /W4 /nologo /EHsc /Zi
+    PRIVATE
+    /MP /W4 /nologo /EHsc /Zi /arch:AVX2 /fp:fast 
+    $<$<CONFIG:Release>: /O2 /Oi /GL /Gy>
+    $<$<CONFIG:Debug>:   /Od /RTC1>
     )
 
     if(VI_TM_BUILD_SHARED)
         target_compile_options(${PROJECT_NAME}
         PRIVATE
-        $<$<CONFIG:Release>: /MT  /O2 /Oi /GL /Gy>
-        $<$<CONFIG:Debug>:   /MTd /Od /RTC1>
+        $<$<CONFIG:Release>: /MT>
+        $<$<CONFIG:Debug>:   /MTd>
         )
     else()
         target_compile_options(${PROJECT_NAME}
         PRIVATE
-        $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
-        $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
+        $<$<CONFIG:Release>: /MD>
+        $<$<CONFIG:Debug>:   /MDd>
         )
     endif()
 elseif (UNIX)
@@ -122,6 +124,8 @@ elseif (UNIX)
   PRIVATE
     -fvisibility=hidden
     -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
+    -mfma
+    -ffast-math
     $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
     $<$<CONFIG:Release>: -O3 -s>
   )

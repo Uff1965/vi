@@ -49,7 +49,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
-	inline bool verify(bool b) { assert(b); return b; }
+	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
 
 	struct measuring_t
 	{
@@ -100,22 +100,26 @@ public:
 };
 
 void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
-{	if(verify(!!n))
-	{
-#ifdef VI_TM_STAT_USE_WELFORD
-		static constexpr double K2 = 6.25; // 2.5^2 Threshold for outliers.
-		const auto v_f = static_cast<double>(v);
-		const auto n_f = static_cast<double>(n);
+{	
+	if (!verify(!!n))
+	{	return;
+	}
 
-		std::lock_guard lg(mtx_);
-		calls_++;
+#ifdef VI_TM_STAT_USE_WELFORD
+	static constexpr double K2 = 6.25; // 2.5^2 Threshold for outliers.
+	const auto v_f = static_cast<double>(v);
+	const auto n_f = static_cast<double>(n);
+
+	{	std::lock_guard lg(mtx_);
+
+		++calls_;
 		sum_ += v;
 		amt_ += n;
 
 		const auto flt_amt_f = flt_amt_;
 		const auto deviation = v_f / n_f - flt_mean_; // Difference from the mean value.
 		const auto sum_square_dev = deviation * deviation * flt_amt_f;
-		if 
+		if
 		(	flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
 			flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
 			deviation < 0.0 || // The minimum value is usually closest to the true value.
@@ -123,16 +127,16 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 		)
 		{	flt_amt_ += n_f;
 			const auto rev_total_f = 1.0 / flt_amt_;
-			flt_mean_ = (flt_mean_ * flt_amt_f + v_f) * rev_total_f;
+			flt_mean_ = std::fma(flt_mean_, flt_amt_f, v_f) * rev_total_f;
 			flt_ss_ += sum_square_dev * n_f * rev_total_f;
 			flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
 		}
-#else
-		calls_.fetch_add(1, std::memory_order_relaxed);
-		sum_.fetch_add(v, std::memory_order_relaxed);
-		amt_.fetch_add(n, std::memory_order_relaxed);
-#endif
 	}
+#else
+	calls_.fetch_add(1, std::memory_order_relaxed);
+	sum_.fetch_add(v, std::memory_order_relaxed);
+	amt_.fetch_add(n, std::memory_order_relaxed);
+#endif
 }
 
 vi_tmMeasuringRAW_t measuring_t::get() const noexcept

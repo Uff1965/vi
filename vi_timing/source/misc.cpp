@@ -66,7 +66,7 @@ namespace
 	constexpr char TYPE[] = "static";
 #endif
 
-	inline bool verify(bool b) { assert(b); return b; }
+	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
 
 	namespace affinity
 	{
