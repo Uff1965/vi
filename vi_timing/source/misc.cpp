@@ -39,7 +39,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <sched.h> // For sched_getcpu.
 #endif
 
-#include <atomic>
+#include <atomic> // for atomic_bool
 #include <array>
 #include <cassert>
 #include <cfloat>
