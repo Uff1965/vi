@@ -90,9 +90,11 @@ private:
 	static constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
 	std::mutex storage_guard_;
 	storage_t storage_;
+	bool need_report_ = false;
 public:
 	static auto& from_handle(VI_TM_HJOUR journal); // Get the journal from the handle or return the global journal.
-	explicit vi_tmJournal_t();
+	explicit vi_tmJournal_t(bool need_report = false);
+	~vi_tmJournal_t();
 	int init();
 	auto& try_emplace(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
 	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
@@ -166,14 +168,21 @@ void measuring_t::reset() noexcept
 }
 
 inline auto& vi_tmJournal_t::from_handle(VI_TM_HJOUR journal)
-{	static vi_tmJournal_t global;
+{	static vi_tmJournal_t global{true};
 	assert(journal);
 	return VI_TM_HGLOBAL == journal ? global : *journal;
 }
 
-vi_tmJournal_t::vi_tmJournal_t()
+vi_tmJournal_t::vi_tmJournal_t(bool need_report)
+	: need_report_(need_report)
 {	storage_.max_load_factor(MAX_LOAD_FACTOR);
 	storage_.reserve(DEFAULT_STORAGE_CAPACITY);
+}
+
+vi_tmJournal_t::~vi_tmJournal_t()
+{	if (need_report_)
+	{	vi_tmReport(this, vi_tmShowResolution | vi_tmShowDuration | vi_tmSortByName);
+	}
 }
 
 int vi_tmJournal_t::init()
@@ -191,6 +200,7 @@ inline auto& vi_tmJournal_t::try_emplace(const char *name)
 
 int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 {	std::lock_guard lock{ storage_guard_ };
+	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
 	{	assert(it.second.amt_ >= it.second.calls_);
 		if (!it.first.empty())
