@@ -29,22 +29,29 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "../vi_timing_c.h"
 #include "build_number_maker.h" // For build number generation.
 
-#include <atomic> // std::atomic
 #include <cassert> // assert()
 #include <cmath> // std::sqrt
 #include <cstdint> // std::uint64_t, std::size_t
 #include <functional> // std::invoke
 #include <memory> // std::unique_ptr
-#include <mutex> // std::mutex, std::lock_guard
 #include <numeric> // std::accumulate
 #include <string> // std::string
 #include <unordered_map> // unordered_map: "does not invalidate pointers or references to elements".
 
-#ifdef __STDC_NO_ATOMICS__
-//	At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
-//	"we left out support for some C11 optional features such as atomics" [Microsoft
-//	https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
-#	error "Atomic objects and the atomic operation library are not supported."
+#ifdef VI_TM_THREADSAFE
+#	ifdef __STDC_NO_ATOMICS__
+		//	At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
+		//	"we left out support for some C11 optional features such as atomics" [Microsoft
+		//	https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
+#		error "Atomic objects and the atomic operation library are not supported."
+#	endif
+
+#	include <atomic> // std::atomic
+#	include <mutex> // std::mutex, std::lock_guard
+
+#	define THREADSAFE_ONLY(t) t
+#else
+#	define THREADSAFE_ONLY(t)
 #endif
 
 namespace
@@ -55,7 +62,7 @@ namespace
 	{
 #ifdef VI_TM_STAT_USE_WELFORD
 		// Welford’s online algorithm for computing variance and filtering of outliers.
-		mutable std::mutex mtx_;
+		THREADSAFE_ONLY(mutable std::mutex mtx_);
 		double flt_mean_ = 0.0; // Mean value. Filtered!!!
 		double flt_ss_ = 0.0; // Sum of squares. Filtered!!!
 		double flt_amt_ = 0U; // Number of items processed. Filtered!!!
@@ -63,11 +70,16 @@ namespace
 		VI_TM_TDIFF sum_ = 0U; // Sum of all measurements.
 		size_t calls_ = 0U; // Number of calls to 'add()'.
 		size_t amt_ = 0U; // Number of items for measurements.
-#else
-		// Simple statistics: no standard deviation, only the mean value.
+#elif defined(VI_TM_THREADSAFE)
+		// Simple statistics: no standard deviation, only the mean value. Thread-safe!
 		std::atomic<VI_TM_TDIFF> sum_ = 0U;
 		std::atomic<size_t> calls_ = 0U;
 		std::atomic<size_t> amt_ = 0U;
+#else
+		// Simple statistics: no standard deviation, only the mean value. Not thread-safe!
+		VI_TM_TDIFF sum_ = 0U;
+		size_t calls_ = 0U;
+		size_t amt_ = 0U;
 #endif
 		inline void add(VI_TM_TDIFF val, size_t amt) noexcept;
 		vi_tmMeasuringRAW_t get() const noexcept;
@@ -79,7 +91,7 @@ namespace
 
 struct vi_tmMeasuring_t: storage_t::value_type {/**/};
 static_assert
-	(	sizeof(vi_tmMeasuring_t) == sizeof(storage_t::value_type),
+	(	sizeof(vi_tmMeasuring_t) == sizeof(storage_t::value_type) && alignof(vi_tmMeasuring_t) == alignof(storage_t::value_type),
 		"'vi_tmMeasuring_t' should simply be a synonym for 'storage_t::value_type'."
 	);
 
@@ -88,7 +100,7 @@ struct vi_tmJournal_t
 private:
 	static constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	static constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	std::mutex storage_guard_;
+	THREADSAFE_ONLY(std::mutex storage_guard_);
 	storage_t storage_;
 	bool need_report_ = false;
 public:
@@ -108,12 +120,12 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 	}
 
 #ifdef VI_TM_STAT_USE_WELFORD
-	static constexpr double K2 = 6.25; // 2.5^2 Threshold for outliers.
+	constexpr double K2 = 6.25; // 2.5^2 Threshold for outliers.
 	const auto v_f = static_cast<double>(v);
 	const auto n_f = static_cast<double>(n);
 
-	{	std::lock_guard lg(mtx_);
-
+	{
+		THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 		++calls_;
 		sum_ += v;
 		amt_ += n;
@@ -134,6 +146,10 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 			flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
 		}
 	}
+#elif !defined(VI_TM_THREADSAFE)
+	++calls_;
+	sum_ += v;
+	amt_ += n;
 #else
 	calls_.fetch_add(1, std::memory_order_relaxed);
 	sum_.fetch_add(v, std::memory_order_relaxed);
@@ -144,7 +160,7 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 vi_tmMeasuringRAW_t measuring_t::get() const noexcept
 {	vi_tmMeasuringRAW_t result;
 #ifdef VI_TM_STAT_USE_WELFORD
-	std::lock_guard lg(mtx_);
+	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	result.flt_mean_ = flt_mean_;
 	result.flt_ss_ = flt_ss_;
 	result.flt_amt_ = static_cast<std::size_t>(flt_amt_);
@@ -159,7 +175,7 @@ vi_tmMeasuringRAW_t measuring_t::get() const noexcept
 void measuring_t::reset() noexcept
 {
 #ifdef VI_TM_STAT_USE_WELFORD
-	std::lock_guard lg(mtx_);
+	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	flt_mean_ = flt_ss_ = 0.0;
 	flt_amt_ = 0U;
 #endif
@@ -194,12 +210,13 @@ int vi_tmJournal_t::init()
 }
 
 inline auto& vi_tmJournal_t::try_emplace(const char *name)
-{	std::lock_guard lock{ storage_guard_ };
+{
+	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	return *storage_.try_emplace(name).first;
 }
 
 int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
-{	std::lock_guard lock{ storage_guard_ };
+{	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
 	{	assert(it.second.amt_ >= it.second.calls_);
@@ -213,7 +230,7 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 }
 
 void vi_tmJournal_t::clear()
-{	std::lock_guard lock{ storage_guard_ };
+{	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	storage_.clear();
 }
 

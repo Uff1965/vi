@@ -35,13 +35,21 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <stdio.h> // For fputs and stdout
 
 //*******************************************************************************************************************
+// Library configuration options:
 //
+// If VI_TM_SHARED defined, the library is a shared library.
+// If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
+//
+// If VI_TM_THREADSAFE not defined, the library is not thread-safe and may be faster in single-threaded applications.
+// Comment out the next line and rebuild project if you do not need thread safety.
+#	define VI_TM_THREADSAFE
+// 
 // If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
 #	define VI_TM_STAT_USE_WELFORD
 //
-// Uses high-performance timing methods (typically platform-specific optimizations like ASM).  
-// To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:  
+// Uses high-performance timing methods (typically platform-specific optimizations like ASM).
+// To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
 //#	define VI_TM_USE_STDCLOCK
 // 
 //*******************************************************************************************************************
