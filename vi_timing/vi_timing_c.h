@@ -94,9 +94,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #			define VI_TM_API
 #		endif
 #	else
-#		define VI_TM_DISABLE "Unknown compiler!"
 #		define VI_FUNCNAME __func__
 #		define VI_SYS_CALL
+#		define VI_TM_DISABLE "Unknown compiler!"
 #		define VI_TM_CALL
 #		define VI_TM_API
 #	endif
@@ -154,9 +154,9 @@ typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts
 typedef struct vi_tmJournal_t *VI_TM_HJOUR; // Opaque handle to a timing journal object.
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS; // Opaque handle to a measurement entry within a journal.
 typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
-typedef int (VI_SYS_CALL *vi_tmRptCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
+typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
 
-typedef struct
+typedef struct vi_tmMeasuringRAW_t
 {	size_t calls_; // The number of times the measurement was invoked.
 	size_t amt_; // The number of all measured elements, including discarded ones.
 	VI_TM_TDIFF sum_; // Total time spent measuring all elements, in ticks.
@@ -168,7 +168,7 @@ typedef struct
 #endif
 } vi_tmMeasuringRAW_t;
 
-typedef enum // Enumeration for various timing information types.
+typedef enum vi_tmInfo_e // Enumeration for various timing information types.
 {	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
 	VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
 	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
@@ -183,7 +183,7 @@ typedef enum // Enumeration for various timing information types.
 	VI_TM_INFO__COUNT,      // Number of information types.
 } vi_tmInfo_e;
 
-typedef enum
+typedef enum vi_tmReportFlags_e
 {	vi_tmSortByTime = 0x00,
 	vi_tmSortByName = 0x01,
 	vi_tmSortBySpeed = 0x02,
@@ -237,7 +237,7 @@ extern "C" {
 	/// Creates a new journal object and returns a handle to it.
 	/// </summary>
 	/// <returns>A handle to the newly created journal object, or nullptr if memory allocation fails.</returns>
-	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(void);
+	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned flags VI_DEF(0U), void *reserved VI_DEF(0));
 
 	/// <summary>
 	/// Resets but does not delete all entries in the journal. All entry handles remain valid.
@@ -306,7 +306,7 @@ extern "C" {
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API int VI_SYS_CALL vi_tmRptCb(const char *str, void *data);
+	VI_TM_API int VI_SYS_CALL vi_tmReportCb(const char *str, void *data);
 
 	/// <summary>
 	/// Generates a report for the specified journal handle, using a callback function to output the report data.
@@ -316,7 +316,7 @@ extern "C" {
 	/// <param name="fn">A callback function used to output each line of the report. If nullptr, defaults to writing to a FILE* stream.</param>
 	/// <param name="data">A pointer to user data passed to the callback function. If fn is nullptr and data is nullptr, defaults to stdout.</param>
 	/// <returns>The total number of characters written by the report, or a negative value if an error occurs.</returns>
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmRptCb_t VI_DEF(vi_tmRptCb), void* VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmReportCb_t VI_DEF(vi_tmReportCb), void* VI_DEF(stdout));
 
 	/// <summary>
 	/// Performs a CPU warming routine by running computationally intensive tasks across multiple threads for a specified duration.
@@ -324,21 +324,21 @@ extern "C" {
 	/// <param name="threads_qty">The number of threads to use for the warming routine. If zero or greater than the number of available hardware threads, the function uses the maximum available.</param>
 	/// <param name="ms">The duration of the warming routine in milliseconds. If zero, the function returns immediately.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmWarming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(1000));
+	VI_TM_API void VI_TM_CALL vi_Warming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(1000));
 
 	/// <summary>
 	/// Fixates the CPU affinity of the current thread.
 	/// </summary>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityFixate(void);
+	VI_TM_API void VI_TM_CALL vi_CurrentThreadAffinityFixate(void);
 
 	/// <summary>
 	/// Restores the CPU affinity of the current thread to its previous state.
 	/// </summary>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmCurrentThreadAffinityRestore(void);
+	VI_TM_API void VI_TM_CALL vi_CurrentThreadAffinityRestore(void);
 
-	VI_TM_API void VI_TM_CALL vi_tmThreadYield(void);
+	VI_TM_API void VI_TM_CALL vi_ThreadYield(void);
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus

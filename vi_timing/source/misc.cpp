@@ -262,19 +262,19 @@ namespace
 	return to_str::to_string_aux(val, significant, decimal);
 }
 
-void VI_TM_CALL vi_tmCurrentThreadAffinityFixate()
+void VI_TM_CALL vi_CurrentThreadAffinityFixate()
 {	affinity::affinity_fix_t::fixate();
 }
 
-void VI_TM_CALL vi_tmCurrentThreadAffinityRestore()
+void VI_TM_CALL vi_CurrentThreadAffinityRestore()
 {	affinity::affinity_fix_t::restore();
 }
 
-void VI_TM_CALL vi_tmThreadYield(void)
+void VI_TM_CALL vi_ThreadYield(void)
 {	std::this_thread::yield();
 }
 
-void VI_TM_CALL vi_tmWarming(unsigned int threads_qty, unsigned int ms)
+void VI_TM_CALL vi_Warming(unsigned int threads_qty, unsigned int ms)
 {	if (0 == ms)
 	{	return;
 	}

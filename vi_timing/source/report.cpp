@@ -156,8 +156,8 @@ namespace
 		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
-		int print_header(const vi_tmRptCb_t fn, void *data) const;
-		int print_metering(const metering_t &i, const vi_tmRptCb_t fn, void *data) const;
+		int print_header(const vi_tmReportCb_t fn, void *data) const;
+		int print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *data) const;
 
 		std::size_t width_column(vi_tmReportFlags_e clmn) const;
 		const char* mark_column(vi_tmReportFlags_e clmn) const;
@@ -183,7 +183,7 @@ namespace
 		return result;
 	}
 
-	int print_props(vi_tmRptCb_t fn, void *data, unsigned flags)
+	int print_props(vi_tmReportCb_t fn, void *data, unsigned flags)
 	{	assert(!!fn);
 		int result = 0;
 		if (flags & vi_tmShowMask)
@@ -381,7 +381,7 @@ std::string formatter_t::item_column(vi_tmReportFlags_e clmn, const char* txt) c
 	return str.str();
 }
 
-int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
+int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 {	
 	if (flags_ & vi_tmHideHeader)
 	{	return 0;
@@ -403,7 +403,7 @@ int formatter_t::print_header(const vi_tmRptCb_t fn, void *data) const
 	return fn(str.str().c_str(), data);
 }
 
-int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void *data) const
+int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *data) const
 {	std::ostringstream str;
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
@@ -424,7 +424,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmRptCb_t fn, void
 	return fn(str.str().c_str(), data);
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRptCb_t fn, void *data)
+int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmReportCb_t fn, void *data)
 {	
 	if (nullptr == fn)
 	{	fn = [](const char *str, void *data) { return std::fputs(str, static_cast<std::FILE *>(data)); };
@@ -447,7 +447,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRptC
 	return result;
 }
 
-int VI_SYS_CALL vi_tmRptCb(const char *str, void *data)
+int VI_SYS_CALL vi_tmReportCb(const char *str, void *data)
 {
 #ifdef _WIN32
 	// If the output is directed to stdout and the standard output handle is not available, return 0.

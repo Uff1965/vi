@@ -201,11 +201,11 @@ namespace
 misc::properties_t::properties_t()
 {
 	struct thread_affinity_fix_guard_t // RAII guard to fixate the current thread's affinity.
-	{	thread_affinity_fix_guard_t() { vi_tmCurrentThreadAffinityFixate(); }
-		~thread_affinity_fix_guard_t() { vi_tmCurrentThreadAffinityRestore(); }
+	{	thread_affinity_fix_guard_t() { vi_CurrentThreadAffinityFixate(); }
+		~thread_affinity_fix_guard_t() { vi_CurrentThreadAffinityRestore(); }
 	} thread_affinity_fix_guard; // Fixate the current thread's affinity to avoid issues with clock resolution measurement.
 
-	vi_tmWarming(1);
+	vi_Warming(1);
 
 	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
 	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.

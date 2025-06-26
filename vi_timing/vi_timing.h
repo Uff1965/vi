@@ -62,7 +62,7 @@ namespace vi_tm
 	class init_t
 	{
 		std::string title_ = "Timing report:\n";
-		vi_tmRptCb_t callback_function_ = vi_tmRptCb;
+		vi_tmReportCb_t callback_function_ = vi_tmReportCb;
 		void* callback_data_ = static_cast<void*>(stdout);
 		unsigned flags_ = vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution | vi_tmSortBySpeed;
 
@@ -78,8 +78,8 @@ namespace vi_tm
 		{	if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
 			{	flags_ |= v;
 			}
-			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmRptCb_t>)
-			{	assert(vi_tmRptCb == callback_function_ && nullptr != v);
+			else if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportCb_t>)
+			{	assert(vi_tmReportCb == callback_function_ && nullptr != v);
 				callback_function_ = v;
 			}
 			else if constexpr (std::is_same_v<T, decltype(title_)>)

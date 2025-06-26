@@ -61,8 +61,8 @@ namespace
 #endif
 	const auto init_common = []
 		{	VI_TM("INITIALIZE COMMON");
-			vi_tmCurrentThreadAffinityFixate();
-			vi_tmWarming();
+			vi_CurrentThreadAffinityFixate();
+			vi_Warming();
 			return 0;
 		}();
 
@@ -241,7 +241,7 @@ VI_OPTIMIZE_ON
 	void test_warming()
 	{	std::cout << "\nTest test_warming:\n";
 		{	VI_TM("Warming in main()");
-			vi_tmWarming(1);
+			vi_Warming(1);
 		}
 		assert(0 == errno);
 		std::cout << "Test test_warming - done" << std::endl;
@@ -468,7 +468,7 @@ int main()
 
 	std::cout.imbue(std::locale(std::cout.getloc(), new space_out));
 
-	vi_tmThreadYield();
+	vi_ThreadYield();
 
 	foo_c();
 
@@ -485,7 +485,7 @@ int main()
 	//std::cout << "\nRAW report:\n";
 	//report_RAW(VI_TM_HGLOBAL);
 
-	vi_tmCurrentThreadAffinityRestore();
+	vi_CurrentThreadAffinityRestore();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 

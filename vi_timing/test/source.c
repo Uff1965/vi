@@ -22,7 +22,7 @@ void bar_c(void)
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 	thrd_yield();
 
-	{	VI_TM_HJOUR journal = vi_tmJournalCreate();
+	{	VI_TM_HJOUR journal = vi_tmJournalCreate(0, 0);
 
 		VI_TM_HMEAS const m1 = vi_tmMeasuring(journal, "xxx");
 		VI_TM_HMEAS const m2 = vi_tmMeasuring(journal, "yyy");
@@ -32,15 +32,15 @@ void bar_c(void)
 		vi_tmFinish(m1, s, 10);
 
 		puts("Original:");
-		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
+		vi_tmReport(journal, vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
 
 		vi_tmMeasuringReset(m1);
 		puts("After vi_tmMeasuringReset(m1) (Clear \"xxx\"):");
-		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
+		vi_tmReport(journal, vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
 
 		vi_tmJournalReset(journal);
 		puts("After vi_tmJournalReset(htimer):");
-		vi_tmReport(journal, vi_tmHideHeader, (vi_tmRptCb_t)fputs, stdout);
+		vi_tmReport(journal, vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
 		vi_tmJournalClose(journal);
 	}
 
@@ -52,7 +52,7 @@ void foo_c(void)
 	const VI_TM_TICK foo_c_start = vi_tmGetTicks();
 	printf("\n%s:\n", __func__); //-V2600
 	
-	vi_tmWarming(256, 2);
+	vi_Warming(256, 2);
 	
 	printf("Version: \'%s\' [%u]\n", (const char*)vi_tmStaticInfo(VI_TM_INFO_VERSION), *(const unsigned*)vi_tmStaticInfo(VI_TM_INFO_VER));
 	thrd_yield();

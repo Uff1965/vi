@@ -216,7 +216,7 @@ void VI_TM_CALL vi_tmFinit(void)
 {	vi_tmJournal_t::from_handle(VI_TM_HGLOBAL).clear();
 }
 
-VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate()
+VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned /*flags*/, void */*reserved*/)
 {	try
 	{	return new vi_tmJournal_t{};
 	}
