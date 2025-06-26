@@ -28,30 +28,24 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include "../vi_timing_c.h"
 #include "build_number_maker.h" // For build number generation.
+#include "welford_alg.h" // For Welford's algorithm implementation.
 
+#include <atomic> // std::atomic
 #include <cassert> // assert()
 #include <cmath> // std::sqrt
 #include <cstdint> // std::uint64_t, std::size_t
 #include <functional> // std::invoke
 #include <memory> // std::unique_ptr
+#include <mutex> // std::mutex, std::lock_guard
 #include <numeric> // std::accumulate
 #include <string> // std::string
 #include <unordered_map> // unordered_map: "does not invalidate pointers or references to elements".
 
-#ifdef VI_TM_THREADSAFE
-#	ifdef __STDC_NO_ATOMICS__
-		//	At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
-		//	"we left out support for some C11 optional features such as atomics" [Microsoft
-		//	https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
-#		error "Atomic objects and the atomic operation library are not supported."
-#	endif
-
-#	include <atomic> // std::atomic
-#	include <mutex> // std::mutex, std::lock_guard
-
-#	define THREADSAFE_ONLY(t) t
-#else
-#	define THREADSAFE_ONLY(t)
+#ifdef __STDC_NO_ATOMICS__
+	//	At the moment Atomics are available in Visual Studio 2022 with the /experimental:c11atomics flag.
+	//	"we left out support for some C11 optional features such as atomics" [Microsoft
+	//	https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2]
+#	error "Atomic objects and the atomic operation library are not supported."
 #endif
 
 namespace
@@ -60,27 +54,13 @@ namespace
 
 	struct measuring_t
 	{
-#ifdef VI_TM_STAT_USE_WELFORD
 		// Welford’s online algorithm for computing variance and filtering of outliers.
-		THREADSAFE_ONLY(mutable std::mutex mtx_);
-		double flt_mean_ = 0.0; // Mean value. Filtered!!!
-		double flt_ss_ = 0.0; // Sum of squares. Filtered!!!
-		double flt_amt_ = 0U; // Number of items processed. Filtered!!!
-		size_t flt_calls_ = 0U; // Number of invoks processed. Filtered!!!
+		mutable std::mutex mtx_;
+		welford_t welford_; // Filtered statistics using Welford's algorithm.
 		VI_TM_TDIFF sum_ = 0U; // Sum of all measurements.
 		size_t calls_ = 0U; // Number of calls to 'add()'.
 		size_t amt_ = 0U; // Number of items for measurements.
-#elif defined(VI_TM_THREADSAFE)
-		// Simple statistics: no standard deviation, only the mean value. Thread-safe!
-		std::atomic<VI_TM_TDIFF> sum_ = 0U;
-		std::atomic<size_t> calls_ = 0U;
-		std::atomic<size_t> amt_ = 0U;
-#else
-		// Simple statistics: no standard deviation, only the mean value. Not thread-safe!
-		VI_TM_TDIFF sum_ = 0U;
-		size_t calls_ = 0U;
-		size_t amt_ = 0U;
-#endif
+
 		inline void add(VI_TM_TDIFF val, size_t amt) noexcept;
 		vi_tmMeasuringRAW_t get() const noexcept;
 		void reset() noexcept;
@@ -100,7 +80,7 @@ struct vi_tmJournal_t
 private:
 	static constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	static constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	THREADSAFE_ONLY(std::mutex storage_guard_);
+	std::mutex storage_guard_;
 	storage_t storage_;
 	bool need_report_ = false;
 public:
@@ -119,53 +99,25 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 	{	return;
 	}
 
-#ifdef VI_TM_STAT_USE_WELFORD
-	constexpr double K2 = 6.25; // 2.5^2 Threshold for outliers.
 	const auto v_f = static_cast<double>(v);
 	const auto n_f = static_cast<double>(n);
 
 	{
-		THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+		std::lock_guard lg(mtx_);
 		++calls_;
 		sum_ += v;
 		amt_ += n;
-
-		const auto deviation = v_f / n_f - flt_mean_; // Difference from the mean value.
-		const auto sum_square_dev = deviation * deviation * flt_amt_;
-		if
-		(	flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
-			flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
-			deviation < 0.0 || // The minimum value is usually closest to the true value.
-			sum_square_dev < K2 * flt_ss_ // Avoids outliers.
-		)
-		{	const auto flt_amt = flt_amt_;
-			flt_amt_ += n_f;
-			const auto rev_total = 1.0 / flt_amt_;
-			flt_mean_ = std::fma(flt_mean_, flt_amt, v_f) * rev_total;
-			flt_ss_ = std::fma(sum_square_dev, n_f * rev_total, flt_ss_);
-			flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
-		}
+		welford_.update(v_f, n_f);
 	}
-#elif !defined(VI_TM_THREADSAFE)
-	++calls_;
-	sum_ += v;
-	amt_ += n;
-#else
-	calls_.fetch_add(1, std::memory_order_relaxed);
-	sum_.fetch_add(v, std::memory_order_relaxed);
-	amt_.fetch_add(n, std::memory_order_relaxed);
-#endif
 }
 
 vi_tmMeasuringRAW_t measuring_t::get() const noexcept
 {	vi_tmMeasuringRAW_t result;
-#ifdef VI_TM_STAT_USE_WELFORD
-	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	result.flt_mean_ = flt_mean_;
-	result.flt_ss_ = flt_ss_;
-	result.flt_amt_ = static_cast<std::size_t>(flt_amt_);
-	result.flt_calls_ = flt_calls_;
-#endif
+	std::lock_guard lg(mtx_);
+	result.flt_mean_ = welford_.mean_;
+	result.flt_ss_ = welford_.ss_;
+	result.flt_amt_ = static_cast<std::size_t>(welford_.amt_);
+	result.flt_calls_ = welford_.calls_;
 	result.sum_ = sum_;
 	result.amt_ = amt_;
 	result.calls_ = calls_;
@@ -174,12 +126,9 @@ vi_tmMeasuringRAW_t measuring_t::get() const noexcept
 
 void measuring_t::reset() noexcept
 {
-#ifdef VI_TM_STAT_USE_WELFORD
-	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	flt_mean_ = flt_ss_ = 0.0;
-	flt_amt_ = 0U;
-	flt_calls_ = 0U;
-#endif
+	std::lock_guard lg(mtx_);
+	welford_.mean_ = welford_.ss_ = welford_.amt_ = 0.0;
+	welford_.calls_ = 0U;
 	sum_ = 0U;
 	amt_ = calls_ = 0U;
 }
@@ -191,7 +140,7 @@ inline auto& vi_tmJournal_t::from_handle(VI_TM_HJOUR journal)
 }
 
 vi_tmJournal_t::vi_tmJournal_t(bool need_report)
-	: need_report_(need_report)
+: need_report_(need_report)
 {	storage_.max_load_factor(MAX_LOAD_FACTOR);
 	storage_.reserve(DEFAULT_STORAGE_CAPACITY);
 }
@@ -212,12 +161,12 @@ int vi_tmJournal_t::init()
 
 inline auto& vi_tmJournal_t::try_emplace(const char *name)
 {
-	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+	std::lock_guard lock{ storage_guard_ };
 	return *storage_.try_emplace(name).first;
 }
 
 int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
-{	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+{	std::lock_guard lock{ storage_guard_ };
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
 	{	assert(it.second.amt_ >= it.second.calls_);
@@ -231,7 +180,7 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 }
 
 void vi_tmJournal_t::clear()
-{	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+{	std::lock_guard lock{ storage_guard_ };
 	storage_.clear();
 }
 
@@ -296,13 +245,11 @@ namespace
 			static constexpr auto M = 2;
 			static constexpr VI_TM_TDIFF samples_multiple[] = { 34, }; // Samples that will be added M times at once.
 			static constexpr VI_TM_TDIFF samples_exclude[] = { 1000 }; // Samples that will be excluded from the statistics.
-
 			static constexpr auto exp_flt_cnt = std::size(samples_simple) + M * std::size(samples_multiple); // The total number of samples that will be counted.
 			static const auto exp_flt_mean = 
 				(	std::accumulate(std::cbegin(samples_simple), std::cend(samples_simple), 0.0) +
 					M * std::accumulate(std::cbegin(samples_multiple), std::cend(samples_multiple), 0.0)
 				) / static_cast<double>(exp_flt_cnt); // The mean value of the samples that will be counted.
-#	ifdef VI_TM_STAT_USE_WELFORD
 			const auto exp_flt_stddev = [] // The standard deviation of the samples that will be counted.
 				{	const auto sum_squared_deviations =
 					std::accumulate
@@ -319,7 +266,6 @@ namespace
 					);
 					return std::sqrt(sum_squared_deviations / static_cast<double>(exp_flt_cnt - 1));
 				}();
-#	endif
 			static constexpr char NAME[] = "dummy"; // The name of the measurement.
 
 			const char *name = nullptr; // Name of the measurement to be filled in.
@@ -332,27 +278,19 @@ namespace
 				for (auto x : samples_multiple) // Add multiple samples M times at once.
 				{	vi_tmMeasuringRepl(m, M * x, M);
 				}
-#	ifdef VI_TM_STAT_USE_WELFORD
 				for (auto x : samples_exclude) // Add samples that will be excluded from the statistics.
 				{	vi_tmMeasuringRepl(m, x, 1);
 				}
-#	endif
 				vi_tmMeasuringGet(m, &name, &md); // Get the measurement data and name.
 			}
 
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
-#	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.flt_amt_ == exp_flt_cnt);
 			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < 1e-12);
 			const auto s = std::sqrt(md.flt_ss_ / static_cast<double>(md.flt_amt_ - 1U));
 			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < 1e-12);
-#	else
-			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
-			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
-			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - exp_flt_mean) < 1e-12);
-#	endif
 			return 0;
 		}();
 }
