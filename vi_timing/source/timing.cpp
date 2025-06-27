@@ -48,6 +48,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #	include <atomic> // std::atomic
 #	include <mutex> // std::mutex, std::lock_guard
+#	include <thread> // std::this_thread::yield()
 
 #	if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
 #		if defined(_MSC_VER)
