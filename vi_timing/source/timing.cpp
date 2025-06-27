@@ -59,8 +59,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #			define cpu_relax() __builtin_ia32_pause()
 #		endif
 #	elif defined(__aarch64__) || defined(__arm__)
-#		include <arm_acle.h>
-#		define cpu_relax() __yield() // For ARM architectures: use yield hint
+#		define cpu_relax() __asm__ __volatile__("yield") // For ARM architectures: use yield hint
 #	else
 #		define cpu_relax() std::this_thread::yield() // Fallback
 #	endif
