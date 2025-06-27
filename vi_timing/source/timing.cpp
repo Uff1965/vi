@@ -49,6 +49,46 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <atomic> // std::atomic
 #	include <mutex> // std::mutex, std::lock_guard
 
+#	if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+#		if defined(_MSC_VER)
+#			include <intrin.h>
+#			define cpu_relax() _mm_pause()
+#		else
+#			include <immintrin.h>
+#			define cpu_relax() __builtin_ia32_pause()
+#		endif
+#	elif defined(__aarch64__) || defined(__arm__)
+#		include <arm_acle.h>
+#		define cpu_relax() __yield() // For ARM architectures: use yield hint
+#	else
+#		define cpu_relax() std::this_thread::yield() // Fallback
+#	endif
+
+namespace
+{
+	class fastmutex_t
+	{	std::atomic_flag locked_ = ATOMIC_FLAG_INIT;
+
+	public:
+		void lock() noexcept
+		{	unsigned spins = 0U;
+			while (locked_.test_and_set(std::memory_order_acquire))
+			{	if (++spins < 64U)
+				{	cpu_relax(); // Fast spin
+				}
+				else if (spins < 128U)
+				{	std::this_thread::yield(); // Let scheduler help
+				}
+				else
+				{	std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+				}
+			}
+		}
+		void unlock() noexcept { locked_.clear(std::memory_order_release); }
+		bool try_lock() noexcept { return !locked_.test_and_set(std::memory_order_acquire); }
+	};
+}
+
 #	define THREADSAFE_ONLY(t) t
 #else
 #	define THREADSAFE_ONLY(t)
@@ -58,11 +98,13 @@ namespace
 {
 	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
 
+	using mutex = fastmutex_t;
+
 	struct measuring_t
 	{
 #ifdef VI_TM_STAT_USE_WELFORD
 		// Welford’s online algorithm for computing variance and filtering of outliers.
-		THREADSAFE_ONLY(mutable std::mutex mtx_);
+		THREADSAFE_ONLY(mutable mutex mtx_);
 		double flt_mean_ = 0.0; // Mean value. Filtered!!!
 		double flt_ss_ = 0.0; // Sum of squares. Filtered!!!
 		double flt_amt_ = 0U; // Number of items processed. Filtered!!!
@@ -100,7 +142,7 @@ struct vi_tmJournal_t
 private:
 	static constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	static constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	THREADSAFE_ONLY(std::mutex storage_guard_);
+	THREADSAFE_ONLY(mutex storage_guard_);
 	storage_t storage_;
 	bool need_report_ = false;
 public:
