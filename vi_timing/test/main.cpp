@@ -10,7 +10,9 @@
 #include "header.h"
 
 #include "vi_timing/vi_timing_proxy.h"
-#include "../source/build_number_maker.h"
+#ifndef VI_TM_SHARED
+#	include "../source/build_number_maker.h"
+#endif
 
 #include <algorithm>
 #include <atomic>

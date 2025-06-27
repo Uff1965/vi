@@ -66,27 +66,19 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
-	class fastmutex_t
+	class mutex_for_short_captures_t
 	{	std::atomic_flag locked_ = ATOMIC_FLAG_INIT;
-
 	public:
 		void lock() noexcept
-		{	unsigned spins = 0U;
-			while (locked_.test_and_set(std::memory_order_acquire))
-			{	if (++spins < 64U)
-				{	cpu_relax(); // Fast spin
-				}
-				else if (spins < 128U)
-				{	std::this_thread::yield(); // Let scheduler help
-				}
-				else
-				{	std::this_thread::sleep_for(std::chrono::nanoseconds(100));
-				}
+		{	while (locked_.test_and_set(std::memory_order_acquire))
+			{	cpu_relax(); // Fast spin
 			}
 		}
 		void unlock() noexcept { locked_.clear(std::memory_order_release); }
 		bool try_lock() noexcept { return !locked_.test_and_set(std::memory_order_acquire); }
 	};
+
+	using mutex = mutex_for_short_captures_t;
 }
 
 #	define THREADSAFE_ONLY(t) t
@@ -98,9 +90,7 @@ namespace
 {
 	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
 
-	using mutex = fastmutex_t;
-
-	struct measuring_t
+	struct alignas(64) measuring_t
 	{
 #ifdef VI_TM_STAT_USE_WELFORD
 		// Welford’s online algorithm for computing variance and filtering of outliers.
