@@ -27,13 +27,6 @@
 #include <thread>
 #include <vector>
 
-#if false
-#	undef VI_OPTIMIZE_ON
-#	define VI_OPTIMIZE_ON
-#	undef VI_OPTIMIZE_OFF
-#	define VI_OPTIMIZE_OFF
-#endif
-
 using namespace std::literals;
 namespace ch = std::chrono;
 
@@ -110,7 +103,6 @@ namespace
 	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
 	}
 
-VI_OPTIMIZE_OFF
 	void test_multithreaded()
 	{	VI_TM("test_multithreaded");
 #ifdef NDEBUG
@@ -161,7 +153,6 @@ VI_OPTIMIZE_OFF
 		vi_tmReport(h.get(), vi_tmShowMask);
 		std::cout << "Test multithreaded - done" << std::endl;
 	}
-VI_OPTIMIZE_ON
 
 	void test_sleep()
 	{	VI_TM("Test sleep");
@@ -179,7 +170,6 @@ VI_OPTIMIZE_ON
 		std::cout << "Test sleep - done" << std::endl;
 	}
 
-VI_OPTIMIZE_OFF
 	void test_empty()
 	{	VI_TM("test_empty");
 		std::cout << "\nTest test_empty:\n";
@@ -223,7 +213,6 @@ VI_OPTIMIZE_OFF
 
 		std::cout << "Test test_empty - Done" << std::endl;
 	}
-VI_OPTIMIZE_ON
 
 	void prn_header()
 	{	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
@@ -352,7 +341,6 @@ VI_OPTIMIZE_ON
 		std::cout << "Test normal_distribution - done" << std::endl;
 	}
 
-//VI_OPTIMIZE_OFF
 	void test_access()
 	{	VI_TM("Test test_access");
 		std::cout << "\nTest test_access:\n";
@@ -427,7 +415,6 @@ VI_OPTIMIZE_ON
 
 		std::cout << "Test test_access - done" << std::endl;
 	}
-//VI_OPTIMIZE_ON
 
 	void test_misc()
 	{

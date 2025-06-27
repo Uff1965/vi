@@ -111,11 +111,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-// Define: VI_OPTIMIZE_ON/OFF and VI_NOINLINE vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// VI_NOINLINE macro: This macro is used to prevent the compiler from inlining a function.
 // The VI_OPTIMIZE_ON/OFF macros allow or disable compiler optimizations
 // for specific code sections. They must appear outside of a function and takes 
 // effect at the first function defined after the macros is seen.
 // Usage:
+//   VI_NOINLINE void my_function() { /* ... */ }
 //   VI_OPTIMIZE_OFF
 //   /* unoptimized code section */
 //   VI_OPTIMIZE_ON
@@ -162,23 +163,23 @@ typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts
 typedef struct vi_tmJournal_t *VI_TM_HJOUR; // Opaque handle to a timing journal object.
 typedef struct vi_tmMeasuring_t *VI_TM_HMEAS; // Opaque handle to a measurement entry within a journal.
 typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
-typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // ABI must be compatible with std::fputs!
+typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Callback type for report function. ABI must be compatible with std::fputs!
 
 typedef struct vi_tmMeasuringRAW_t
 {	size_t calls_; // The number of times the measurement was invoked.
-	size_t amt_; // The number of all measured elements, including discarded ones.
-	VI_TM_TDIFF sum_; // Total time spent measuring all elements, in ticks.
+	size_t amt_; // The number of all measured events, including discarded ones.
+	VI_TM_TDIFF sum_; // Total time spent measuring all events, in ticks.
 #if defined VI_TM_STAT_USE_WELFORD
-	size_t flt_amt_; // Number of items counted. Filtered!
-	double flt_mean_; // The mean (average) time taken per processed items. In ticks. Filtered!
+	size_t flt_amt_; // Number of events counted. Filtered!
+	double flt_mean_; // The mean (average) time taken per processed events. In ticks. Filtered!
 	double flt_ss_; // Sum of Squares. In ticks. Filtered!
 	size_t flt_calls_; // Number of invokes processed. Filtered!
 #endif
 } vi_tmMeasuringRAW_t;
 
 typedef enum vi_tmInfo_e // Enumeration for various timing information types.
-{	VI_TM_INFO_VER,         // unsigned*: Version number of the library.
-	VI_TM_INFO_BUILDNUMBER, // unsigned*: Build number of the library.
+{	VI_TM_INFO_VER,         // const unsigned*: Version number of the library.
+	VI_TM_INFO_BUILDNUMBER, // const unsigned*: Build number of the library.
 	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
 	VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
 	VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
@@ -227,6 +228,10 @@ extern "C" {
 #endif
 
 // Main functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	/// <summary>
+	/// This function is used to measure time intervals with fine precision.
+	/// </summary>
+	/// <returns>A current tick count.</returns>
 	VI_TM_API VI_NODISCARD VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) VI_NOEXCEPT;
 
 	/// <summary>
