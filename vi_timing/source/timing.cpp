@@ -162,16 +162,16 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 		sum_ += v;
 		amt_ += n;
 
-		const auto flt_amt_f = flt_amt_;
 		const auto deviation = v_f / n_f - flt_mean_; // Difference from the mean value.
-		const auto sum_square_dev = deviation * deviation * flt_amt_f;
+		const auto sum_square_dev = deviation * deviation * flt_amt_;
 		if
 		(	flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
 			flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
 			deviation < 0.0 || // The minimum value is usually closest to the true value.
 			sum_square_dev < K2 * flt_ss_ // Avoids outliers.
 		)
-		{	flt_amt_ += n_f;
+		{	const auto flt_amt_f = flt_amt_;
+			flt_amt_ += n_f;
 			const auto rev_total_f = 1.0 / flt_amt_;
 			flt_mean_ = std::fma(flt_mean_, flt_amt_f, v_f) * rev_total_f;
 			flt_ss_ = std::fma(sum_square_dev, n_f * rev_total_f, flt_ss_);

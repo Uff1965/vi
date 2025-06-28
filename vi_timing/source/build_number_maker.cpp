@@ -36,15 +36,15 @@ namespace
 {
 	constexpr unsigned to_month(const char *str)
 	{	// 7.27.3.1 The asctime function. [C17 ballot ISO/IEC 9899:2017]
-		constexpr std::array<std::string_view, 13> mon_names
+		constexpr std::array<std::string_view, 13> month_names
 		{	"", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 			"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 		};
-		auto n = mon_names.size();
-		while (--n && std::string_view{ str, 3 } != mon_names[n])
+		auto month = month_names.size();
+		while (--month && month_names[month].compare(0, 3, str, 3))
 		{/**/}
-		assert(n);
-		return static_cast<unsigned>(n);
+		assert(month);
+		return static_cast<unsigned>(month);
 	}
 
 	constexpr int c2d(char c)
