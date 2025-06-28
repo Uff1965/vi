@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <threads.h>
 
-static inline void vi_tmFinish(VI_TM_HMEAS measure, VI_TM_TICK start, size_t amount)
+static inline void vi_tmFinish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
 	vi_tmMeasuringRepl(measure, finish - start, amount);
 }

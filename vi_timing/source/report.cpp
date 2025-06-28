@@ -87,7 +87,7 @@ namespace
 		std::string cv_txt_{ NotAvailable }; // Coefficient of Variation (CV) in percent
 #endif
 
-		metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsigned flags) noexcept;
+		metering_t(const char *name, const vi_tmMeasurementStats_t &meas, unsigned flags) noexcept;
 	};
 
 	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);
@@ -172,7 +172,7 @@ namespace
 		(	journal_handle,
 			[](VI_TM_HMEAS h, void *callback_data)
 			{	const char *name;
-				vi_tmMeasuringRAW_t meas;
+				vi_tmMeasurementStats_t meas;
 				vi_tmMeasuringGet(h, &name, &meas);
 				auto& [vec, flags] = *static_cast<data_t*>(callback_data);
 				vec.emplace_back(name, std::move(meas), flags);
@@ -234,7 +234,7 @@ namespace
 
 } // namespace
 
-metering_t::metering_t(const char *name, const vi_tmMeasuringRAW_t &meas, unsigned flags) noexcept
+metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, unsigned flags) noexcept
 :	name_{ name },
 	amt_{ meas.amt_ }
 {	assert(amt_ >= meas.calls_);

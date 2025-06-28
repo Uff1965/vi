@@ -81,7 +81,7 @@ namespace
 		auto results_callback = [](VI_TM_HMEAS m, void* data)
 			{	auto d = static_cast<data_t *>(data);
 				const char *name;
-				vi_tmMeasuringRAW_t meas;
+				vi_tmMeasurementStats_t meas;
 				vi_tmMeasuringGet(m, &name, &meas);
 				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
 				std::right << std::scientific <<
@@ -197,7 +197,7 @@ namespace
 			}
 
 			const char *name = nullptr;
-			vi_tmMeasuringRAW_t data;
+			vi_tmMeasurementStats_t data;
 			vi_tmMeasuringGet(vi_tmMeasuring(j, "vi_tm"), &name, &data);
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
@@ -330,7 +330,7 @@ namespace
 
 		vi_tmReport(j.get(), vi_tmShowMask);
 
-		vi_tmMeasuringRAW_t raw;
+		vi_tmMeasurementStats_t raw;
 		vi_tmMeasuringGet(m, nullptr, &raw);
 		assert(raw.amt_ == CNT + CNT);
 		assert(raw.calls_ == CNT + CNT / MULT);

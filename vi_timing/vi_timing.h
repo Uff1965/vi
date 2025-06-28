@@ -117,7 +117,7 @@ namespace vi_tm
 	// Unlike the API, this class is not thread-safe!!!
 	class measurer_t
 	{	VI_TM_HMEAS meas_ = nullptr;
-		size_t amt_ = 0;
+		VI_TM_SIZE amt_ = 0;
 		VI_TM_TICK start_ = 0; // Order matters!!! 'start_' must be initialized last!
 	public:
 		measurer_t() = delete;
@@ -128,7 +128,7 @@ namespace vi_tm
 			start_{ src.start_ }
 		{	assert(meas_);
 		}
-		measurer_t(VI_TM_HMEAS m, size_t amt = 1) noexcept
+		measurer_t(VI_TM_HMEAS m, VI_TM_SIZE amt = 1) noexcept
 		:	meas_{ m },
 			amt_{ amt }
 		{	assert(meas_);
@@ -150,7 +150,7 @@ namespace vi_tm
 		bool is_active() const noexcept
 		{	return !!amt_;
 		}
-		void start(size_t amt = 1) noexcept
+		void start(VI_TM_SIZE amt = 1) noexcept
 		{	assert(!is_active() && amt); // Ensure that the measurer is not already running and that a valid amount is provided.
 			amt_ = amt;
 			start_ = vi_tmGetTicks(); // Reset start time.
@@ -175,7 +175,7 @@ namespace vi_tm
 	// It stores the pointer to the named measurer entry in a static variable. Therefore, it cannot 
 	// be called with different measurement names.
 #	define VI_TM(...) \
-		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, size_t amount = 1) -> vi_tm::measurer_t { \
+		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, VI_TM_SIZE amount = 1) -> vi_tm::measurer_t { \
 			static const auto meas = vi_tmMeasuring(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
 			VI_DEBUG_ONLY \
 			(	const char* registered_name = nullptr; \

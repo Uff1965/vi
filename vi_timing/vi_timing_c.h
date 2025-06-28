@@ -34,6 +34,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <stdint.h>
 #	include <stdio.h> // For fputs and stdout
 
+#if !defined(__cplusplus) && (__STDC_VERSION__ < 202311L)
+#	include <stdalign.h> // For alignas in C-files.
+#endif
+
 //*******************************************************************************************************************
 // Library configuration options:
 //
@@ -47,6 +51,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
 #	define VI_TM_STAT_USE_WELFORD
+//
+// If VI_TM_STAT_USE_MINMAX defined, uses min/max statistics for measurements.
+// Comment out the next line and rebuild project if you do not need min/max statistics.
+#	define VI_TM_STAT_USE_MINMAX
 //
 // Uses high-performance timing methods (typically platform-specific optimizations like ASM).
 // To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
@@ -158,6 +166,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, __COUNTER__ )
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+typedef double VI_TM_FP; // Floating-point type used for timing calculations, typically double precision.
+typedef size_t VI_TM_SIZE; // Size type used for counting events, typically size_t.
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
 typedef struct vi_tmJournal_t *VI_TM_HJOUR; // Opaque handle to a timing journal object.
@@ -165,17 +175,21 @@ typedef struct vi_tmMeasuring_t *VI_TM_HMEAS; // Opaque handle to a measurement 
 typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
 typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Callback type for report function. ABI must be compatible with std::fputs!
 
-typedef struct vi_tmMeasuringRAW_t
-{	size_t calls_; // The number of times the measurement was invoked.
-	size_t amt_; // The number of all measured events, including discarded ones.
-	VI_TM_TDIFF sum_; // Total time spent measuring all events, in ticks.
-#if defined VI_TM_STAT_USE_WELFORD
-	size_t flt_amt_; // Number of events counted. Filtered!
-	double flt_mean_; // The mean (average) time taken per processed events. In ticks. Filtered!
-	double flt_ss_; // Sum of Squares. In ticks. Filtered!
-	size_t flt_calls_; // Number of invokes processed. Filtered!
+typedef struct vi_tmMeasurementStats_t
+{	VI_TM_SIZE calls_;		// The number of times the measurement was invoked.
+	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
+	VI_TM_TDIFF sum_;	// Total time spent measuring all events, in ticks.
+#ifdef VI_TM_STAT_USE_MINMAX
+	VI_TM_TDIFF min_;	// Minimum time taken for a single event, in ticks.
+	VI_TM_TDIFF max_;	// Maximum time taken for a single event, in ticks.
 #endif
-} vi_tmMeasuringRAW_t;
+#ifdef VI_TM_STAT_USE_WELFORD
+	VI_TM_SIZE flt_calls_;	// Number of invokes processed. Filtered!
+	VI_TM_FP flt_amt_;	// Number of events counted. Filtered!
+	VI_TM_FP flt_mean_;	// The mean (average) time taken per processed events. In ticks. Filtered!
+	VI_TM_FP flt_ss_;		// Sum of Squares. In ticks. Filtered!
+#endif
+} vi_tmMeasurementStats_t;
 
 typedef enum vi_tmInfo_e // Enumeration for various timing information types.
 {	VI_TM_INFO_VER,         // const unsigned*: Version number of the library.
@@ -290,7 +304,7 @@ extern "C" {
 	/// <param name="tick_diff">The time difference value to add to the measurement.</param>
 	/// <param name="amount">The amount associated with the time difference to add.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF duration, size_t amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF duration, VI_TM_SIZE amount VI_DEF(1)) VI_NOEXCEPT;
 
 	/// <summary>
 	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
@@ -298,10 +312,10 @@ extern "C" {
 	/// <param name="meas">The measurement handle from which to retrieve information.</param>
 	/// <param name="name">Pointer to a string pointer that will receive the name of the measurement. Can be nullptr if not needed.</param>
 	/// <param name="total">Pointer to a VI_TM_TDIFF variable that will receive the total measured time. Can be nullptr if not needed.</param>
-	/// <param name="amount">Pointer to a size_t variable that will receive the measured amount. Can be nullptr if not needed.</param>
-	/// <param name="calls_cnt">Pointer to a size_t variable that will receive the number of calls. Can be nullptr if not needed.</param>
+	/// <param name="amount">Pointer to a VI_TM_SIZE variable that will receive the measured amount. Can be nullptr if not needed.</param>
+	/// <param name="calls_cnt">Pointer to a VI_TM_SIZE variable that will receive the number of calls. Can be nullptr if not needed.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, vi_tmMeasuringRAW_t *data);
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, vi_tmMeasurementStats_t *data);
 	
 	/// <summary>
 	/// Resets the measurement state for the specified measurement handle.

@@ -90,31 +90,19 @@ namespace
 {
 	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
 
-	struct alignas(64) measuring_t
+	struct measuring_t: public vi_tmMeasurementStats_t
 	{
-#ifdef VI_TM_STAT_USE_WELFORD
-		// Welford’s online algorithm for computing variance and filtering of outliers.
 		THREADSAFE_ONLY(mutable mutex mtx_);
-		double flt_mean_ = 0.0; // Mean value. Filtered!!!
-		double flt_ss_ = 0.0; // Sum of squares. Filtered!!!
-		double flt_amt_ = 0U; // Number of items processed. Filtered!!!
-		size_t flt_calls_ = 0U; // Number of invoks processed. Filtered!!!
-		VI_TM_TDIFF sum_ = 0U; // Sum of all measurements.
-		size_t calls_ = 0U; // Number of calls to 'add()'.
-		size_t amt_ = 0U; // Number of items for measurements.
-#elif defined(VI_TM_THREADSAFE)
-		// Simple statistics: no standard deviation, only the mean value. Thread-safe!
-		std::atomic<VI_TM_TDIFF> sum_ = 0U;
-		std::atomic<size_t> calls_ = 0U;
-		std::atomic<size_t> amt_ = 0U;
-#else
-		// Simple statistics: no standard deviation, only the mean value. Not thread-safe!
-		VI_TM_TDIFF sum_ = 0U;
-		size_t calls_ = 0U;
-		size_t amt_ = 0U;
+
+		measuring_t()
+		{	std::memset(static_cast<vi_tmMeasurementStats_t*>(this), 0, sizeof(vi_tmMeasurementStats_t));
+#ifdef VI_TM_STAT_USE_MINMAX
+			min_ = std::numeric_limits<VI_TM_TDIFF>::max();
+			max_ = std::numeric_limits<VI_TM_TDIFF>::min();
 #endif
-		inline void add(VI_TM_TDIFF val, size_t amt) noexcept;
-		vi_tmMeasuringRAW_t get() const noexcept;
+		}
+		inline void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
+		vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept;
 	};
 
@@ -145,75 +133,56 @@ public:
 	void clear();
 };
 
-void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
+void measuring_t::reset() noexcept
+{	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
+	auto* const self = static_cast<vi_tmMeasurementStats_t*>(this);
+	*self = vi_tmMeasurementStats_t{};
+}
+
+void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 {	
 	if (!verify(!!n))
 	{	return;
 	}
 
-#ifdef VI_TM_STAT_USE_WELFORD
-	constexpr double K2 = 6.25; // 2.5^2 Threshold for outliers.
-	const auto v_f = static_cast<double>(v);
-	const auto n_f = static_cast<double>(n);
+	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 
-	{
-		THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-		++calls_;
-		sum_ += v;
-		amt_ += n;
-
-		const auto deviation = v_f / n_f - flt_mean_; // Difference from the mean value.
-		const auto sum_square_dev = deviation * deviation * flt_amt_;
-		if
-		(	flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
-			flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
-			deviation < 0.0 || // The minimum value is usually closest to the true value.
-			sum_square_dev < K2 * flt_ss_ // Avoids outliers.
-		)
-		{	const auto flt_amt = flt_amt_;
-			flt_amt_ += n_f;
-			const auto rev_total = 1.0 / flt_amt_;
-			flt_mean_ = std::fma(flt_mean_, flt_amt, v_f) * rev_total;
-			flt_ss_ = std::fma(sum_square_dev, n_f * rev_total, flt_ss_);
-			flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
-		}
-	}
-#elif !defined(VI_TM_THREADSAFE)
 	++calls_;
 	sum_ += v;
 	amt_ += n;
-#else
-	calls_.fetch_add(1, std::memory_order_relaxed);
-	sum_.fetch_add(v, std::memory_order_relaxed);
-	amt_.fetch_add(n, std::memory_order_relaxed);
+
+#ifdef VI_TM_STAT_USE_MINMAX
+	if (min_ > v) { min_ = v; }
+	if (max_ < v) { max_ = v; }
+#endif
+
+#ifdef VI_TM_STAT_USE_WELFORD
+	constexpr VI_TM_FP K2 = 6.25; // 2.5^2 Threshold for outliers.
+	const auto v_f = static_cast<VI_TM_FP>(v);
+	const auto n_f = static_cast<VI_TM_FP>(n);
+
+	const auto deviation = v_f / n_f - flt_mean_; // Difference from the mean value.
+	const auto sum_square_dev = deviation * deviation * flt_amt_;
+	if
+	(	flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
+		flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
+		deviation < 0.0 || // The minimum value is usually closest to the true value.
+		sum_square_dev < K2 * flt_ss_ // Avoids outliers.
+	)
+	{	const auto flt_amt = flt_amt_;
+		flt_amt_ += n_f;
+		const auto rev_total = VI_TM_FP(1.0) / flt_amt_;
+		flt_mean_ = std::fma(flt_mean_, flt_amt, v_f) * rev_total;
+		flt_ss_ = std::fma(sum_square_dev, n_f * rev_total, flt_ss_);
+		flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
+	}
 #endif
 }
 
-vi_tmMeasuringRAW_t measuring_t::get() const noexcept
-{	vi_tmMeasuringRAW_t result;
-#ifdef VI_TM_STAT_USE_WELFORD
-	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	result.flt_mean_ = flt_mean_;
-	result.flt_ss_ = flt_ss_;
-	result.flt_amt_ = static_cast<std::size_t>(flt_amt_);
-	result.flt_calls_ = flt_calls_;
-#endif
-	result.sum_ = sum_;
-	result.amt_ = amt_;
-	result.calls_ = calls_;
-	return result;
-}
-
-void measuring_t::reset() noexcept
-{
-#ifdef VI_TM_STAT_USE_WELFORD
-	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	flt_mean_ = flt_ss_ = 0.0;
-	flt_amt_ = 0U;
-	flt_calls_ = 0U;
-#endif
-	sum_ = 0U;
-	amt_ = calls_ = 0U;
+vi_tmMeasurementStats_t measuring_t::get() const noexcept
+{	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+	return *this;
 }
 
 inline auto& vi_tmJournal_t::from_handle(VI_TM_HJOUR journal)
@@ -302,11 +271,11 @@ VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR journal, const char *name)
 {	return static_cast<VI_TM_HMEAS>(&vi_tmJournal_t::from_handle(journal).try_emplace(name));
 }
 
-void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, size_t amount) noexcept
+void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
 {	if (verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasuringRAW_t *data)
+void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasurementStats_t *data)
 {	if (verify(meas))
 	{	if (name) { *name = meas->first.c_str(); }
 		if (data) { *data = meas->second.get(); }
@@ -333,7 +302,7 @@ namespace
 			static const auto exp_flt_mean = 
 				(	std::accumulate(std::cbegin(samples_simple), std::cend(samples_simple), 0.0) +
 					M * std::accumulate(std::cbegin(samples_multiple), std::cend(samples_multiple), 0.0)
-				) / static_cast<double>(exp_flt_cnt); // The mean value of the samples that will be counted.
+				) / static_cast<VI_TM_FP>(exp_flt_cnt); // The mean value of the samples that will be counted.
 #	ifdef VI_TM_STAT_USE_WELFORD
 			const auto exp_flt_stddev = [] // The standard deviation of the samples that will be counted.
 				{	const auto sum_squared_deviations =
@@ -341,21 +310,21 @@ namespace
 					(	std::cbegin(samples_simple),
 						std::cend(samples_simple),
 						0.0,
-						[](auto i, auto v) { const auto d = static_cast<double>(v) - exp_flt_mean; return std::fma(d, d, i); }
+						[](auto i, auto v) { const auto d = static_cast<VI_TM_FP>(v) - exp_flt_mean; return std::fma(d, d, i); }
 					) +
 					M * std::accumulate
 					(	std::cbegin(samples_multiple),
 						std::cend(samples_multiple),
 						0.0,
-						[](auto i, auto v) { const auto d = static_cast<double>(v) - exp_flt_mean; return std::fma(d, d, i); }
+						[](auto i, auto v) { const auto d = static_cast<VI_TM_FP>(v) - exp_flt_mean; return std::fma(d, d, i); }
 					);
-					return std::sqrt(sum_squared_deviations / static_cast<double>(exp_flt_cnt - 1));
+					return std::sqrt(sum_squared_deviations / static_cast<VI_TM_FP>(exp_flt_cnt - 1));
 				}();
 #	endif
 			static constexpr char NAME[] = "dummy"; // The name of the measurement.
 
 			const char *name = nullptr; // Name of the measurement to be filled in.
-			vi_tmMeasuringRAW_t md; // Measurement data to be filled in.
+			vi_tmMeasurementStats_t md; // Measurement data to be filled in.
 			std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose }; // Journal for measurements, automatically closed on destruction.
 			{	const auto m = vi_tmMeasuring(journal.get(), NAME); // Create a measurement 'NAME'.
 				for (auto x : samples_simple) // Add simple samples one at a time.
@@ -372,18 +341,24 @@ namespace
 				vi_tmMeasuringGet(m, &name, &md); // Get the measurement data and name.
 			}
 
+			auto EPS = VI_TM_FP(0.0);
+			if constexpr (std::is_same_v<VI_TM_FP, double>)
+				EPS = VI_TM_FP(1e-12);
+			else
+				EPS = VI_TM_FP(1.e-7);
+
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
 #	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.flt_amt_ == exp_flt_cnt);
-			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < 1e-12);
-			const auto s = std::sqrt(md.flt_ss_ / static_cast<double>(md.flt_amt_ - 1U));
-			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < 1e-12);
+			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < EPS);
+			const auto s = std::sqrt(md.flt_ss_ / static_cast<VI_TM_FP>(md.flt_amt_ - 1U));
+			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < EPS);
 #	else
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
-			assert(std::abs(static_cast<double>(md.sum_) / md.amt_ - exp_flt_mean) < 1e-12);
+			assert(std::abs(static_cast<VI_TM_FP>(md.sum_) / md.amt_ - exp_flt_mean) < EPS);
 #	endif
 			return 0;
 		}();
