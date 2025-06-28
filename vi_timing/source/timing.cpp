@@ -170,11 +170,11 @@ void measuring_t::add(VI_TM_TDIFF v, size_t n) noexcept
 			deviation < 0.0 || // The minimum value is usually closest to the true value.
 			sum_square_dev < K2 * flt_ss_ // Avoids outliers.
 		)
-		{	const auto flt_amt_f = flt_amt_;
+		{	const auto flt_amt = flt_amt_;
 			flt_amt_ += n_f;
-			const auto rev_total_f = 1.0 / flt_amt_;
-			flt_mean_ = std::fma(flt_mean_, flt_amt_f, v_f) * rev_total_f;
-			flt_ss_ = std::fma(sum_square_dev, n_f * rev_total_f, flt_ss_);
+			const auto rev_total = 1.0 / flt_amt_;
+			flt_mean_ = std::fma(flt_mean_, flt_amt, v_f) * rev_total;
+			flt_ss_ = std::fma(sum_square_dev, n_f * rev_total, flt_ss_);
 			flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
 		}
 	}
@@ -210,6 +210,7 @@ void measuring_t::reset() noexcept
 	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	flt_mean_ = flt_ss_ = 0.0;
 	flt_amt_ = 0U;
+	flt_calls_ = 0U;
 #endif
 	sum_ = 0U;
 	amt_ = calls_ = 0U;
