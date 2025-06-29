@@ -218,7 +218,7 @@ namespace
 			{	str << "One tick: " << to_string(props.seconds_per_tick_.count());
 			}
 			if (flags & vi_tmShowOverhead)
-			{	str << "Additive: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_ticks_);
+			{	str << "Overhead: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_ticks_);
 			}
 
 			str << '\n';

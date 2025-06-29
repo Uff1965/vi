@@ -1,4 +1,4 @@
-/********************************************************************\
+/*****************************************************************************\
 'vi_timing' is a compact and lightweight library for measuring code execution
 time in C and C++. 
 
@@ -21,7 +21,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
-\********************************************************************/
+\*****************************************************************************/
 
 #ifndef VI_TIMING_VI_TIMING_C_H
 #	define VI_TIMING_VI_TIMING_C_H

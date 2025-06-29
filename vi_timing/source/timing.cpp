@@ -95,13 +95,6 @@ namespace
 	using fp_limits_t = std::numeric_limits<VI_TM_FP>;
 
 #ifndef NDEBUG
-	constexpr auto DBG_EPS()
-	{	if constexpr (std::is_same_v<VI_TM_FP, double>)
-			return VI_TM_FP(1e-12);
-		else
-			return VI_TM_FP(1.e-7);
-	};
-
 	bool check_invariant(const vi_tmMeasurementStats_t& src)
 	{	if(!verify(src.amt_ >= src.calls_)) return false;
 		if (src.calls_ == 0U)
@@ -389,6 +382,10 @@ void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS meas)
 // This code is only compiled in debug mode to test certain library functionality.
 namespace
 {
+	constexpr auto DBG_EPS()
+	{	return fp_limits_t::epsilon();
+	};
+
 	const auto nanotest = []
 		{
 			static constexpr VI_TM_TDIFF samples_simple[] = { 34, 32, 36 }; // Samples that will be added one at a time.
@@ -428,9 +425,15 @@ namespace
 				for (auto x : samples_simple) // Add simple samples one at a time.
 				{	vi_tmMeasurementRepl(m, x);
 				}
+
+				vi_tmMeasurementStatsReset(&md);
 				for (auto x : samples_multiple) // Add multiple samples M times at once.
-				{	vi_tmMeasurementRepl(m, M * x, M);
+				{	vi_tmMeasurementStatsRepl(&md, M * x, M);
 				}
+
+				vi_tmMeasurementMerge(m, &md); // Merge the statistics into the measurement.
+				vi_tmMeasurementStatsReset(&md);
+
 #	ifdef VI_TM_STAT_USE_WELFORD
 				for (auto x : samples_exclude) // Add samples that will be excluded from the statistics.
 				{	vi_tmMeasurementRepl(m, x, 1);
@@ -445,7 +448,7 @@ namespace
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.flt_amt_ == exp_flt_cnt);
 			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < DBG_EPS());
-			const auto s = std::sqrt(md.flt_ss_ / static_cast<VI_TM_FP>(md.flt_amt_ - 1U));
+			const auto s = std::sqrt(md.flt_ss_ / (md.flt_amt_ - VI_TM_FP(1)));
 			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < DBG_EPS());
 #	else
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
