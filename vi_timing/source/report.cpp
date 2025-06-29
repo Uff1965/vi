@@ -52,11 +52,13 @@ namespace
 	constexpr char TitleTotal[] = "Sum.";
 	constexpr char TitleCV[] = "CV";
 	constexpr char TitleAmount[] = "Amt.";
+	constexpr char TitleMin[] = "Min.";
+	constexpr char TitleMax[] = "Max.";
 	constexpr char Ascending[] = " [^]";
 	constexpr char Descending[] = " [v]";
-	constexpr char Insignificant[] = "<insig>";
-	constexpr char Excessive[] = "<exces>";
-	constexpr char NotAvailable[] = "<n/a>";
+	constexpr char Insignificant[] = "<ins>"; // insignificant
+	constexpr char Excessive[] = "<exc>"; // excessively
+	constexpr char NotAvailable[] = "n/a";
 
 	constexpr unsigned char DURATION_PREC = 2;
 	constexpr unsigned char DURATION_DEC = 1;
@@ -82,7 +84,11 @@ namespace
 		std::string average_txt_{ NotAvailable };
 		std::size_t amt_{}; // Number of measured units
 		std::string amt_txt_{ "0" };
-#if defined(VI_TM_STAT_USE_WELFORD)
+#ifdef VI_TM_STAT_USE_WELFORD
+		duration_t<DURATION_PREC, DURATION_DEC> min_{}; // Minimum time in seconds
+		std::string min_txt_{ NotAvailable };
+		duration_t<DURATION_PREC, DURATION_DEC> max_{}; // Maximum time in seconds
+		std::string max_txt_{ NotAvailable };
 		double cv_{}; // Coefficient of Variation.
 		std::string cv_txt_{ NotAvailable }; // Coefficient of Variation (CV) in percent
 #endif
@@ -146,13 +152,15 @@ namespace
 		const unsigned flags_;
 		const unsigned guideline_interval_;
 
-		std::size_t max_len_name_{ std::size(TitleName) - 1 };
-		std::size_t max_len_average_{ std::size(TitleAverage) - 1 };
+		std::size_t max_len_name_{};
+		std::size_t max_len_average_{};
 #ifdef VI_TM_STAT_USE_WELFORD
-		std::size_t max_len_cv_{ std::size(TitleCV) - 1 };
+		std::size_t max_len_min_{};
+		std::size_t max_len_max_{};
+		std::size_t max_len_cv_{};
 #endif
-		std::size_t max_len_total_{ std::size(TitleTotal) - 1 };
-		std::size_t max_len_amount_{ std::size(TitleAmount) - 1 };
+		std::size_t max_len_total_{};
+		std::size_t max_len_amount_{};
 		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
@@ -191,6 +199,9 @@ namespace
 			auto &props = misc::properties_t::props();
 
 			auto to_string = [](auto d) { return misc::to_string(d, DURATION_PREC, DURATION_DEC) + "s. "; };
+			if (flags & vi_tmShowCorrected)
+			{	str << (flags & vi_tmDoNotSubtractOverhead? "": "Corrected. ");
+			}
 			if (flags & vi_tmShowResolution)
 			{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_ticks_);
 			}
@@ -251,11 +262,35 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 
 		const bool subtract_overhead{ 0U == (flags & vi_tmDoNotSubtractOverhead) };
 #ifdef VI_TM_STAT_USE_WELFORD
+		const auto correction = (subtract_overhead ? props.clock_latency_ticks_ * meas.flt_calls_ / meas.flt_amt_ : 0.0);
+		const auto limit = props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_);
+
+		assert(meas.min_ != INFINITY && meas.max_ != -INFINITY);
 		assert(meas.flt_amt_ && meas.flt_calls_); // Since amt_ is not zero.
 		assert(meas.flt_calls_ <= meas.flt_amt_);
+		if (1 < meas.calls_)
+		{
+			if (const auto v = meas.min_ - correction; v > limit)
+			{	min_ = props.seconds_per_tick_ * v;
+				min_txt_ = to_string(min_);
+			}
+			else
+			{	min_txt_ = Insignificant;
+			}
 
-		const auto ave = meas.flt_mean_ - (subtract_overhead? props.clock_latency_ticks_ * meas.flt_calls_ / meas.flt_amt_: 0.0);
-		if (ave <= props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_))
+			if (const auto v = meas.max_ - correction; v > limit)
+			{	max_ = props.seconds_per_tick_ * v;
+				max_txt_ = to_string(max_);
+			}
+			else
+			{	max_txt_ = Insignificant;
+			}
+		}
+		else
+		{	assert(meas.min_ == meas.max_);
+		}
+
+		if (const auto ave = meas.flt_mean_ - correction; ave <= limit)
 		{	sum_txt_ = Insignificant;
 			average_txt_ = Insignificant;
 		}
@@ -269,7 +304,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 				assert(meas.flt_amt_ >= 2); // The first two measurements cannot be filtered out.
 				cv_ = std::sqrt(meas.flt_ss_ / static_cast<double>(meas.flt_amt_ - 1)) / ave;
 				if (const auto cv = std::round(cv_ * 100.0); cv < 1.0)
-				{	cv_txt_ = Insignificant; // Coefficient of Variation (CV) is too low.
+				{	cv_txt_ = "<1"; // Coefficient of Variation (CV) is too low.
 				}
 				else if (cv >= 100.0)
 				{	cv_txt_ = Excessive; // Coefficient of Variation (CV) is too high.
@@ -303,14 +338,29 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 	flags_{ flags },
 	guideline_interval_{ itms.size() > 4U ? 3U : 0U }
 {	
+	if ((flags & vi_tmHideHeader) == 0)
+	{
+		max_len_name_ = std::size(TitleName) - 1;
+		max_len_average_ = std::size(TitleAverage) - 1;
+#ifdef VI_TM_STAT_USE_WELFORD
+		max_len_cv_ = std::size(TitleCV) - 1;
+		max_len_min_ = std::size(TitleMin) - 1;
+		max_len_max_ = std::size(TitleMax) - 1;
+#endif
+		max_len_total_ = std::size(TitleTotal) - 1;
+		max_len_amount_ = std::size(TitleAmount) - 1;
+	}
+
 	for (auto &itm : itms)
 	{	max_len_name_ = std::max(max_len_name_, itm.name_.length());
-		max_len_amount_ = std::max(max_len_amount_, itm.amt_txt_.length());
-		max_len_total_ = std::max(max_len_total_, itm.sum_txt_.length());
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
-#if defined(VI_TM_STAT_USE_WELFORD)
+#ifdef VI_TM_STAT_USE_WELFORD
 		max_len_cv_ = std::max(max_len_cv_, itm.cv_txt_.length());
+		max_len_min_ = std::max(max_len_min_, itm.min_txt_.length());
+		max_len_max_ = std::max(max_len_max_, itm.max_txt_.length());
 #endif
+		max_len_total_ = std::max(max_len_total_, itm.sum_txt_.length());
+		max_len_amount_ = std::max(max_len_amount_, itm.amt_txt_.length());
 	}
 }
 
@@ -394,8 +444,9 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 		std::setw(width_column(vi_tmSortByName)) << item_column(vi_tmSortByName) << ": " <<
 		std::right << std::setfill(' ') <<
 		std::setw(width_column(vi_tmSortBySpeed)) << item_column(vi_tmSortBySpeed) << " "
-#if defined(VI_TM_STAT_USE_WELFORD)
+#ifdef VI_TM_STAT_USE_WELFORD
 		"(" << std::setw(max_len_cv_) << TitleCV << ") "
+		"(" << std::setw(max_len_min_) << TitleMin << " - " << std::setw(max_len_max_) << TitleMax << ") "
 #endif
 		"[" << std::setw(width_column(vi_tmSortByTime)) << item_column(vi_tmSortByTime) << " / " <<
 		std::setw(width_column(vi_tmSortByAmount)) << item_column(vi_tmSortByAmount) << "]\n";
@@ -415,8 +466,9 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 		std::setw(width_column(vi_tmSortByName)) << i.name_ << ": " <<
 		std::right << std::setfill(' ') <<
 		std::setw(width_column(vi_tmSortBySpeed)) << i.average_txt_ << " "
-#if defined(VI_TM_STAT_USE_WELFORD)
+#ifdef VI_TM_STAT_USE_WELFORD
 		"(" << std::setw(max_len_cv_) << i.cv_txt_ << ") "
+		"(" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << ") "
 #endif
 		"[" << std::setw(width_column(vi_tmSortByTime)) << i.sum_txt_ << " / " <<
 		std::setw(width_column(vi_tmSortByAmount)) << i.amt_ << "]\n";

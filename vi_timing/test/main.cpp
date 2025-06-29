@@ -71,7 +71,7 @@ namespace
 			{	auto d = static_cast<data_t *>(data);
 				const char *name = nullptr;
 				vi_tmMeasuringGet(m, &name, nullptr);
-				if (name && *name && d->name_max_len_ < std::strlen(name))
+				if (name && d->name_max_len_ < std::strlen(name))
 				{	d->name_max_len_ = std::strlen(name);
 				}
 				return 0;
@@ -85,14 +85,16 @@ namespace
 				vi_tmMeasuringGet(m, &name, &meas);
 				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
 				std::right << std::scientific <<
-#ifdef VI_TM_STAT_USE_WELFORD
-				" mean = " << meas.flt_mean_ << ","
-				" ss = " << meas.flt_ss_ << ","
-				" cnt = " << std::setw(12) << meas.flt_amt_ << ","
-#endif
+				" calls = " << std::setw(8) << meas.calls_ << ","
+				" amt = " << std::setw(8) << meas.amt_ << ","
 				" sum = " << std::setw(15) << meas.sum_ << ","
-				" amt = " << std::setw(12) << meas.amt_ << ","
-				" calls = " << std::setw(12) << meas.calls_ <<
+#ifdef VI_TM_STAT_USE_WELFORD
+				" min = " << std::setw(9) << meas.min_ << ","
+				" max = " << std::setw(9) << meas.max_ << ","
+				" flt_cnt = " << std::setw(10) << meas.flt_amt_ << ","
+				" flt_mean = " << std::setw(9) << meas.flt_mean_ << ","
+				" flt_ss = " << std::setw(9) << meas.flt_ss_ <<
+#endif
 				std::endl;
 				return 0;
 			};
@@ -160,10 +162,11 @@ namespace
 		auto journal = create_journal();
 		if(	auto j = journal.get())
 		{	auto m = vi_tmMeasuring(j, "100ms");
-			vi_tm::measurer_t tm{ vi_tmMeasuring(j, "100ms*10"), 10U };
-			for (int n = 0; n < 10; ++n)
-			{	vi_tm::measurer_t tm2{ m };
-				std::this_thread::sleep_for(100ms);
+			{	vi_tm::measurer_t tm{ vi_tmMeasuring(j, "100ms*10"), 10U };
+				for (int n = 0; n < 10; ++n)
+				{	vi_tm::measurer_t tm2{ m };
+					std::this_thread::sleep_for(100ms);
+				}
 			}
 			vi_tmReport(j, vi_tmShowDuration | vi_tmShowDurationEx | vi_tmShowOverhead | vi_tmShowUnit);
 		}
@@ -471,8 +474,8 @@ int main()
 	test_report();
 	test_multithreaded();
 	test_access();
-	//std::cout << "\nRAW report:\n";
-	//report_RAW(VI_TM_HGLOBAL);
+	std::cout << "\nRAW report:\n";
+	report_RAW(VI_TM_HGLOBAL);
 
 	vi_CurrentThreadAffinityRestore();
 

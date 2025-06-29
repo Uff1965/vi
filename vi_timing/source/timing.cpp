@@ -86,24 +86,34 @@ namespace
 #	define THREADSAFE_ONLY(t)
 #endif
 
+static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
+
 namespace
 {
+#ifndef NDEBUG
+	constexpr auto DBG_EPS()
+	{	if constexpr (std::is_same_v<VI_TM_FP, double>)
+			return VI_TM_FP(1e-12);
+		else
+			return VI_TM_FP(1.e-7);
+	};
+#endif
+
 	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
 
-	struct measuring_t: public vi_tmMeasurementStats_t
-	{
-		THREADSAFE_ONLY(mutable mutex mtx_);
-
-		measuring_t()
-		{	std::memset(static_cast<vi_tmMeasurementStats_t*>(this), 0, sizeof(vi_tmMeasurementStats_t));
-#ifdef VI_TM_STAT_USE_MINMAX
-			min_ = std::numeric_limits<VI_TM_TDIFF>::max();
-			max_ = std::numeric_limits<VI_TM_TDIFF>::min();
-#endif
+	class measuring_t: public vi_tmMeasurementStats_t
+	{	THREADSAFE_ONLY(mutable mutex mtx_);
+		void reset_impl() noexcept;
+	public:
+		measuring_t() noexcept
+		{	reset_impl();
 		}
 		inline void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
 		vi_tmMeasurementStats_t get() const noexcept;
-		void reset() noexcept;
+		void reset() noexcept
+		{	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+			reset_impl();
+		}
 	};
 
 	using storage_t = std::unordered_map<std::string, measuring_t>;
@@ -133,11 +143,18 @@ public:
 	void clear();
 };
 
-void measuring_t::reset() noexcept
-{	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
-	auto* const self = static_cast<vi_tmMeasurementStats_t*>(this);
-	*self = vi_tmMeasurementStats_t{};
+void measuring_t::reset_impl() noexcept
+{	calls_ = 0;
+	amt_ = 0;
+	sum_ = 0;
+#ifdef VI_TM_STAT_USE_WELFORD
+	flt_calls_ = 0;
+	flt_amt_ = 0;
+	flt_mean_ = 0;
+	flt_ss_ = 0;
+	min_ = INFINITY;
+	max_ = -INFINITY;
+#endif
 }
 
 void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
@@ -152,15 +169,14 @@ void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 	sum_ += v;
 	amt_ += n;
 
-#ifdef VI_TM_STAT_USE_MINMAX
-	if (min_ > v) { min_ = v; }
-	if (max_ < v) { max_ = v; }
-#endif
-
 #ifdef VI_TM_STAT_USE_WELFORD
 	constexpr VI_TM_FP K2 = 6.25; // 2.5^2 Threshold for outliers.
 	const auto v_f = static_cast<VI_TM_FP>(v);
 	const auto n_f = static_cast<VI_TM_FP>(n);
+
+	const auto a_f = v_f / n_f;
+	if (min_ > a_f) { min_ = a_f; }
+	if (max_ < a_f) { max_ = a_f; }
 
 	const auto deviation = v_f / n_f - flt_mean_; // Difference from the mean value.
 	const auto sum_square_dev = deviation * deviation * flt_amt_;
@@ -178,6 +194,11 @@ void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 		flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
 	}
 #endif
+
+	assert(flt_mean_ >= 0.0);
+	assert(calls_ >= 2 || std::abs(min_ - flt_mean_) / flt_mean_ < DBG_EPS());
+	assert(calls_ >= 2 || std::abs(max_ - flt_mean_) / flt_mean_ < DBG_EPS());
+	assert(calls_ == 1 || min_ <= flt_mean_ && flt_mean_ <= max_);
 }
 
 vi_tmMeasurementStats_t measuring_t::get() const noexcept
@@ -341,24 +362,18 @@ namespace
 				vi_tmMeasuringGet(m, &name, &md); // Get the measurement data and name.
 			}
 
-			auto EPS = VI_TM_FP(0.0);
-			if constexpr (std::is_same_v<VI_TM_FP, double>)
-				EPS = VI_TM_FP(1e-12);
-			else
-				EPS = VI_TM_FP(1.e-7);
-
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
 #	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.flt_amt_ == exp_flt_cnt);
-			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < EPS);
+			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < DBG_EPS());
 			const auto s = std::sqrt(md.flt_ss_ / static_cast<VI_TM_FP>(md.flt_amt_ - 1U));
-			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < EPS);
+			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < DBG_EPS());
 #	else
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
-			assert(std::abs(static_cast<VI_TM_FP>(md.sum_) / md.amt_ - exp_flt_mean) < EPS);
+			assert(std::abs(static_cast<VI_TM_FP>(md.sum_) / md.amt_ - exp_flt_mean) < DBG_EPS());
 #	endif
 			return 0;
 		}();

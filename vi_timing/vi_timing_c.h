@@ -52,10 +52,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
 #	define VI_TM_STAT_USE_WELFORD
 //
-// If VI_TM_STAT_USE_MINMAX defined, uses min/max statistics for measurements.
-// Comment out the next line and rebuild project if you do not need min/max statistics.
-#	define VI_TM_STAT_USE_MINMAX
-//
 // Uses high-performance timing methods (typically platform-specific optimizations like ASM).
 // To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
 //#	define VI_TM_USE_STDCLOCK
@@ -178,16 +174,14 @@ typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Call
 typedef struct vi_tmMeasurementStats_t
 {	VI_TM_SIZE calls_;		// The number of times the measurement was invoked.
 	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
-	VI_TM_TDIFF sum_;	// Total time spent measuring all events, in ticks.
-#ifdef VI_TM_STAT_USE_MINMAX
-	VI_TM_TDIFF min_;	// Minimum time taken for a single event, in ticks.
-	VI_TM_TDIFF max_;	// Maximum time taken for a single event, in ticks.
-#endif
+	VI_TM_TDIFF sum_;		// Total time spent measuring all events, in ticks.
 #ifdef VI_TM_STAT_USE_WELFORD
 	VI_TM_SIZE flt_calls_;	// Number of invokes processed. Filtered!
-	VI_TM_FP flt_amt_;	// Number of events counted. Filtered!
-	VI_TM_FP flt_mean_;	// The mean (average) time taken per processed events. In ticks. Filtered!
+	VI_TM_FP flt_amt_;		// Number of events counted. Filtered!
+	VI_TM_FP flt_mean_;		// The mean (average) time taken per processed events. In ticks. Filtered!
 	VI_TM_FP flt_ss_;		// Sum of Squares. In ticks. Filtered!
+	VI_TM_FP min_;			// INFINITY - initially. Minimum time taken for a single event, in ticks.
+	VI_TM_FP max_;			// -INFINITY - initially. Maximum time taken for a single event, in ticks.
 #endif
 } vi_tmMeasurementStats_t;
 
@@ -207,24 +201,25 @@ typedef enum vi_tmInfo_e // Enumeration for various timing information types.
 } vi_tmInfo_e;
 
 typedef enum vi_tmReportFlags_e
-{	vi_tmSortByTime = 0x00,
-	vi_tmSortByName = 0x01,
-	vi_tmSortBySpeed = 0x02,
-	vi_tmSortByAmount = 0x03,
-	vi_tmSortMask = 0x07,
+{	vi_tmSortByTime = 0x00, // If set, the report will be sorted by time spent in the measurement.
+	vi_tmSortByName = 0x01, // If set, the report will be sorted by measurement name.
+	vi_tmSortBySpeed = 0x02, // If set, the report will be sorted by average time per event (speed).
+	vi_tmSortByAmount = 0x03, // If set, the report will be sorted by the number of events measured.
+	vi_tmSortMask = 0x07, // Mask for all sorting flags.
 
-	vi_tmSortDescending = 0x00,
-	vi_tmSortAscending = 0x08,
+	vi_tmSortDescending = 0x00, // If set, the report will be sorted in descending order.
+	vi_tmSortAscending = 0x08, // If set, the report will be sorted in ascending order.
 
-	vi_tmShowOverhead = 0x0010,
-	vi_tmShowUnit = 0x0020,
-	vi_tmShowDuration = 0x0040,
-	vi_tmShowDurationEx = 0x0080,
-	vi_tmShowResolution = 0x0100,
-	vi_tmShowMask = 0x1F0,
+	vi_tmShowOverhead = 0x0010, // If set, the report will show the overhead of the clock.
+	vi_tmShowUnit = 0x0020, // If set, the report will show the time unit (seconds per tick).
+	vi_tmShowDuration = 0x0040, // If set, the report will show the duration of the measurement in seconds.
+	vi_tmShowDurationEx = 0x0080, // If set, the report will show the duration, including overhead costs, in seconds.
+	vi_tmShowResolution = 0x0100, // If set, the report will show the clock resolution in seconds.
+	vi_tmShowCorrected = 0x0200, // If set, the report will show corrected values (subtracting overhead).
+	vi_tmShowMask = 0x2F0, // Mask for all show flags.
 
-	vi_tmHideHeader = 0x0200,
-	vi_tmDoNotSubtractOverhead = 0x0400, // If set, the overhead is not subtracted from the measured time in report.
+	vi_tmHideHeader = 0x0400, // If set, the report will not show the header with column names.
+	vi_tmDoNotSubtractOverhead = 0x0800, // If set, the overhead is not subtracted from the measured time in report.
 } vi_tmReportFlags_e;
 
 #define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
