@@ -147,7 +147,7 @@ namespace
 		{	reset_impl();
 		}
 		inline void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
-		inline void add(const vi_tmMeasurementStats_t &src) noexcept;
+		inline void merge(const vi_tmMeasurementStats_t &src) noexcept;
 		inline vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept
 		{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
@@ -246,28 +246,34 @@ void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 	vi_tmMeasurementStatsRepl(this, v, n);
 }
 
-void measuring_t::add(const vi_tmMeasurementStats_t &src) noexcept
-{	assert(check_invariant(src));
-	if(src.amt_ < 1)
-	{	return; // Nothing to add.
+void measuring_t::merge(const vi_tmMeasurementStats_t &src) noexcept
+{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+	vi_tmMeasurementStatsMerge(this, &src);
+}
+
+void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT
+{	if(!verify(!!dst) || !verify(!!src) || src->amt_ == 0)
+	{	return;
 	}
 
-	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	calls_ += src.calls_;
-	amt_ += src.amt_;
-	sum_ += src.sum_;
+	assert(check_invariant(*dst));
+	assert(check_invariant(*src));
+
+	dst->calls_ += src->calls_;
+	dst->amt_ += src->amt_;
+	dst->sum_ += src->sum_;
 
 #ifdef VI_TM_STAT_USE_WELFORD
-	if (src.flt_amt_ > VI_TM_FP(0))
-	{	const auto rev_amt = VI_TM_FP(1) / (flt_amt_ + src.flt_amt_);
-		const auto diff_mean = src.flt_mean_ - flt_mean_;
-		flt_ss_ = std::fma(flt_amt_ * src.flt_amt_ * rev_amt, diff_mean * diff_mean, (flt_ss_ + src.flt_ss_));
-		flt_mean_ = std::fma(flt_mean_, flt_amt_, src.flt_mean_ * src.flt_amt_) * rev_amt;
-		flt_amt_ += src.flt_amt_;
-		flt_calls_ += src.flt_calls_;
+	if (src->flt_amt_ > VI_TM_FP(0))
+	{	const auto rev_amt = VI_TM_FP(1) / (dst->flt_amt_ + src->flt_amt_);
+		const auto diff_mean = src->flt_mean_ - dst->flt_mean_;
+		dst->flt_ss_ = std::fma(dst->flt_amt_ * src->flt_amt_ * rev_amt, diff_mean * diff_mean, (dst->flt_ss_ + src->flt_ss_));
+		dst->flt_mean_ = std::fma(dst->flt_mean_, dst->flt_amt_, src->flt_mean_ * src->flt_amt_) * rev_amt;
+		dst->flt_amt_ += src->flt_amt_;
+		dst->flt_calls_ += src->flt_calls_;
 	}
 #endif
-	assert(check_invariant(*this));
+	assert(check_invariant(*dst));
 }
 
 vi_tmMeasurementStats_t measuring_t::get() const noexcept
@@ -365,9 +371,8 @@ void VI_TM_CALL vi_tmMeasurementRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI
 {	if (verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
-void VI_TM_CALL vi_tmMeasurementsMerge(VI_TM_HMEAS meas, const vi_tmMeasurementStats_t *src) noexcept
-{
-	if (verify(meas)) { meas->second.add(*src); }
+void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS meas, const vi_tmMeasurementStats_t *src) noexcept
+{	if (verify(meas)) { meas->second.merge(*src); }
 }
 
 void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasurementStats_t *data)

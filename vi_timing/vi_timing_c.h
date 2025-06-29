@@ -301,9 +301,30 @@ extern "C" {
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasurementRepl(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amount VI_DEF(1)) VI_NOEXCEPT;
 
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementsMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
+    /// <summary>
+    /// Merges the statistics from the given source measurement stats into the specified measurement handle.
+    /// </summary>
+    /// <param name="m">A handle to the measurement object to be updated.</param>
+    /// <param name="src">Pointer to the source measurement statistics to merge.</param>
+    /// <returns>This function does not return a value.</returns>
+    VI_TM_API void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
 
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *p, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+    /// <summary>
+    /// Updates the given measurement statistics structure by adding a duration and amount.
+    /// </summary>
+    /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
+    /// <param name="dur">The time difference value to add to the statistics.</param>
+    /// <param name="amt">The amount associated with the time difference to add. Defaults to 1.</param>
+    /// <returns>This function does not return a value.</returns>
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+
+    /// <summary>
+    /// Merges the statistics from the source measurement statistics structure into the destination.
+    /// </summary>
+    /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
+    /// <param name="src">Pointer to the source measurement statistics structure to merge.</param>
+    /// <returns>This function does not return a value.</returns>
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
 
 	/// <summary>
 	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
@@ -314,7 +335,7 @@ extern "C" {
 	/// <param name="amount">Pointer to a VI_TM_SIZE variable that will receive the measured amount. Can be nullptr if not needed.</param>
 	/// <param name="calls_cnt">Pointer to a VI_TM_SIZE variable that will receive the number of calls. Can be nullptr if not needed.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS m, const char **name, vi_tmMeasurementStats_t *data);
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS m, const char **name, vi_tmMeasurementStats_t *dst);
 	
 	/// <summary>
 	/// Resets the measurement state for the specified measurement handle.
