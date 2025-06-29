@@ -176,12 +176,12 @@ namespace
 	{	std::vector<metering_t> result;
 		auto data = std::tie(result, flags);
 		using data_t = decltype(data);
-		vi_tmMeasuringEnumerate
+		vi_tmMeasurementEnumerate
 		(	journal_handle,
 			[](VI_TM_HMEAS h, void *callback_data)
 			{	const char *name;
 				vi_tmMeasurementStats_t meas;
-				vi_tmMeasuringGet(h, &name, &meas);
+				vi_tmMeasurementGet(h, &name, &meas);
 				auto& [vec, flags] = *static_cast<data_t*>(callback_data);
 				vec.emplace_back(name, std::move(meas), flags);
 				return 0; // Ok, continue enumerate.

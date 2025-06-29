@@ -124,8 +124,8 @@ namespace
 	void measuring(VI_TM_HJOUR journal, const char* name)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
-		const auto h = vi_tmMeasuring(journal, name);
-		vi_tmMeasuringRepl(h, finish - start, 1U);
+		const auto h = vi_tmMeasurement(journal, name);
+		vi_tmMeasurementRepl(h, finish - start, 1U);
 	};
 
 	auto meas_duration()
@@ -139,13 +139,13 @@ namespace
 	void measuring_with_caching(VI_TM_HMEAS m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
-		vi_tmMeasuringRepl(m, finish - start, 1U);
+		vi_tmMeasurementRepl(m, finish - start, 1U);
 	};
 
 	auto meas_duration_with_caching()
 	{	double result{};
 		if (const auto journal = create_journal())
-		{	if (const auto m = vi_tmMeasuring(journal.get(), SERVICE_NAME))
+		{	if (const auto m = vi_tmMeasurement(journal.get(), SERVICE_NAME))
 			{	result = diff_calc<measuring_with_caching>(m);
 			}
 		}

@@ -161,7 +161,7 @@ namespace vi_tm
 		void finish()
 		{	if (is_active())
 			{	const auto finish = vi_tmGetTicks();
-				vi_tmMeasuringRepl(meas_, finish - start_, amt_);
+				vi_tmMeasurementRepl(meas_, finish - start_, amt_);
 				amt_ = 0;
 			}
 		}
@@ -176,10 +176,10 @@ namespace vi_tm
 	// be called with different measurement names.
 #	define VI_TM(...) \
 		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, VI_TM_SIZE amount = 1) -> vi_tm::measurer_t { \
-			static const auto meas = vi_tmMeasuring(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
+			static const auto meas = vi_tmMeasurement(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
 			VI_DEBUG_ONLY \
 			(	const char* registered_name = nullptr; \
-				vi_tmMeasuringGet(meas, &registered_name, nullptr); \
+				vi_tmMeasurementGet(meas, &registered_name, nullptr); \
 				assert(registered_name && 0 == std::strcmp(name, registered_name) && \
 					"One VI_TM macro cannot be reused with a different name value!"); \
 			) \
@@ -193,7 +193,7 @@ namespace vi_tm
 #	define VI_TM_REPORT(...) vi_tmReport(VI_TM_HGLOBAL, __VA_ARGS__)
 
 	// Resets the data of the specified measure entry in global journal. The handle remains valid.
-#	define VI_TM_RESET(name) vi_tmMeasuringReset(vi_tmMeasuring(VI_TM_HGLOBAL, (name)))
+#	define VI_TM_RESET(name) vi_tmMeasurementReset(vi_tmMeasurement(VI_TM_HGLOBAL, (name)))
 
 	// Full version string of the library (Example: "0.1.0.2506151515R static").
 #	define VI_TM_FULLVERSION static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_VERSION))

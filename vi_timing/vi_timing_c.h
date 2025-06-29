@@ -281,7 +281,7 @@ extern "C" {
 	/// <param name="j">The handle to the journal containing the measurement.</param>
 	/// <param name="name">The name of the measurement entry to retrieve.</param>
 	/// <returns>A handle to the specified measurement entry within the journal.</returns>
-	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR j, const char* name);
+	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasurement(VI_TM_HJOUR j, const char* name);
 
 	/// <summary>
 	/// Invokes a callback function for each measurement entry in the journal, allowing early interruption.
@@ -290,7 +290,7 @@ extern "C" {
 	/// <param name="fn">A callback function to be called for each measurement. It receives a handle to the measurement and the user-provided data pointer.</param>
 	/// <param name="data">A pointer to user-defined data that is passed to the callback function.</param>
 	/// <returns>Returns 0 if all measurements were processed. If the callback returns a non-zero value, iteration stops and that value is returned.</returns>
-	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR j, vi_tmMeasEnumCb_t fn, void* data);
+	VI_TM_API int VI_TM_CALL vi_tmMeasurementEnumerate(VI_TM_HJOUR j, vi_tmMeasEnumCb_t fn, void* data);
 
 	/// <summary>
 	/// Performs a measurement replenishment operation by adding a time difference and amount to the measurement object.
@@ -299,9 +299,9 @@ extern "C" {
 	/// <param name="tick_diff">The time difference value to add to the measurement.</param>
 	/// <param name="amount">The amount associated with the time difference to add.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementRepl(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amount VI_DEF(1)) VI_NOEXCEPT;
 
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementsMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
 
 	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *p, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
 
@@ -314,14 +314,14 @@ extern "C" {
 	/// <param name="amount">Pointer to a VI_TM_SIZE variable that will receive the measured amount. Can be nullptr if not needed.</param>
 	/// <param name="calls_cnt">Pointer to a VI_TM_SIZE variable that will receive the number of calls. Can be nullptr if not needed.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS m, const char **name, vi_tmMeasurementStats_t *data);
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS m, const char **name, vi_tmMeasurementStats_t *data);
 	
 	/// <summary>
 	/// Resets the measurement state for the specified measurement handle.
 	/// </summary>
 	/// <param name="meas">The measurement handle whose state should be reset.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS m);
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS m);
 
 	/// <summary>
 	/// Retrieves static information about the timing module based on the specified info type.

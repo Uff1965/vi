@@ -350,34 +350,34 @@ void VI_TM_CALL vi_tmJournalClose(VI_TM_HJOUR journal)
 }
 
 void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal) noexcept
-{	vi_tmMeasuringEnumerate(journal, [](VI_TM_HMEAS m, void*) { vi_tmMeasuringReset(m); return 0; }, nullptr);
+{	vi_tmMeasurementEnumerate(journal, [](VI_TM_HMEAS m, void*) { vi_tmMeasurementReset(m); return 0; }, nullptr);
 }
 
-int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCb_t fn, void *data)
+int VI_TM_CALL vi_tmMeasurementEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCb_t fn, void *data)
 {	return vi_tmMeasurementsJournal_t::from_handle(journal).for_each_measurement(fn, data);
 }
 
-VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR journal, const char *name)
+VI_TM_HMEAS VI_TM_CALL vi_tmMeasurement(VI_TM_HJOUR journal, const char *name)
 {	return static_cast<VI_TM_HMEAS>(&vi_tmMeasurementsJournal_t::from_handle(journal).try_emplace(name));
 }
 
-void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
+void VI_TM_CALL vi_tmMeasurementRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
 {	if (verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
-void VI_TM_CALL vi_tmMeasuringMerge(VI_TM_HMEAS meas, const vi_tmMeasurementStats_t *src) noexcept
+void VI_TM_CALL vi_tmMeasurementsMerge(VI_TM_HMEAS meas, const vi_tmMeasurementStats_t *src) noexcept
 {
 	if (verify(meas)) { meas->second.add(*src); }
 }
 
-void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasurementStats_t *data)
+void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasurementStats_t *data)
 {	if (verify(meas))
 	{	if (name) { *name = meas->first.c_str(); }
 		if (data) { *data = meas->second.get(); }
 	}
 }
 
-void VI_TM_CALL vi_tmMeasuringReset(VI_TM_HMEAS meas)
+void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS meas)
 {	if (verify(meas)) { meas->second.reset(); }
 }
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -421,19 +421,19 @@ namespace
 			const char *name = nullptr; // Name of the measurement to be filled in.
 			vi_tmMeasurementStats_t md; // Measurement data to be filled in.
 			std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> journal{ vi_tmJournalCreate(), vi_tmJournalClose }; // Journal for measurements, automatically closed on destruction.
-			{	const auto m = vi_tmMeasuring(journal.get(), NAME); // Create a measurement 'NAME'.
+			{	const auto m = vi_tmMeasurement(journal.get(), NAME); // Create a measurement 'NAME'.
 				for (auto x : samples_simple) // Add simple samples one at a time.
-				{	vi_tmMeasuringRepl(m, x);
+				{	vi_tmMeasurementRepl(m, x);
 				}
 				for (auto x : samples_multiple) // Add multiple samples M times at once.
-				{	vi_tmMeasuringRepl(m, M * x, M);
+				{	vi_tmMeasurementRepl(m, M * x, M);
 				}
 #	ifdef VI_TM_STAT_USE_WELFORD
 				for (auto x : samples_exclude) // Add samples that will be excluded from the statistics.
-				{	vi_tmMeasuringRepl(m, x, 1);
+				{	vi_tmMeasurementRepl(m, x, 1);
 				}
 #	endif
-				vi_tmMeasuringGet(m, &name, &md); // Get the measurement data and name.
+				vi_tmMeasurementGet(m, &name, &md); // Get the measurement data and name.
 			}
 
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));

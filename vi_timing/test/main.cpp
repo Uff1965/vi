@@ -70,19 +70,19 @@ namespace
 		auto cb_name = [](VI_TM_HMEAS m, void *data)
 			{	auto d = static_cast<data_t *>(data);
 				const char *name = nullptr;
-				vi_tmMeasuringGet(m, &name, nullptr);
+				vi_tmMeasurementGet(m, &name, nullptr);
 				if (name && d->name_max_len_ < std::strlen(name))
 				{	d->name_max_len_ = std::strlen(name);
 				}
 				return 0;
 			};
-		vi_tmMeasuringEnumerate(h, cb_name, &data);
+		vi_tmMeasurementEnumerate(h, cb_name, &data);
 
 		auto results_callback = [](VI_TM_HMEAS m, void* data)
 			{	auto d = static_cast<data_t *>(data);
 				const char *name;
 				vi_tmMeasurementStats_t meas;
-				vi_tmMeasuringGet(m, &name, &meas);
+				vi_tmMeasurementGet(m, &name, &meas);
 				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
 				std::right << std::scientific <<
 				" calls = " << std::setw(8) << meas.calls_ << ","
@@ -98,7 +98,7 @@ namespace
 				std::endl;
 				return 0;
 			};
-		vi_tmMeasuringEnumerate(h, results_callback, &data);
+		vi_tmMeasurementEnumerate(h, results_callback, &data);
 	}
 
 	inline std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> create_journal()
@@ -118,14 +118,14 @@ namespace
 		static std::atomic<std::size_t> v{};
 		auto h = create_journal();
 		auto thread_fn = [h = h.get()]
-		{	static auto j_load = vi_tmMeasuring(h, "thread_fn");
+		{	static auto j_load = vi_tmMeasurement(h, "thread_fn");
 			vi_tm::measurer_t tm{ j_load };
 
 			for (auto n = CNT; n; --n)
 			{	const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				vi_tmMeasuringRepl(vi_tmMeasuring(h, name.c_str()), f - s, 1);
+				vi_tmMeasurementRepl(vi_tmMeasurement(h, name.c_str()), f - s, 1);
 				v++;
 			}
 		};
@@ -161,8 +161,8 @@ namespace
 		std::cout << "\nTest sleep:\n";
 		auto journal = create_journal();
 		if(	auto j = journal.get())
-		{	auto m = vi_tmMeasuring(j, "100ms");
-			{	vi_tm::measurer_t tm{ vi_tmMeasuring(j, "100ms*10"), 10U };
+		{	auto m = vi_tmMeasurement(j, "100ms");
+			{	vi_tm::measurer_t tm{ vi_tmMeasurement(j, "100ms*10"), 10U };
 				for (int n = 0; n < 10; ++n)
 				{	vi_tm::measurer_t tm2{ m };
 					std::this_thread::sleep_for(100ms);
@@ -180,11 +180,11 @@ namespace
 		auto journal = create_journal();
 		{	auto const j = journal.get();
 
-			vi_tmMeasuringReset(vi_tmMeasuring(j, "vi_tm"));
-			vi_tmMeasuringReset(vi_tmMeasuring(j, "empty"));
+			vi_tmMeasurementReset(vi_tmMeasurement(j, "vi_tm"));
+			vi_tmMeasurementReset(vi_tmMeasurement(j, "empty"));
 
-			static auto const jTm = vi_tmMeasuring(j, "vi_tm");
-			static auto const jEmpty = vi_tmMeasuring(j, "empty");
+			static auto const jTm = vi_tmMeasurement(j, "vi_tm");
+			static auto const jEmpty = vi_tmMeasurement(j, "empty");
 
 			for (int n = 0; n < 1'000'000; ++n)
 			{
@@ -193,22 +193,22 @@ namespace
 					const auto sEmpty = vi_tmGetTicks(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
 					/**/
 					const auto fEmpty = vi_tmGetTicks();
-					vi_tmMeasuringRepl(jEmpty, fEmpty - sEmpty, 1);
+					vi_tmMeasurementRepl(jEmpty, fEmpty - sEmpty, 1);
 					const auto fTm = vi_tmGetTicks();
-					vi_tmMeasuringRepl(jTm, fTm - sTm, 1);
+					vi_tmMeasurementRepl(jTm, fTm - sTm, 1);
 				}
 			}
 
 			const char *name = nullptr;
 			vi_tmMeasurementStats_t data;
-			vi_tmMeasuringGet(vi_tmMeasuring(j, "vi_tm"), &name, &data);
+			vi_tmMeasurementGet(vi_tmMeasurement(j, "vi_tm"), &name, &data);
 #ifdef VI_TM_STAT_USE_WELFORD
 			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-			vi_tmMeasuringGet(vi_tmMeasuring(j, "empty"), &name, &data);
+			vi_tmMeasurementGet(vi_tmMeasurement(j, "empty"), &name, &data);
 			std::cout << "empty:\tmean = " << std::setprecision(3)  << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 #else
 			std::cout << "vi_tm:\tticks = " << std::setw(16) << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-			vi_tmMeasuringGet(vi_tmMeasuring(j, "empty"), &name, &data);
+			vi_tmMeasurementGet(vi_tmMeasurement(j, "empty"), &name, &data);
 			std::cout << "empty:\tticks = " << std::setw(16)  << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
 #endif
 			vi_tmReport(j, vi_tmShowMask);
@@ -284,12 +284,12 @@ namespace
 
 		auto journal = create_journal();
 		{	const auto unit = *static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT));
-			const auto m = vi_tmMeasuring(journal.get(), "Sample");
+			const auto m = vi_tmMeasurement(journal.get(), "Sample");
 			for (auto x : samples_simple)
-			{	vi_tmMeasuringRepl(m, static_cast<VI_TM_TDIFF>(x / unit));
+			{	vi_tmMeasurementRepl(m, static_cast<VI_TM_TDIFF>(x / unit));
 			}
 			for (auto x : samples_multiple)
-			{	vi_tmMeasuringRepl(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
+			{	vi_tmMeasurementRepl(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
 			}
 		}
 		std::cout << "RAW:\n";
@@ -313,7 +313,7 @@ namespace
 			" are added one by one and " << CNT / MULT <<  " by " << MULT << ".\n";
 
 		const auto j = create_journal();
-		const auto m = vi_tmMeasuring(j.get(), "ITEM");
+		const auto m = vi_tmMeasurement(j.get(), "ITEM");
 		
 		std::mt19937 gen{ VI_DEBUG_ONLY(std::random_device{}()) };
 		std::normal_distribution dist(MEAN, CV * MEAN);
@@ -321,20 +321,20 @@ namespace
 		for (int i = 0; i < CNT; ++i)
 		{	const auto v = dist(gen);
 			assert(v >= 0);
-			vi_tmMeasuringRepl(m, static_cast<VI_TM_TICK>(std::round(v)), 1);
+			vi_tmMeasurementRepl(m, static_cast<VI_TM_TICK>(std::round(v)), 1);
 		}
 
 		std::normal_distribution distM(MEAN * MULT, CV * MEAN * MULT);
 		for (int i = 0; i < CNT / MULT; ++i)
 		{	const auto v = distM(gen);
 			assert(v >= 0);
-			vi_tmMeasuringRepl(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
+			vi_tmMeasurementRepl(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
 		}
 
 		vi_tmReport(j.get(), vi_tmShowMask);
 
 		vi_tmMeasurementStats_t raw;
-		vi_tmMeasuringGet(m, nullptr, &raw);
+		vi_tmMeasurementGet(m, nullptr, &raw);
 		assert(raw.amt_ == CNT + CNT);
 		assert(raw.calls_ == CNT + CNT / MULT);
 #if defined VI_TM_STAT_USE_WELFORD
@@ -357,7 +357,7 @@ namespace
 		static std::timed_mutex mtx_t;
 		static std::shared_mutex mtx_s;
 
-#define VI_TM_EX(j, name) static const auto m = vi_tmMeasuring(j, name); vi_tm::measurer_t _{m}
+#define VI_TM_EX(j, name) static const auto m = vi_tmMeasurement(j, name); vi_tm::measurer_t _{m}
 		static void(*arr[])(VI_TM_HJOUR) = {
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*empty"); },
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*normal"); ++v_normal; },
@@ -369,8 +369,8 @@ namespace
 //			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex_shared"); std::lock_guard lg{ mtx_s }; ++v_normal; },
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex_recurs"); std::lock_guard lg{ mtx_r }; ++v_normal; },
 			[] (VI_TM_HJOUR h ){ VI_TM_EX(h, "*mutex_timed"); std::lock_guard lg{ mtx_t }; ++v_normal; },
-			[] (VI_TM_HJOUR h ){ static const auto m = vi_tmMeasuring(h, "*VI_TM"); vi_tm::measurer_t _{ m }; ++v_normal; },
-			[] (VI_TM_HJOUR h ){ vi_tm::measurer_t _{ vi_tmMeasuring(h, "*VI_XX") }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ static const auto m = vi_tmMeasurement(h, "*VI_TM"); vi_tm::measurer_t _{ m }; ++v_normal; },
+			[] (VI_TM_HJOUR h ){ vi_tm::measurer_t _{ vi_tmMeasurement(h, "*VI_XX") }; ++v_normal; },
 		};
 #undef VI_TM_EX
 
@@ -399,7 +399,7 @@ namespace
 		} while (std::next_permutation(std::begin(arr), std::end(arr)));
 		endl(std::cout);
 
-		{	static const auto m = vi_tmMeasuring(journal.get(), "*mutex_r***");
+		{	static const auto m = vi_tmMeasurement(journal.get(), "*mutex_r***");
 			for (int n = 0; n < 1'000'000; ++n)
 			{	vi_tm::measurer_t _{ m };
 				std::lock_guard lg{ mtx_r };
@@ -434,7 +434,7 @@ namespace
 			std::this_thread::sleep_for(1s);
 		}
 
-		{	vi_tm::measurer_t m{vi_tmMeasuring(VI_TM_HGLOBAL, "test_misc: xxx")};
+		{	vi_tm::measurer_t m{vi_tmMeasurement(VI_TM_HGLOBAL, "test_misc: xxx")};
 			std::this_thread::sleep_for(1s);
 			m.finish();
 
