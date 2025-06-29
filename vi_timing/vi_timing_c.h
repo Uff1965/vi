@@ -168,7 +168,7 @@ typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-r
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
 typedef struct vi_tmMeasurement_t *VI_TM_HMEAS; // Opaque handle to a measurement entry.
 typedef struct vi_tmMeasurementsJournal_t *VI_TM_HJOUR; // Opaque handle to a measurements journal object.
-typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
+typedef int (VI_TM_CALL *vi_tmMeasEnumCb_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
 typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Callback type for report function. ABI must be compatible with std::fputs!
 
 typedef struct vi_tmMeasurementStats_t
@@ -290,7 +290,7 @@ extern "C" {
 	/// <param name="fn">A callback function to be called for each measurement. It receives a handle to the measurement and the user-provided data pointer.</param>
 	/// <param name="data">A pointer to user-defined data that is passed to the callback function.</param>
 	/// <returns>Returns 0 if all measurements were processed. If the callback returns a non-zero value, iteration stops and that value is returned.</returns>
-	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR j, vi_tmMeasEnumCallback_t fn, void* data);
+	VI_TM_API int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR j, vi_tmMeasEnumCb_t fn, void* data);
 
 	/// <summary>
 	/// Performs a measurement replenishment operation by adding a time difference and amount to the measurement object.

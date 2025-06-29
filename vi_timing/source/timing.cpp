@@ -178,7 +178,7 @@ public:
 	~vi_tmMeasurementsJournal_t();
 	int init();
 	auto& try_emplace(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
-	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
+	int for_each_measurement(vi_tmMeasEnumCb_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
 	void clear();
 };
 
@@ -307,7 +307,7 @@ inline auto& vi_tmMeasurementsJournal_t::try_emplace(const char *name)
 	return *storage_.try_emplace(name).first;
 }
 
-int vi_tmMeasurementsJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
+int vi_tmMeasurementsJournal_t::for_each_measurement(vi_tmMeasEnumCb_t fn, void *data)
 {	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
@@ -353,7 +353,7 @@ void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal) noexcept
 {	vi_tmMeasuringEnumerate(journal, [](VI_TM_HMEAS m, void*) { vi_tmMeasuringReset(m); return 0; }, nullptr);
 }
 
-int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCallback_t fn, void *data)
+int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCb_t fn, void *data)
 {	return vi_tmMeasurementsJournal_t::from_handle(journal).for_each_measurement(fn, data);
 }
 
