@@ -110,11 +110,10 @@ namespace
 		}
 
 	#ifdef VI_TM_STAT_USE_WELFORD
-		if (!verify(VI_TM_FP(src.calls_) >= src.flt_calls_)) return false;
+		if (!verify(src.calls_ >= src.flt_calls_)) return false;
 		if (!verify(VI_TM_FP(src.amt_) >= src.flt_amt_)) return false;
-		if (!verify(src.flt_amt_ >= src.flt_calls_)) return false;
-		VI_TM_FP _;
-		if (!verify(std::modf(src.flt_amt_, &_) == VI_TM_FP(0))) return false;
+		if (!verify(src.flt_amt_ >= VI_TM_FP(src.flt_calls_))) return false;
+		if (VI_TM_FP _; !verify(std::modf(src.flt_amt_, &_) == VI_TM_FP(0))) return false;
 		if (!verify(src.flt_mean_ >= 0.0)) return false;
 		if (!verify(src.flt_ss_ >= 0.0)) return false;
 
@@ -125,12 +124,12 @@ namespace
 			if (!verify(src.max_ == -fp_limits_t::infinity())) return false;
 		}
 		else if (src.flt_amt_ == 1.0)
-		{	if (!verify(src.flt_calls_ == 1.0)) return false;
+		{	if (!verify(src.flt_calls_ == 1U)) return false;
 			if (!verify(src.min_ == src.max_)) return false;
 			if (!verify(std::abs(src.min_ - src.flt_mean_) / src.flt_mean_ < fp_limits_t::epsilon())) return false;
 		}
 		else
-		{	if (!verify(src.flt_calls_ >= 1.0)) return false;
+		{	if (!verify(src.flt_calls_ >= 1U)) return false;
 			if (!verify(std::nextafter(src.min_, fp_limits_t::lowest()) <= src.flt_mean_)) return false;
 			if (!verify(std::nextafter(src.max_, fp_limits_t::max()) >= src.flt_mean_)) return false;
 		}
@@ -146,9 +145,9 @@ namespace
 		measuring_t() noexcept
 		{	reset_impl();
 		}
-		inline void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
-		inline void merge(const vi_tmMeasurementStats_t &src) noexcept;
-		inline vi_tmMeasurementStats_t get() const noexcept;
+		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
+		void merge(const vi_tmMeasurementStats_t &src) noexcept;
+		vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept
 		{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 			reset_impl();
@@ -237,7 +236,7 @@ void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *meas, VI_TM_T
 	assert(check_invariant(*meas));
 }
 
-void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
+inline void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 {	if (!verify(!!n))
 	{	return;
 	}
@@ -246,7 +245,7 @@ void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 	vi_tmMeasurementStatsRepl(this, v, n);
 }
 
-void measuring_t::merge(const vi_tmMeasurementStats_t &src) noexcept
+inline void measuring_t::merge(const vi_tmMeasurementStats_t &src) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsMerge(this, &src);
 }
@@ -276,7 +275,7 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const v
 	assert(check_invariant(*dst));
 }
 
-vi_tmMeasurementStats_t measuring_t::get() const noexcept
+inline vi_tmMeasurementStats_t measuring_t::get() const noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	return *this;
 }
