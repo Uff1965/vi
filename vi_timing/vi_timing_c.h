@@ -166,8 +166,8 @@ typedef double VI_TM_FP; // Floating-point type used for timing calculations, ty
 typedef size_t VI_TM_SIZE; // Size type used for counting events, typically size_t.
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
-typedef struct vi_tmJournal_t *VI_TM_HJOUR; // Opaque handle to a timing journal object.
-typedef struct vi_tmMeasuring_t *VI_TM_HMEAS; // Opaque handle to a measurement entry within a journal.
+typedef struct vi_tmMeasurement_t *VI_TM_HMEAS; // Opaque handle to a measurement entry.
+typedef struct vi_tmMeasurementsJournal_t *VI_TM_HJOUR; // Opaque handle to a measurements journal object.
 typedef int (VI_TM_CALL *vi_tmMeasEnumCallback_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
 typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Callback type for report function. ABI must be compatible with std::fputs!
 
@@ -216,7 +216,7 @@ typedef enum vi_tmReportFlags_e
 	vi_tmShowDurationEx = 0x0080, // If set, the report will show the duration, including overhead costs, in seconds.
 	vi_tmShowResolution = 0x0100, // If set, the report will show the clock resolution in seconds.
 	vi_tmShowCorrected = 0x0200, // If set, the report will show corrected values (subtracting overhead).
-	vi_tmShowMask = 0x2F0, // Mask for all show flags.
+	vi_tmShowMask = 0x3F0, // Mask for all show flags.
 
 	vi_tmHideHeader = 0x0400, // If set, the report will not show the header with column names.
 	vi_tmDoNotSubtractOverhead = 0x0800, // If set, the overhead is not subtracted from the measured time in report.
@@ -299,7 +299,11 @@ extern "C" {
 	/// <param name="tick_diff">The time difference value to add to the measurement.</param>
 	/// <param name="amount">The amount associated with the time difference to add.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF duration, VI_TM_SIZE amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amount VI_DEF(1)) VI_NOEXCEPT;
+
+	VI_TM_API void VI_TM_CALL vi_tmMeasuringMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
+
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *p, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
 
 	/// <summary>
 	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.

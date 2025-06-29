@@ -81,15 +81,19 @@ namespace
 	using mutex = mutex_for_short_captures_t;
 }
 
-#	define THREADSAFE_ONLY(t) t
+#	define VI_THREADSAFE_ONLY(t) t
 #else
-#	define THREADSAFE_ONLY(t)
+#	define VI_THREADSAFE_ONLY(t)
 #endif
 
 static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
 
 namespace
 {
+	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
+
+	using fp_limits_t = std::numeric_limits<VI_TM_FP>;
+
 #ifndef NDEBUG
 	constexpr auto DBG_EPS()
 	{	if constexpr (std::is_same_v<VI_TM_FP, double>)
@@ -97,21 +101,56 @@ namespace
 		else
 			return VI_TM_FP(1.e-7);
 	};
+
+	bool check_invariant(const vi_tmMeasurementStats_t& src)
+	{	if(!verify(src.amt_ >= src.calls_)) return false;
+		if (src.calls_ == 0U)
+		{	if(!verify(src.amt_ == 0U)) return false;
+			if(!verify(src.sum_ == 0U)) return false;
+		}
+
+	#ifdef VI_TM_STAT_USE_WELFORD
+		if (!verify(VI_TM_FP(src.calls_) >= src.flt_calls_)) return false;
+		if (!verify(VI_TM_FP(src.amt_) >= src.flt_amt_)) return false;
+		if (!verify(src.flt_amt_ >= src.flt_calls_)) return false;
+		VI_TM_FP _;
+		if (!verify(std::modf(src.flt_amt_, &_) == VI_TM_FP(0))) return false;
+		if (!verify(src.flt_mean_ >= 0.0)) return false;
+		if (!verify(src.flt_ss_ >= 0.0)) return false;
+
+		if (src.flt_amt_ == 0.0)
+		{	if (!verify(src.flt_mean_ == 0.0)) return false;
+			if (!verify(src.flt_ss_ == 0.0)) return false;
+			if (!verify(src.min_ == fp_limits_t::infinity())) return false;
+			if (!verify(src.max_ == -fp_limits_t::infinity())) return false;
+		}
+		else if (src.flt_amt_ == 1.0)
+		{	if (!verify(src.flt_calls_ == 1.0)) return false;
+			if (!verify(src.min_ == src.max_)) return false;
+			if (!verify(std::abs(src.min_ - src.flt_mean_) / src.flt_mean_ < fp_limits_t::epsilon())) return false;
+		}
+		else
+		{	if (!verify(src.flt_calls_ >= 1.0)) return false;
+			if (!verify(std::nextafter(src.min_, fp_limits_t::lowest()) <= src.flt_mean_)) return false;
+			if (!verify(std::nextafter(src.max_, fp_limits_t::max()) >= src.flt_mean_)) return false;
+		}
+	#endif
+		return true;
+	}
 #endif
 
-	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
-
 	class measuring_t: public vi_tmMeasurementStats_t
-	{	THREADSAFE_ONLY(mutable mutex mtx_);
+	{	VI_THREADSAFE_ONLY(mutable mutex mtx_);
 		void reset_impl() noexcept;
 	public:
 		measuring_t() noexcept
 		{	reset_impl();
 		}
 		inline void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
-		vi_tmMeasurementStats_t get() const noexcept;
+		inline void add(const vi_tmMeasurementStats_t &src) noexcept;
+		inline vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept
-		{	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+		{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 			reset_impl();
 		}
 	};
@@ -119,24 +158,24 @@ namespace
 	using storage_t = std::unordered_map<std::string, measuring_t>;
 } // namespace
 
-struct vi_tmMeasuring_t: storage_t::value_type {/**/};
+struct vi_tmMeasurement_t: storage_t::value_type {/**/};
 static_assert
-	(	sizeof(vi_tmMeasuring_t) == sizeof(storage_t::value_type) && alignof(vi_tmMeasuring_t) == alignof(storage_t::value_type),
-		"'vi_tmMeasuring_t' should simply be a synonym for 'storage_t::value_type'."
+	(	sizeof(vi_tmMeasurement_t) == sizeof(storage_t::value_type) && alignof(vi_tmMeasurement_t) == alignof(storage_t::value_type),
+		"'vi_tmMeasurement_t' should simply be a synonym for 'storage_t::value_type'."
 	);
 
-struct vi_tmJournal_t
+struct vi_tmMeasurementsJournal_t
 {
 private:
 	static constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	static constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	THREADSAFE_ONLY(mutex storage_guard_);
+	VI_THREADSAFE_ONLY(mutex storage_guard_);
 	storage_t storage_;
 	bool need_report_ = false;
 public:
 	static auto& from_handle(VI_TM_HJOUR journal); // Get the journal from the handle or return the global journal.
-	explicit vi_tmJournal_t(bool need_report = false);
-	~vi_tmJournal_t();
+	explicit vi_tmMeasurementsJournal_t(bool need_report = false);
+	~vi_tmMeasurementsJournal_t();
 	int init();
 	auto& try_emplace(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
 	int for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
@@ -144,102 +183,132 @@ public:
 };
 
 void measuring_t::reset_impl() noexcept
-{	calls_ = 0;
-	amt_ = 0;
-	sum_ = 0;
+{	calls_ = 0U;
+	amt_ = 0U;
+	sum_ = 0U;
 #ifdef VI_TM_STAT_USE_WELFORD
-	flt_calls_ = 0;
-	flt_amt_ = 0;
-	flt_mean_ = 0;
-	flt_ss_ = 0;
-	min_ = INFINITY;
-	max_ = -INFINITY;
+	flt_calls_ = 0U;
+	flt_amt_ = VI_TM_FP(0);
+	flt_mean_ = VI_TM_FP(0);
+	flt_ss_ = VI_TM_FP(0);
+	min_ = fp_limits_t::infinity();
+	max_ = -fp_limits_t::infinity();
 #endif
+	assert(check_invariant(*this));
 }
 
-void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
-{	
-	if (!verify(!!n))
+void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *meas, VI_TM_TDIFF dur, VI_TM_SIZE amt) noexcept
+{	assert(meas);
+	assert(check_invariant(*meas));
+
+	if (!verify(!!amt))
 	{	return;
 	}
 
-	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-
-	++calls_;
-	sum_ += v;
-	amt_ += n;
+	++meas->calls_;
+	meas->amt_ += amt;
+	meas->sum_ += dur;
 
 #ifdef VI_TM_STAT_USE_WELFORD
 	constexpr VI_TM_FP K2 = 6.25; // 2.5^2 Threshold for outliers.
-	const auto v_f = static_cast<VI_TM_FP>(v);
-	const auto n_f = static_cast<VI_TM_FP>(n);
+	const auto v_f = static_cast<VI_TM_FP>(dur);
+	const auto n_f = static_cast<VI_TM_FP>(amt);
 
 	const auto a_f = v_f / n_f;
-	if (min_ > a_f) { min_ = a_f; }
-	if (max_ < a_f) { max_ = a_f; }
+	if (meas->min_ > a_f) { meas->min_ = a_f; }
+	if (meas->max_ < a_f) { meas->max_ = a_f; }
 
-	const auto deviation = v_f / n_f - flt_mean_; // Difference from the mean value.
-	const auto sum_square_dev = deviation * deviation * flt_amt_;
+	const auto deviation = v_f / n_f - meas->flt_mean_; // Difference from the mean value.
 	if
-	(	flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
-		flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
+	(	const auto sum_square_dev = deviation * deviation * meas->flt_amt_;
+		meas->flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
+		meas->flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
 		deviation < 0.0 || // The minimum value is usually closest to the true value.
-		sum_square_dev < K2 * flt_ss_ // Avoids outliers.
+		sum_square_dev < K2 * meas->flt_ss_ // Avoids outliers.
 	)
-	{	const auto flt_amt = flt_amt_;
-		flt_amt_ += n_f;
-		const auto rev_total = VI_TM_FP(1.0) / flt_amt_;
-		flt_mean_ = std::fma(flt_mean_, flt_amt, v_f) * rev_total;
-		flt_ss_ = std::fma(sum_square_dev, n_f * rev_total, flt_ss_);
-		flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
+	{	const auto flt_amt = meas->flt_amt_;
+		meas->flt_amt_ += n_f;
+		const auto rev_total = VI_TM_FP(1.0) / meas->flt_amt_;
+		meas->flt_mean_ = std::fma(meas->flt_mean_, flt_amt, v_f) * rev_total;
+		meas->flt_ss_ = std::fma(sum_square_dev, n_f * rev_total, meas->flt_ss_);
+		meas->flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
 	}
 #endif
+	assert(check_invariant(*meas));
+}
 
-	assert(flt_mean_ >= 0.0);
-	assert(calls_ >= 2 || std::abs(min_ - flt_mean_) / flt_mean_ < DBG_EPS());
-	assert(calls_ >= 2 || std::abs(max_ - flt_mean_) / flt_mean_ < DBG_EPS());
-	assert(calls_ == 1 || min_ <= flt_mean_ && flt_mean_ <= max_);
+void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
+{	if (!verify(!!n))
+	{	return;
+	}
+
+	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+	vi_tmMeasurementStatsRepl(this, v, n);
+}
+
+void measuring_t::add(const vi_tmMeasurementStats_t &src) noexcept
+{	assert(check_invariant(src));
+	if(src.amt_ < 1)
+	{	return; // Nothing to add.
+	}
+
+	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+	calls_ += src.calls_;
+	amt_ += src.amt_;
+	sum_ += src.sum_;
+
+#ifdef VI_TM_STAT_USE_WELFORD
+	if (src.flt_amt_ > VI_TM_FP(0))
+	{	const auto rev_amt = VI_TM_FP(1) / (flt_amt_ + src.flt_amt_);
+		const auto diff_mean = src.flt_mean_ - flt_mean_;
+		flt_ss_ = std::fma(flt_amt_ * src.flt_amt_ * rev_amt, diff_mean * diff_mean, (flt_ss_ + src.flt_ss_));
+		flt_mean_ = std::fma(flt_mean_, flt_amt_, src.flt_mean_ * src.flt_amt_) * rev_amt;
+		flt_amt_ += src.flt_amt_;
+		flt_calls_ += src.flt_calls_;
+	}
+#endif
+	assert(check_invariant(*this));
 }
 
 vi_tmMeasurementStats_t measuring_t::get() const noexcept
-{	THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	return *this;
 }
 
-inline auto& vi_tmJournal_t::from_handle(VI_TM_HJOUR journal)
-{	static vi_tmJournal_t global{true};
+inline auto& vi_tmMeasurementsJournal_t::from_handle(VI_TM_HJOUR journal)
+{	static vi_tmMeasurementsJournal_t global{true};
 	assert(journal);
 	return VI_TM_HGLOBAL == journal ? global : *journal;
 }
 
-vi_tmJournal_t::vi_tmJournal_t(bool need_report)
+vi_tmMeasurementsJournal_t::vi_tmMeasurementsJournal_t(bool need_report)
 	: need_report_(need_report)
 {	storage_.max_load_factor(MAX_LOAD_FACTOR);
 	storage_.reserve(DEFAULT_STORAGE_CAPACITY);
 }
 
-vi_tmJournal_t::~vi_tmJournal_t()
+vi_tmMeasurementsJournal_t::~vi_tmMeasurementsJournal_t()
 {	if (need_report_)
 	{	vi_tmReport(this, vi_tmShowResolution | vi_tmShowDuration | vi_tmSortByName);
 	}
 }
 
-int vi_tmJournal_t::init()
-{	auto &journal = vi_tmJournal_t::from_handle(VI_TM_HGLOBAL);
+int vi_tmMeasurementsJournal_t::init()
+{	auto &journal = vi_tmMeasurementsJournal_t::from_handle(VI_TM_HGLOBAL);
 	assert(journal.storage_.empty() && "The global journal should not be empty at initialization.");
 	// Initialize the global journal here.
 	((void)journal);
 	return 0;
 }
 
-inline auto& vi_tmJournal_t::try_emplace(const char *name)
+inline auto& vi_tmMeasurementsJournal_t::try_emplace(const char *name)
 {
-	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	return *storage_.try_emplace(name).first;
 }
 
-int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
-{	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+int vi_tmMeasurementsJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
+{	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
 	{	assert(it.second.amt_ >= it.second.calls_);
@@ -252,23 +321,23 @@ int vi_tmJournal_t::for_each_measurement(vi_tmMeasEnumCallback_t fn, void *data)
 	return 0;
 }
 
-void vi_tmJournal_t::clear()
-{	THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+void vi_tmMeasurementsJournal_t::clear()
+{	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	storage_.clear();
 }
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 int VI_TM_CALL vi_tmInit()
-{	return vi_tmJournal_t::from_handle(VI_TM_HGLOBAL).init();
+{	return vi_tmMeasurementsJournal_t::from_handle(VI_TM_HGLOBAL).init();
 }
 
 void VI_TM_CALL vi_tmFinit(void)
-{	vi_tmJournal_t::from_handle(VI_TM_HGLOBAL).clear();
+{	vi_tmMeasurementsJournal_t::from_handle(VI_TM_HGLOBAL).clear();
 }
 
 VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned /*flags*/, void */*reserved*/)
 {	try
-	{	return new vi_tmJournal_t{};
+	{	return new vi_tmMeasurementsJournal_t{};
 	}
 	catch (const std::bad_alloc &)
 	{	assert(false);
@@ -285,15 +354,20 @@ void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal) noexcept
 }
 
 int VI_TM_CALL vi_tmMeasuringEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCallback_t fn, void *data)
-{	return vi_tmJournal_t::from_handle(journal).for_each_measurement(fn, data);
+{	return vi_tmMeasurementsJournal_t::from_handle(journal).for_each_measurement(fn, data);
 }
 
 VI_TM_HMEAS VI_TM_CALL vi_tmMeasuring(VI_TM_HJOUR journal, const char *name)
-{	return static_cast<VI_TM_HMEAS>(&vi_tmJournal_t::from_handle(journal).try_emplace(name));
+{	return static_cast<VI_TM_HMEAS>(&vi_tmMeasurementsJournal_t::from_handle(journal).try_emplace(name));
 }
 
 void VI_TM_CALL vi_tmMeasuringRepl(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
 {	if (verify(meas)) { meas->second.add(tick_diff, amount); }
+}
+
+void VI_TM_CALL vi_tmMeasuringMerge(VI_TM_HMEAS meas, const vi_tmMeasurementStats_t *src) noexcept
+{
+	if (verify(meas)) { meas->second.add(*src); }
 }
 
 void VI_TM_CALL vi_tmMeasuringGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasurementStats_t *data)

@@ -87,7 +87,7 @@ namespace
 				std::right << std::scientific <<
 				" calls = " << std::setw(8) << meas.calls_ << ","
 				" amt = " << std::setw(8) << meas.amt_ << ","
-				" sum = " << std::setw(15) << meas.sum_ << ","
+				" sum = " << std::setw(15) << meas.sum_ << "," <<
 #ifdef VI_TM_STAT_USE_WELFORD
 				" min = " << std::setw(9) << meas.min_ << ","
 				" max = " << std::setw(9) << meas.max_ << ","
