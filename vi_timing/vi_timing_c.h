@@ -171,6 +171,9 @@ typedef struct vi_tmMeasurementsJournal_t *VI_TM_HJOUR; // Opaque handle to a me
 typedef int (VI_TM_CALL *vi_tmMeasEnumCb_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
 typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Callback type for report function. ABI must be compatible with std::fputs!
 
+// vi_tmMeasurementStats_t: Structure holding statistics for a timing measurement.
+// This structure is used to store the number of calls, total time spent, and other statistical data for a measurement.
+// Use the vi_tmMeasurementStatsReset function to reset the structure to its initial state!!!
 typedef struct vi_tmMeasurementStats_t
 {	VI_TM_SIZE calls_;		// The number of times the measurement was invoked.
 	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
@@ -180,8 +183,8 @@ typedef struct vi_tmMeasurementStats_t
 	VI_TM_FP flt_amt_;		// Number of events counted. Filtered!
 	VI_TM_FP flt_mean_;		// The mean (average) time taken per processed events. In ticks. Filtered!
 	VI_TM_FP flt_ss_;		// Sum of Squares. In ticks. Filtered!
-	VI_TM_FP min_;			// INFINITY - initially. Minimum time taken for a single event, in ticks.
-	VI_TM_FP max_;			// -INFINITY - initially. Maximum time taken for a single event, in ticks.
+	VI_TM_FP min_; //!!!! INFINITY - initially!!! Minimum time taken for a single event, in ticks.
+	VI_TM_FP max_; //!!!! -INFINITY - initially!!! Maximum time taken for a single event, in ticks.
 #endif
 } vi_tmMeasurementStats_t;
 
