@@ -136,20 +136,32 @@ namespace
 		return result;
 	}
 
-	void measuring_with_caching(VI_TM_HMEAS m)
+	void threadsafe_measuring_with_caching(VI_TM_HMEAS m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		vi_tmMeasurementRepl(m, finish - start, 1U);
 	};
 
-	auto meas_duration_with_caching()
+	void measuring_with_caching(vi_tmMeasurementStats_t &m)
+	{	const auto start = vi_tmGetTicks();
+		const auto finish = vi_tmGetTicks();
+		vi_tmMeasurementStatsRepl(&m, finish - start, 1U);
+	};
+
+	auto meas_threadsafe_duration_with_caching()
 	{	double result{};
 		if (const auto journal = create_journal())
 		{	if (const auto m = vi_tmMeasurement(journal.get(), SERVICE_NAME))
-			{	result = diff_calc<measuring_with_caching>(m);
+			{	result = diff_calc<threadsafe_measuring_with_caching>(m);
 			}
 		}
 		return result;
+	}
+
+	auto meas_duration_with_caching()
+	{	vi_tmMeasurementStats_t m;
+		vi_tmMeasurementStatsReset(&m);
+		return diff_calc<measuring_with_caching>(m);
 	}
 
 	auto meas_GetTicks()
@@ -210,6 +222,7 @@ misc::properties_t::properties_t()
 	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
 	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
 	clock_latency_ticks_ = meas_cost_calling_tick_function(); // The cost of a single call of vi_tmGetTicks.
-	duration_ = seconds_per_tick_ * meas_duration_with_caching(); // The cost of a single measurement with preservation in seconds.
-	duration_ex_ = seconds_per_tick_ * meas_duration(); // The cost of a single measurement in seconds.
+	duration_non_threadsafe_ = seconds_per_tick_ * meas_duration_with_caching();
+	duration_threadsafe_ = seconds_per_tick_ * meas_threadsafe_duration_with_caching(); // The cost of a single measurement with preservation in seconds.
+	duration_ex_threadsafe_ = seconds_per_tick_ * meas_duration(); // The cost of a single measurement in seconds.
 }

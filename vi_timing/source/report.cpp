@@ -206,10 +206,13 @@ namespace
 			{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_ticks_);
 			}
 			if (flags & vi_tmShowDuration)
-			{	str << "Duration: " << to_string(props.duration_.count());
+			{	str << "Duration: " << to_string(props.duration_threadsafe_.count());
+			}
+			if (flags & vi_tmShowDurationNonThreadsafe)
+			{	str << "Duration thread-unsafe: " << to_string(props.duration_non_threadsafe_.count());
 			}
 			if (flags & vi_tmShowDurationEx)
-			{	str << "Duration ex: " << to_string(props.duration_ex_.count());
+			{	str << "Duration ex: " << to_string(props.duration_ex_threadsafe_.count());
 			}
 			if (flags & vi_tmShowUnit)
 			{	str << "One tick: " << to_string(props.seconds_per_tick_.count());

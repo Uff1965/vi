@@ -140,17 +140,16 @@ namespace
 
 	class measuring_t: public vi_tmMeasurementStats_t
 	{	VI_THREADSAFE_ONLY(mutable mutex mtx_);
-		void reset_impl() noexcept;
 	public:
 		measuring_t() noexcept
-		{	reset_impl();
+		{	vi_tmMeasurementStatsReset(this);
 		}
 		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
 		void merge(const vi_tmMeasurementStats_t &src) noexcept;
 		vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept
 		{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-			reset_impl();
+			vi_tmMeasurementStatsReset(this);
 		}
 	};
 
@@ -181,19 +180,19 @@ public:
 	void clear();
 };
 
-void measuring_t::reset_impl() noexcept
-{	calls_ = 0U;
-	amt_ = 0U;
-	sum_ = 0U;
+void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *m) noexcept
+{	m->calls_ = 0U;
+	m->amt_ = 0U;
+	m->sum_ = 0U;
 #ifdef VI_TM_STAT_USE_WELFORD
-	flt_calls_ = 0U;
-	flt_amt_ = VI_TM_FP(0);
-	flt_mean_ = VI_TM_FP(0);
-	flt_ss_ = VI_TM_FP(0);
-	min_ = fp_limits_t::infinity();
-	max_ = -fp_limits_t::infinity();
+	m->flt_calls_ = 0U;
+	m->flt_amt_ = VI_TM_FP(0);
+	m->flt_mean_ = VI_TM_FP(0);
+	m->flt_ss_ = VI_TM_FP(0);
+	m->min_ = fp_limits_t::infinity();
+	m->max_ = -fp_limits_t::infinity();
 #endif
-	assert(check_invariant(*this));
+	assert(check_invariant(*m));
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *meas, VI_TM_TDIFF dur, VI_TM_SIZE amt) noexcept

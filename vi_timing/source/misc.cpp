@@ -358,12 +358,17 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		}
 
 		case VI_TM_INFO_DURATION:
-		{	static const double duration = misc::properties_t::props().duration_.count();
+		{	static const double duration = misc::properties_t::props().duration_threadsafe_.count();
+			return &duration;
+		}
+
+		case VI_TM_INFO_DURATION_UNSAFE:
+		{	static const double duration = misc::properties_t::props().duration_non_threadsafe_.count();
 			return &duration;
 		}
 
 		case VI_TM_INFO_DURATION_EX:
-		{	static const double duration_ex = misc::properties_t::props().duration_ex_.count();
+		{	static const double duration_ex = misc::properties_t::props().duration_ex_threadsafe_.count();
 			return &duration_ex;
 		}
 
@@ -378,7 +383,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		}
 
 		default:
-			static_assert(VI_TM_INFO__COUNT == 10, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
+			static_assert(VI_TM_INFO__COUNT == 11, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
 			assert(false); // If we reach this point, the info type is not recognized.
 			return nullptr;
 	}

@@ -194,6 +194,7 @@ typedef enum vi_tmInfo_e // Enumeration for various timing information types.
 	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
 	VI_TM_INFO_DURATION,    // const double*: Measure duration with cache in seconds.
 	VI_TM_INFO_DURATION_EX, // const double*: Measure duration in seconds.
+	VI_TM_INFO_DURATION_UNSAFE, // const double*: Measure thread-unsafe duration in seconds.
 	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
 	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
 
@@ -214,9 +215,10 @@ typedef enum vi_tmReportFlags_e
 	vi_tmShowUnit = 0x0020, // If set, the report will show the time unit (seconds per tick).
 	vi_tmShowDuration = 0x0040, // If set, the report will show the duration of the measurement in seconds.
 	vi_tmShowDurationEx = 0x0080, // If set, the report will show the duration, including overhead costs, in seconds.
-	vi_tmShowResolution = 0x0100, // If set, the report will show the clock resolution in seconds.
-	vi_tmShowCorrected = 0x0200, // If set, the report will show corrected values (subtracting overhead).
-	vi_tmShowMask = 0x3F0, // Mask for all show flags.
+	vi_tmShowDurationNonThreadsafe = 0x0100, // If this parameter is set, the report will indicate the duration of the threadunsafe measurement.
+	vi_tmShowResolution = 0x0200, // If set, the report will show the clock resolution in seconds.
+	vi_tmShowCorrected = 0x0400, // If set, the report will show corrected values (subtracting overhead).
+	vi_tmShowMask = 0x7F0, // Mask for all show flags.
 
 	vi_tmHideHeader = 0x0400, // If set, the report will not show the header with column names.
 	vi_tmDoNotSubtractOverhead = 0x0800, // If set, the overhead is not subtracted from the measured time in report.
@@ -309,23 +311,6 @@ extern "C" {
     /// <returns>This function does not return a value.</returns>
     VI_TM_API void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
 
-    /// <summary>
-    /// Updates the given measurement statistics structure by adding a duration and amount.
-    /// </summary>
-    /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
-    /// <param name="dur">The time difference value to add to the statistics.</param>
-    /// <param name="amt">The amount associated with the time difference to add. Defaults to 1.</param>
-    /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
-
-    /// <summary>
-    /// Merges the statistics from the source measurement statistics structure into the destination.
-    /// </summary>
-    /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
-    /// <param name="src">Pointer to the source measurement statistics structure to merge.</param>
-    /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
-
 	/// <summary>
 	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
 	/// </summary>
@@ -344,6 +329,30 @@ extern "C" {
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS m);
 
+    /// <summary>
+    /// Updates the given measurement statistics structure by adding a duration and amount.
+    /// </summary>
+    /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
+    /// <param name="dur">The time difference value to add to the statistics.</param>
+    /// <param name="amt">The amount associated with the time difference to add. Defaults to 1.</param>
+    /// <returns>This function does not return a value.</returns>
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+
+    /// <summary>
+    /// Merges the statistics from the source measurement statistics structure into the destination.
+    /// </summary>
+    /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
+    /// <param name="src">Pointer to the source measurement statistics structure to merge.</param>
+    /// <returns>This function does not return a value.</returns>
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
+
+	/// <summary>
+	/// Resets the given measurement statistics structure to its initial state.
+	/// </summary>
+	/// <param name="m">Pointer to the measurement statistics structure to reset.</param>
+	/// <returns>This function does not return a value.</returns>
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *m) VI_NOEXCEPT;
+
 	/// <summary>
 	/// Retrieves static information about the timing module based on the specified info type.
 	/// </summary>
@@ -353,7 +362,13 @@ extern "C" {
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	VI_TM_API int VI_SYS_CALL vi_tmReportCb(const char *str, void *data);
+    /// <summary>
+    /// Default report callback function. Writes the given string to the specified output stream.
+    /// </summary>
+    /// <param name="str">The string to output.</param>
+    /// <param name="data">A pointer to a FILE* stream. If nullptr, defaults to stdout.</param>
+    /// <returns>The number of characters written, or a negative value if an error occurs.</returns>
+    VI_TM_API int VI_SYS_CALL vi_tmReportCb(const char *str, void *data);
 
 	/// <summary>
 	/// Generates a report for the specified journal handle, using a callback function to output the report data.
@@ -385,6 +400,9 @@ extern "C" {
 	/// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_CurrentThreadAffinityRestore(void);
 
+	/// <summary>
+	/// Yields execution of the current thread, allowing other threads to run.
+	/// </summary>
 	VI_TM_API void VI_TM_CALL vi_ThreadYield(void);
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
