@@ -64,7 +64,7 @@ namespace vi_tm
 		std::string title_ = "Timing report:\n";
 		vi_tmReportCb_t callback_function_ = vi_tmReportCb;
 		void* callback_data_ = static_cast<void*>(stdout);
-		unsigned flags_ = vi_tmShowDuration | vi_tmShowOverhead | vi_tmShowUnit | vi_tmShowResolution | vi_tmSortBySpeed;
+		unsigned flags_ = vi_tmShowDuration | vi_tmShowResolution | vi_tmSortBySpeed;
 
 		init_t(const init_t &) = delete;
 		init_t& operator=(const init_t &) = delete;

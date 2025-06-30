@@ -46,6 +46,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
+	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
+
 	constexpr char TitleNumber[] = "#";
 	constexpr char TitleName[] = "Name";
 	constexpr char TitleAverage[] = "Avg.";
@@ -84,11 +86,13 @@ namespace
 		std::string average_txt_{ NotAvailable };
 		std::size_t amt_{}; // Number of measured units
 		std::string amt_txt_{ "0" };
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_MINMAX
 		duration_t<DURATION_PREC, DURATION_DEC> min_{}; // Minimum time in seconds
 		std::string min_txt_{ NotAvailable };
 		duration_t<DURATION_PREC, DURATION_DEC> max_{}; // Maximum time in seconds
 		std::string max_txt_{ NotAvailable };
+#endif
+#ifdef VI_TM_STAT_USE_WELFORD
 		double cv_{}; // Coefficient of Variation.
 		std::string cv_txt_{ NotAvailable }; // Coefficient of Variation (CV) in percent
 #endif
@@ -155,9 +159,11 @@ namespace
 		std::size_t max_len_name_{};
 		std::size_t max_len_average_{};
 #ifdef VI_TM_STAT_USE_WELFORD
+		std::size_t max_len_cv_{};
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
 		std::size_t max_len_min_{};
 		std::size_t max_len_max_{};
-		std::size_t max_len_cv_{};
 #endif
 		std::size_t max_len_total_{};
 		std::size_t max_len_amount_{};
@@ -208,9 +214,11 @@ namespace
 			if (flags & vi_tmShowDuration)
 			{	str << "Duration: " << to_string(props.duration_threadsafe_.count());
 			}
+#ifdef VI_TM_THREADSAFE
 			if (flags & vi_tmShowDurationNonThreadsafe)
 			{	str << "Duration thread-unsafe: " << to_string(props.duration_non_threadsafe_.count());
 			}
+#endif
 			if (flags & vi_tmShowDurationEx)
 			{	str << "Duration ex: " << to_string(props.duration_ex_threadsafe_.count());
 			}
@@ -249,91 +257,88 @@ namespace
 } // namespace
 
 metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, unsigned flags) noexcept
-:	name_{ name },
-	amt_{ meas.amt_ }
-{	assert(amt_ >= meas.calls_);
-	assert(!!amt_ == !!meas.calls_);
-
-	if (0 != amt_)
-	{	auto &props = misc::properties_t::props();
-
-		{	std::ostringstream str;
-			str.imbue(std::locale(str.getloc(), new misc::space_out));
-			str << amt_;
-			amt_txt_ = str.str();
-		}
-
-		const bool subtract_overhead{ 0U == (flags & vi_tmDoNotSubtractOverhead) };
-#ifdef VI_TM_STAT_USE_WELFORD
-		const auto correction = (subtract_overhead ? props.clock_latency_ticks_ * meas.flt_calls_ / meas.flt_amt_ : 0.0);
-		const auto limit = props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_);
-
-		assert(meas.min_ != INFINITY && meas.max_ != -INFINITY);
-		assert(meas.flt_amt_ && meas.flt_calls_); // Since amt_ is not zero.
-		assert(meas.flt_calls_ <= meas.flt_amt_);
-		if (1 < meas.calls_)
-		{
-			if (const auto v = meas.min_ - correction; v > limit)
-			{	min_ = props.seconds_per_tick_ * v;
-				min_txt_ = to_string(min_);
-			}
-			else
-			{	min_txt_ = Insignificant;
-			}
-
-			if (const auto v = meas.max_ - correction; v > limit)
-			{	max_ = props.seconds_per_tick_ * v;
-				max_txt_ = to_string(max_);
-			}
-			else
-			{	max_txt_ = Insignificant;
-			}
-		}
-		else
-		{	assert(meas.min_ == meas.max_);
-		}
-
-		if (const auto ave = meas.flt_mean_ - correction; ave <= limit)
-		{	sum_txt_ = Insignificant;
-			average_txt_ = Insignificant;
-		}
-		else
-		{	average_ = ave * props.seconds_per_tick_;
-			average_txt_ = to_string(average_);
-			sum_ = average_ * amt_;
-			sum_txt_ = to_string(sum_);
-			if (meas.calls_ >= 2)
-			{	assert(amt_ >= 2); // Zero amt_ values are not included in meas.calls_.
-				assert(meas.flt_amt_ >= 2); // The first two measurements cannot be filtered out.
-				cv_ = std::sqrt(meas.flt_ss_ / static_cast<double>(meas.flt_amt_ - 1)) / ave;
-				if (const auto cv = std::round(cv_ * 100.0); cv < 1.0)
-				{	cv_txt_ = "<1"; // Coefficient of Variation (CV) is too low.
-				}
-				else if (cv >= 100.0)
-				{	cv_txt_ = Excessive; // Coefficient of Variation (CV) is too high.
-				}
-				else
-				{	cv_txt_ = misc::to_string(cv, 2, 0);
-					assert(cv_txt_.back() == ' '); // In these conditions, the last character is always a space.
-					cv_txt_.back() = '%'; // Replace last char with '%'.
-				}
-			}
-		}
-#else
-		if (const auto ticks = static_cast<double>(meas.sum_) - (subtract_overhead? props.clock_latency_ticks_ * static_cast<double>(meas.calls_): 0.0);
-			ticks <= props.clock_resolution_ticks_ * std::sqrt(amt_)
-		)
-		{	sum_txt_ = Insignificant;
-			average_txt_ = Insignificant;
-		}
-		else
-		{	sum_ = props.seconds_per_tick_ * ticks;
-			sum_txt_ = to_string(sum_);
-			average_ = sum_ / amt_;
-			average_txt_ = to_string(average_);
-		}
-#endif
+:	name_{ name }
+{
+	if (!verify(0 == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.amt_)
+	{	return; // If the measurement is invalid or has no amount, we do not create a metering_t.
 	}
+
+	{	amt_ = meas.amt_;
+		std::ostringstream str;
+		str.imbue(std::locale(str.getloc(), new misc::space_out));
+		str << amt_;
+		amt_txt_ = str.str();
+	}
+
+	const auto &props = misc::properties_t::props();
+	const auto correction_ticks = (0U == (flags & vi_tmDoNotSubtractOverhead)) ? props.clock_latency_ticks_ : 0.0;
+	const auto total_ticks = meas.sum_ - correction_ticks * meas.calls_; // Total time in ticks, corrected for overhead if necessary.
+	const auto mean_ticks = total_ticks / meas.amt_; // Mean time in ticks, corrected for overhead if necessary.
+	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.amt_); // Limit for insignificant values, based on the clock resolution and the number of measurements.
+
+	if (mean_ticks <= limit_ticks)
+	{	sum_txt_ = Insignificant;
+	}
+	else
+	{	sum_ = props.seconds_per_tick_ * total_ticks;
+		sum_txt_ = to_string(sum_);
+	}
+
+#ifdef VI_TM_STAT_USE_MINMAX
+	if (meas.calls_ >= 2)
+	{	// If there is more than one measurement, the minimum and maximum values are meaningful.
+		if (const auto ticks = meas.min_ - correction_ticks; ticks <= limit_ticks)
+		{	min_txt_ = Insignificant;
+		}
+		else
+		{	min_ = props.seconds_per_tick_ * ticks;
+			min_txt_ = to_string(min_);
+		}
+
+		if (const auto ticks = meas.max_ - correction_ticks; ticks <= limit_ticks)
+		{	max_txt_ = Insignificant;
+		}
+		else
+		{	max_ = props.seconds_per_tick_ * ticks;
+			max_txt_ = to_string(max_);
+		}
+	}
+#endif
+
+#ifdef VI_TM_STAT_USE_WELFORD
+	const auto avg_ticks = meas.flt_mean_ - correction_ticks;
+	if (avg_ticks <= props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_))
+	{	average_txt_ = Insignificant;
+	}
+	else
+	{	average_ = avg_ticks * props.seconds_per_tick_;
+		average_txt_ = to_string(average_);
+	}
+
+	if (meas.flt_calls_ >= 2) // To calculate the measurement spread, at least two measurements must be taken.
+	{	assert(meas.flt_amt_ >= 2); // The first two measurements cannot be filtered out.
+		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_amt_ - VI_TM_FP(1))) / avg_ticks;
+		if (const auto cv_pct = std::round(cv_ * 100.0); cv_pct < 1.0)
+		{	cv_txt_ = "<1 %"; // Coefficient of Variation (CV) is too low.
+		}
+		else if (cv_pct >= 100.0)
+		{	cv_txt_ = Excessive; // Coefficient of Variation (CV) is too high.
+		}
+		else
+		{	cv_txt_ = misc::to_string(cv_pct, 2, 0);
+			assert(cv_txt_.back() == ' '); // In these conditions, the last character is always a space.
+			cv_txt_.back() = '%'; // Replace last space with '%'.
+		}
+	}
+#else
+	if (mean_ticks <= limit_ticks)
+	{	average_txt_ = Insignificant;
+	}
+	else
+	{	average_ = props.seconds_per_tick_ * mean_ticks;
+		average_txt_ = to_string(average_);
+	}
+#endif
 }
 
 formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
@@ -347,6 +352,8 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 		max_len_average_ = std::size(TitleAverage) - 1;
 #ifdef VI_TM_STAT_USE_WELFORD
 		max_len_cv_ = std::size(TitleCV) - 1;
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
 		max_len_min_ = std::size(TitleMin) - 1;
 		max_len_max_ = std::size(TitleMax) - 1;
 #endif
@@ -359,6 +366,8 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
 #ifdef VI_TM_STAT_USE_WELFORD
 		max_len_cv_ = std::max(max_len_cv_, itm.cv_txt_.length());
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
 		max_len_min_ = std::max(max_len_min_, itm.min_txt_.length());
 		max_len_max_ = std::max(max_len_max_, itm.max_txt_.length());
 #endif
@@ -449,6 +458,8 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 		std::setw(width_column(vi_tmSortBySpeed)) << item_column(vi_tmSortBySpeed) << " "
 #ifdef VI_TM_STAT_USE_WELFORD
 		"(" << std::setw(max_len_cv_) << TitleCV << ") "
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
 		"(" << std::setw(max_len_min_) << TitleMin << " - " << std::setw(max_len_max_) << TitleMax << ") "
 #endif
 		"[" << std::setw(width_column(vi_tmSortByTime)) << item_column(vi_tmSortByTime) << " / " <<
@@ -471,6 +482,8 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 		std::setw(width_column(vi_tmSortBySpeed)) << i.average_txt_ << " "
 #ifdef VI_TM_STAT_USE_WELFORD
 		"(" << std::setw(max_len_cv_) << i.cv_txt_ << ") "
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
 		"(" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << ") "
 #endif
 		"[" << std::setw(width_column(vi_tmSortByTime)) << i.sum_txt_ << " / " <<

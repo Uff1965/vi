@@ -89,11 +89,13 @@ namespace
 				" amt = " << std::setw(8) << meas.amt_ << ","
 				" sum = " << std::setw(15) << meas.sum_ << "," <<
 #ifdef VI_TM_STAT_USE_WELFORD
-				" min = " << std::setw(9) << meas.min_ << ","
-				" max = " << std::setw(9) << meas.max_ << ","
 				" flt_cnt = " << std::setw(10) << meas.flt_amt_ << ","
 				" flt_mean = " << std::setw(9) << meas.flt_mean_ << ","
 				" flt_ss = " << std::setw(9) << meas.flt_ss_ <<
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
+				" min = " << std::setw(9) << meas.min_ << ","
+				" max = " << std::setw(9) << meas.max_ << "," <<
 #endif
 				std::endl;
 				return 0;

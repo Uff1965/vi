@@ -94,43 +94,6 @@ namespace
 
 	using fp_limits_t = std::numeric_limits<VI_TM_FP>;
 
-#ifndef NDEBUG
-	bool check_invariant(const vi_tmMeasurementStats_t& src)
-	{	if(!verify(src.amt_ >= src.calls_)) return false;
-		if (src.calls_ == 0U)
-		{	if(!verify(src.amt_ == 0U)) return false;
-			if(!verify(src.sum_ == 0U)) return false;
-		}
-
-	#ifdef VI_TM_STAT_USE_WELFORD
-		if (!verify(src.calls_ >= src.flt_calls_)) return false;
-		if (!verify(VI_TM_FP(src.amt_) >= src.flt_amt_)) return false;
-		if (!verify(src.flt_amt_ >= VI_TM_FP(src.flt_calls_))) return false;
-		if (VI_TM_FP _; !verify(std::modf(src.flt_amt_, &_) == VI_TM_FP(0))) return false;
-		if (!verify(src.flt_mean_ >= 0.0)) return false;
-		if (!verify(src.flt_ss_ >= 0.0)) return false;
-
-		if (src.flt_amt_ == 0.0)
-		{	if (!verify(src.flt_mean_ == 0.0)) return false;
-			if (!verify(src.flt_ss_ == 0.0)) return false;
-			if (!verify(src.min_ == fp_limits_t::infinity())) return false;
-			if (!verify(src.max_ == -fp_limits_t::infinity())) return false;
-		}
-		else if (src.flt_amt_ == 1.0)
-		{	if (!verify(src.flt_calls_ == 1U)) return false;
-			if (!verify(src.min_ == src.max_)) return false;
-			if (!verify(std::abs(src.min_ - src.flt_mean_) / src.flt_mean_ < fp_limits_t::epsilon())) return false;
-		}
-		else
-		{	if (!verify(src.flt_calls_ >= 1U)) return false;
-			if (!verify(std::nextafter(src.min_, fp_limits_t::lowest()) <= src.flt_mean_)) return false;
-			if (!verify(std::nextafter(src.max_, fp_limits_t::max()) >= src.flt_mean_)) return false;
-		}
-	#endif
-		return true;
-	}
-#endif
-
 	class measuring_t: public vi_tmMeasurementStats_t
 	{	VI_THREADSAFE_ONLY(mutable mutex mtx_);
 	public:
@@ -173,24 +136,77 @@ public:
 	void clear();
 };
 
+int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *src) noexcept
+{
+	if(!verify(!!src->amt_ == !!src->calls_)) return __LINE__;
+	if (!verify(src->amt_ >= src->calls_)) return __LINE__;
+	if (src->amt_ == 0U && !verify(src->sum_ == 0U)) return __LINE__;
+
+#ifdef VI_TM_STAT_USE_MINMAX
+	if (src->calls_ == 1U && !verify(src->min_ == src->max_)) return __LINE__;
+	if (src->calls_ == 1U && !verify(src->sum_ == src->min_ * src->amt_)) return __LINE__;
+	if (src->amt_ == 0U)
+	{	if (!verify(src->min_ == fp_limits_t::infinity())) return __LINE__;
+		if (!verify(src->max_ == -fp_limits_t::infinity())) return __LINE__;
+	}
+	else if (src->amt_ == 1U)
+	{	if (!verify(VI_TM_FP(src->sum_) == src->min_)) return __LINE__;
+		if (!verify(VI_TM_FP(src->sum_) == src->max_)) return __LINE__;
+	}
+	else
+	{	if (!verify(src->min_ <= src->max_)) return __LINE__;
+		if (!verify(src->min_ != fp_limits_t::infinity())) return __LINE__;
+		if (!verify(VI_TM_FP(src->sum_) >= src->max_)) return __LINE__;
+	}
+#endif
+
+#ifdef VI_TM_STAT_USE_WELFORD
+	if (!verify(src->calls_ >= src->flt_calls_)) return __LINE__;
+	if (!verify(VI_TM_FP(src->amt_) >= src->flt_amt_)) return __LINE__;
+	if (!verify(!!src->flt_amt_ == !!src->flt_calls_)) return __LINE__;
+	if (!verify(src->flt_amt_ >= VI_TM_FP(src->flt_calls_))) return __LINE__;
+	if (VI_TM_FP _; !verify(std::modf(src->flt_amt_, &_) == VI_TM_FP(0))) return __LINE__; // Check if flt_amt_ is an integer.
+	if (!verify(src->flt_mean_ >= VI_TM_FP(0))) return __LINE__;
+	if (!verify(src->flt_ss_ >= VI_TM_FP(0))) return __LINE__;
+
+	if (src->flt_amt_ == VI_TM_FP(0))
+	{	if (!verify(src->flt_mean_ == VI_TM_FP(0))) return __LINE__;
+		if (!verify(src->flt_ss_ == VI_TM_FP(0))) return __LINE__;
+	}
+	else if (src->flt_amt_ == VI_TM_FP(1))
+	{	if (!verify(src->flt_calls_ == 1U)) return __LINE__;
+		if (!verify(src->flt_ss_ == VI_TM_FP(0))) return __LINE__;
+	}
+#	ifdef VI_TM_STAT_USE_MINMAX
+	else
+	{	if (!verify((src->min_ - src->flt_mean_) / src->flt_mean_ < fp_limits_t::epsilon())) return __LINE__;
+		if (!verify((src->flt_mean_ - src->max_) / src->flt_mean_ < fp_limits_t::epsilon())) return __LINE__;
+	}
+#	endif
+#endif
+	return 0;
+}
+
 void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *m) noexcept
 {	m->calls_ = 0U;
 	m->amt_ = 0U;
 	m->sum_ = 0U;
+#ifdef VI_TM_STAT_USE_MINMAX
+	m->min_ = fp_limits_t::infinity();
+	m->max_ = -fp_limits_t::infinity();
+#endif
 #ifdef VI_TM_STAT_USE_WELFORD
 	m->flt_calls_ = 0U;
 	m->flt_amt_ = VI_TM_FP(0);
 	m->flt_mean_ = VI_TM_FP(0);
 	m->flt_ss_ = VI_TM_FP(0);
-	m->min_ = fp_limits_t::infinity();
-	m->max_ = -fp_limits_t::infinity();
 #endif
-	assert(check_invariant(*m));
+	assert(0 == vi_tmMeasurementStatsIsValid(m));
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *meas, VI_TM_TDIFF dur, VI_TM_SIZE amt) noexcept
 {	assert(meas);
-	assert(check_invariant(*meas));
+	assert(0 == vi_tmMeasurementStatsIsValid(meas));
 
 	if (!verify(!!amt))
 	{	return;
@@ -200,15 +216,18 @@ void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *meas, VI_TM_T
 	meas->amt_ += amt;
 	meas->sum_ += dur;
 
-#ifdef VI_TM_STAT_USE_WELFORD
-	constexpr VI_TM_FP K2 = 6.25; // 2.5^2 Threshold for outliers.
+#if defined(VI_TM_STAT_USE_WELFORD) || defined(VI_TM_STAT_USE_MINMAX)
 	const auto v_f = static_cast<VI_TM_FP>(dur);
 	const auto n_f = static_cast<VI_TM_FP>(amt);
-
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
 	const auto a_f = v_f / n_f;
 	if (meas->min_ > a_f) { meas->min_ = a_f; }
 	if (meas->max_ < a_f) { meas->max_ = a_f; }
+#endif
 
+#ifdef VI_TM_STAT_USE_WELFORD
+	constexpr VI_TM_FP K2 = 6.25; // 2.5^2 Threshold for outliers.
 	const auto deviation = v_f / n_f - meas->flt_mean_; // Difference from the mean value.
 	if
 	(	const auto sum_square_dev = deviation * deviation * meas->flt_amt_;
@@ -225,7 +244,7 @@ void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *meas, VI_TM_T
 		meas->flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
 	}
 #endif
-	assert(check_invariant(*meas));
+	assert(0 == vi_tmMeasurementStatsIsValid(meas));
 }
 
 inline void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
@@ -247,8 +266,8 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const v
 	{	return;
 	}
 
-	assert(check_invariant(*dst));
-	assert(check_invariant(*src));
+	assert(0 == vi_tmMeasurementStatsIsValid(dst));
+	assert(0 == vi_tmMeasurementStatsIsValid(src));
 
 	dst->calls_ += src->calls_;
 	dst->amt_ += src->amt_;
@@ -264,7 +283,7 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const v
 		dst->flt_calls_ += src->flt_calls_;
 	}
 #endif
-	assert(check_invariant(*dst));
+	assert(0 == vi_tmMeasurementStatsIsValid(dst));
 }
 
 inline vi_tmMeasurementStats_t measuring_t::get() const noexcept

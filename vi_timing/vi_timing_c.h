@@ -50,7 +50,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // 
 // If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
-#	define VI_TM_STAT_USE_WELFORD
+//#	define VI_TM_STAT_USE_WELFORD
+// 
+// VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
+// Comment out the next line and rebuild project if you do not need min/max values in reports.
+#	define VI_TM_STAT_USE_MINMAX
 //
 // Uses high-performance timing methods (typically platform-specific optimizations like ASM).
 // To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
@@ -162,7 +166,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, __COUNTER__ )
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-typedef double VI_TM_FP; // Floating-point type used for timing calculations, typically double precision.
+typedef float VI_TM_FP; // Floating-point type used for timing calculations, typically double precision.
 typedef size_t VI_TM_SIZE; // Size type used for counting events, typically size_t.
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
@@ -183,6 +187,9 @@ typedef struct vi_tmMeasurementStats_t
 	VI_TM_FP flt_amt_;		// Number of events counted. Filtered!
 	VI_TM_FP flt_mean_;		// The mean (average) time taken per processed events. In ticks. Filtered!
 	VI_TM_FP flt_ss_;		// Sum of Squares. In ticks. Filtered!
+#endif
+#ifdef VI_TM_STAT_USE_MINMAX
+	// The minimum and maximum times are represented with a floating point because they can be initialized with the average of the batch.
 	VI_TM_FP min_; //!!!! INFINITY - initially!!! Minimum time taken for a single event, in ticks.
 	VI_TM_FP max_; //!!!! -INFINITY - initially!!! Maximum time taken for a single event, in ticks.
 #endif
@@ -223,8 +230,8 @@ typedef enum vi_tmReportFlags_e
 	vi_tmShowCorrected = 0x0400, // If set, the report will show corrected values (subtracting overhead).
 	vi_tmShowMask = 0x7F0, // Mask for all show flags.
 
-	vi_tmHideHeader = 0x0400, // If set, the report will not show the header with column names.
-	vi_tmDoNotSubtractOverhead = 0x0800, // If set, the overhead is not subtracted from the measured time in report.
+	vi_tmHideHeader = 0x0800, // If set, the report will not show the header with column names.
+	vi_tmDoNotSubtractOverhead = 0x1000, // If set, the overhead is not subtracted from the measured time in report.
 } vi_tmReportFlags_e;
 
 #define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
@@ -365,6 +372,9 @@ extern "C" {
 // Main functions ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+	VI_TM_API int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *m) VI_NOEXCEPT;
+
     /// <summary>
     /// Default report callback function. Writes the given string to the specified output stream.
     /// </summary>
