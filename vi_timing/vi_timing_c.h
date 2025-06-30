@@ -50,7 +50,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // 
 // If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
-//#	define VI_TM_STAT_USE_WELFORD
+#	define VI_TM_STAT_USE_WELFORD
 // 
 // VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
 // Comment out the next line and rebuild project if you do not need min/max values in reports.
