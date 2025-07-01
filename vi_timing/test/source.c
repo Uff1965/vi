@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <threads.h>
 
-static inline void vi_tmFinish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)
+static inline void finish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
 	vi_tmMeasurementRepl(measure, finish - start, amount);
 }
@@ -28,8 +28,8 @@ void bar_c(void)
 		VI_TM_HMEAS const m2 = vi_tmMeasurement(journal, "yyy");
 		VI_TM_TICK s = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 250000 }, NULL);
-		vi_tmFinish(m2, s, 1);
-		vi_tmFinish(m1, s, 10);
+		finish(m2, s, 1);
+		finish(m1, s, 10);
 
 		puts("Original:");
 		vi_tmReport(journal, vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
@@ -44,7 +44,7 @@ void bar_c(void)
 		vi_tmJournalClose(journal);
 	}
 
-	vi_tmFinish(bar_c_measuring, bar_c_start, 1);
+	finish(bar_c_measuring, bar_c_start, 1);
 }
 
 void foo_c(void)
@@ -64,58 +64,58 @@ void foo_c(void)
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 10000 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	{	VI_TM_HMEAS const meas = vi_tmMeasurement(VI_TM_HGLOBAL, "thrd_sleep 100us");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 100000 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	{	VI_TM_HMEAS const meas = vi_tmMeasurement(VI_TM_HGLOBAL, "thrd_sleep 1ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 1000000 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	{	VI_TM_HMEAS const meas = vi_tmMeasurement(VI_TM_HGLOBAL, "thrd_sleep 10ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 10000000 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	{	VI_TM_HMEAS const meas = vi_tmMeasurement(VI_TM_HGLOBAL, "thrd_sleep 14ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 14000000 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	{	VI_TM_HMEAS const meas = vi_tmMeasurement(VI_TM_HGLOBAL, "thrd_sleep 20ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 20000000 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	{	VI_TM_HMEAS const meas = vi_tmMeasurement(VI_TM_HGLOBAL, "thrd_sleep 30ms");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_nsec = 30000000 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	{	VI_TM_HMEAS const meas = vi_tmMeasurement(VI_TM_HGLOBAL, "thrd_sleep 1s");
 		thrd_yield();
 		const VI_TM_TICK start = vi_tmGetTicks();
 		thrd_sleep(&(struct timespec) { .tv_sec = 1 }, NULL);
-		vi_tmFinish(meas, start, 1);
+		finish(meas, start, 1);
 	}
 
 	printf("%s - done\n", __func__); //-V2600
-	vi_tmFinish(foo_c_measuring, foo_c_start, 1);
+	finish(foo_c_measuring, foo_c_start, 1);
 }

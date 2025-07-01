@@ -43,7 +43,7 @@ namespace
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit
 	};
 
-	VI_TM_INIT(vi_tmSortByName, "Global timing report:\n", vi_tmShowMask);
+	VI_TM_INIT(vi_tmSortBySpeed, "Global timing report:\n", vi_tmShowMask);
 	VI_TM("GLOBAL");
 
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -404,14 +404,6 @@ namespace
 		} while (std::next_permutation(std::begin(arr), std::end(arr)));
 		endl(std::cout);
 
-		{	static const auto m = vi_tmMeasurement(journal.get(), "*mutex_r***");
-			for (int n = 0; n < 1'000'000; ++n)
-			{	vi_tm::measurer_t _{ m };
-				std::lock_guard lg{ mtx_r };
-				++v_normal;
-			}
-		}
-
 		std::cout << "RAW report:\n";
 		report_RAW(journal.get());
 		std::cout << "Report:\n";
@@ -470,17 +462,17 @@ int main()
 	foo_c();
 
 	//test_warming();
-	//test_misc();
+	test_misc();
 	test_empty();
 	test_sleep();
 	normal_distribution();
 	prn_clock_properties();
 
 	test_report();
-	//test_multithreaded();
-	//test_access();
-	std::cout << "\nRAW report:\n";
-	report_RAW(VI_TM_HGLOBAL);
+	test_multithreaded();
+	test_access();
+	//std::cout << "\nRAW report:\n";
+	//report_RAW(VI_TM_HGLOBAL);
 
 	vi_CurrentThreadAffinityRestore();
 
