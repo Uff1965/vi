@@ -2,8 +2,8 @@
 // This file provides a fallback implementation if the vi_timing library is not available.
 // Copy this file to your project and include it instead of <vi_timing/vi_timing.h>.
 
-#ifndef _VI_TIMING_PROXY_H_
-#	define _VI_TIMING_PROXY_H_
+#ifndef VI_TIMING_PROXY_H
+#	define VI_TIMING_PROXY_H
 #	pragma once
 
 #	if !defined(VI_TM_DISABLE) && !__has_include(<vi_timing/vi_timing.h>)
@@ -15,7 +15,7 @@
 #	else
 		// Auxiliary macros for generating a unique identifier.
 #		ifndef __COUNTER__ // __COUNTER__ is not included in the standard yet.
-#			define __COUNTER__ __LINE__
+#			define __COUNTER__ __LINE__ //-V2573 // Use __LINE__ as a fallback.
 #		endif
 #		define VI_STR_CONCAT_AUX( a, b ) a##b // Concatenate two tokens without expansion
 #		define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b ) // Concatenate two tokens
@@ -30,4 +30,4 @@
 #		define VI_TM_FULLVERSION ""
 #	endif
 
-#endif // #ifndef _VI_TIMING_PROXY_H_
+#endif // #ifndef VI_TIMING_PROXY_H

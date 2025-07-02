@@ -77,11 +77,11 @@ namespace
 	constexpr auto multiple_invoke_aux(std::index_sequence<Is...>, Args&&... args)
 	{	using return_t = std::invoke_result_t<decltype(F), Args...>;
 		if constexpr (std::is_void_v<return_t>)
-		{	((static_cast<void>(Is), std::invoke(F, args...)), ...);
+		{	((static_cast<void>(Is), std::invoke(F, args...)), ...); //-V2528
 		}
 		else
 		{	return_t result{};
-			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(F, args...)), ...);
+			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(F, args...)), ...); //-V2528
 			return result; // Return the last result.
 		}
 	}
@@ -109,23 +109,23 @@ namespace
 		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
 		auto const mid = diff.begin() + (diff.size() + CACHE_WARMUP) / 2;
 		std::nth_element(diff.begin() + CACHE_WARMUP, mid, diff.end());
-		return static_cast<double>(*mid) / MULTIPLIER;
+		return static_cast<double>(*mid) / static_cast<double>(MULTIPLIER);
 	}
 
 	template <auto F, typename... Args>
 	double diff_calc(Args&&... args)
 	{	constexpr auto BASE = 4U;
-		constexpr auto FULL = BASE + 32U;
+		constexpr auto FULL = BASE + 32U; //-V112
 		const double full = diff_calc_aux<F, FULL>(args...);
 		const double base = diff_calc_aux<F, BASE>(args...);
-		return (full - base) / (FULL - BASE);
+		return (full - base) / static_cast<double>(FULL - BASE);
 	}
 
 	void measuring(VI_TM_HJOUR journal, const char* name)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		const auto h = vi_tmMeasurement(journal, name);
-		vi_tmMeasurementRepl(h, finish - start, 1U);
+		vi_tmMeasurementAdd(h, finish - start, 1U);
 	};
 
 	auto meas_duration()
@@ -139,13 +139,13 @@ namespace
 	void threadsafe_measuring_with_caching(VI_TM_HMEAS m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
-		vi_tmMeasurementRepl(m, finish - start, 1U);
+		vi_tmMeasurementAdd(m, finish - start, 1U);
 	};
 
 	void measuring_with_caching(vi_tmMeasurementStats_t &m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
-		vi_tmMeasurementStatsRepl(&m, finish - start, 1U);
+		vi_tmMeasurementStatsAdd(&m, finish - start, 1U);
 	};
 
 	auto meas_threadsafe_duration_with_caching()
@@ -190,7 +190,7 @@ namespace
 		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
 		auto const mid = arr.begin() + (arr.size() + CACHE_WARMUP) / 2;
 		std::nth_element(arr.begin() + CACHE_WARMUP, mid, arr.end());
-		return static_cast<double>(*mid) / N;
+		return static_cast<double>(*mid) / static_cast<double>(N);
 	}
 
 	duration_t meas_seconds_per_tick()

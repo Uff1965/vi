@@ -381,19 +381,19 @@ std::size_t formatter_t::width_column(vi_tmReportFlags_e clmn) const
 	std::size_t title_len = 0;
 	switch (clmn)
 	{	case vi_tmSortByName:
-			result = static_cast<int>(max_len_name_);
+			result = max_len_name_;
 			title_len = std::size(TitleName) - 1U;
 			break;
 		case vi_tmSortBySpeed:
-			result = static_cast<int>(max_len_average_);
+			result = max_len_average_;
 			title_len = std::size(TitleAverage) - 1U;
 			break;
 		case vi_tmSortByTime:
-			result = static_cast<int>(max_len_total_);
+			result = max_len_total_;
 			title_len = std::size(TitleTotal) - 1U;
 			break;
 		case vi_tmSortByAmount:
-			result = static_cast<int>(max_len_amount_);
+			result = max_len_amount_;
 			title_len = std::size(TitleAmount) - 1U;
 			break;
 		default:
@@ -473,7 +473,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
 	n_++;
-	const char fill = (guideline_interval_ && (0 == n_ % guideline_interval_)) ? UNDERSCORE : ' ';
+	const char fill = ((0 != guideline_interval_) && (0 == n_ % guideline_interval_)) ? UNDERSCORE : ' ';
 	str <<
 		std::setw(max_len_number_) << n_ << ". " << 
 		std::left << std::setfill(fill) <<
@@ -524,5 +524,5 @@ int VI_SYS_CALL vi_tmReportCb(const char *str, void *data)
 	{	return 0;
 	}
 #endif
-	return fputs(str, (FILE *)data);
+	return fputs(str, static_cast<FILE*>(data));
 }

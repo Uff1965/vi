@@ -40,33 +40,33 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 //*******************************************************************************************************************
 // Library configuration options:
-//
+
 // If VI_TM_SHARED defined, the library is a shared library.
 // If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
-//
+
 // If VI_TM_THREADSAFE not defined, the library is not thread-safe and may be faster in single-threaded applications.
 // Comment out the next line and rebuild project if you do not need thread safety.
 #	define VI_TM_THREADSAFE
-// 
+
 // If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
 #	define VI_TM_STAT_USE_WELFORD
-// 
+
 // VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
 // Comment out the next line and rebuild project if you do not need min/max values in reports.
-#	define VI_TM_STAT_USE_MINMAX
-//
+//#	define VI_TM_STAT_USE_MINMAX
+
 // Uses high-performance timing methods (typically platform-specific optimizations like ASM).
 // To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
 //#	define VI_TM_USE_STDCLOCK
-// 
+
 //*******************************************************************************************************************
 
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
 #	if defined(_MSC_VER)
 #		define VI_FUNCNAME __FUNCSIG__
 
-#		ifdef _M_IX86
+#		ifdef _M_IX86 // x86 architecture
 #			define VI_SYS_CALL __cdecl
 #			define VI_TM_CALL __fastcall
 #		else
@@ -148,7 +148,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define VI_OPTIMIZE_ON
 #	endif
 
-// VI_DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
+// VI_[N]DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
 #	ifdef NDEBUG
 #		define VI_NDEBUG_ONLY(t) t
 #		define VI_DEBUG_ONLY(t)
@@ -159,7 +159,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
  
 // Stringification and token-pasting macros for unique identifier generation.
 #	ifndef __COUNTER__
-#		define __COUNTER__ __LINE__ // If __COUNTER__ is not defined, use __LINE__ as a fallback.
+#		define __COUNTER__ __LINE__ //-V2573 Use __LINE__ as a fallback.
 #	endif
 #	define VI_STR_CONCAT_AUX( a, b ) a##b
 #	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
@@ -171,13 +171,13 @@ typedef size_t VI_TM_SIZE; // Size type used for counting events, typically size
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
 typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
 typedef struct vi_tmMeasurement_t *VI_TM_HMEAS; // Opaque handle to a measurement entry.
-typedef struct vi_tmMeasurementsJournal_t *VI_TM_HJOUR; // Opaque handle to a measurements journal object.
+typedef struct vi_tmMeasurementsJournal_t *VI_TM_HJOUR; // Opaque handle to a measurements journal.
 typedef int (VI_TM_CALL *vi_tmMeasEnumCb_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
 typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Callback type for report function. ABI must be compatible with std::fputs!
 
 // vi_tmMeasurementStats_t: Structure holding statistics for a timing measurement.
 // This structure is used to store the number of calls, total time spent, and other statistical data for a measurement.
-// Use the vi_tmMeasurementStatsReset function to reset the structure to its initial state!!!
+// !!!Use the vi_tmMeasurementStatsReset function to reset the structure to its initial state!!!
 typedef struct vi_tmMeasurementStats_t
 {	VI_TM_SIZE calls_;		// The number of times the measurement was invoked.
 	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
@@ -195,7 +195,10 @@ typedef struct vi_tmMeasurementStats_t
 #endif
 } vi_tmMeasurementStats_t;
 
-typedef enum vi_tmInfo_e // Enumeration for various timing information types.
+// vi_tmInfo_e: Enumeration for various timing information types used in the vi_timing library.
+// Each value corresponds to a specific static information query, such as version, build type, or timing characteristics.
+// The return type for each enum value is indicated in the comment.
+typedef enum vi_tmInfo_e
 {	VI_TM_INFO_VER,         // const unsigned*: Version number of the library.
 	VI_TM_INFO_BUILDNUMBER, // const unsigned*: Build number of the library.
 	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
@@ -208,9 +211,11 @@ typedef enum vi_tmInfo_e // Enumeration for various timing information types.
 	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
 	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
 
-	VI_TM_INFO__COUNT,      // Number of information types.
+	VI_TM_INFO_COUNT_,      // Number of information types.
 } vi_tmInfo_e;
 
+// vi_tmReportFlags_e: Flags for controlling the formatting and content of timing reports.
+// These flags allow customization of sorting, display options, and report details.
 typedef enum vi_tmReportFlags_e
 {	vi_tmSortByTime = 0x00, // If set, the report will be sorted by time spent in the measurement.
 	vi_tmSortByName = 0x01, // If set, the report will be sorted by measurement name.
@@ -234,14 +239,14 @@ typedef enum vi_tmReportFlags_e
 	vi_tmDoNotSubtractOverhead = 0x1000, // If set, the overhead is not subtracted from the measured time in report.
 } vi_tmReportFlags_e;
 
+//-V:VI_TM_HGLOBAL:2571, 2611
 #define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
 
 #	ifdef __cplusplus
 extern "C" {
-
 #	define VI_NODISCARD [[nodiscard]]
 #	define VI_NOEXCEPT noexcept
-#	define VI_DEF(v) = (v)
+#	define VI_DEF(v) =(v)
 #else
 #	define VI_NODISCARD
 #	define VI_NOEXCEPT
@@ -271,7 +276,7 @@ extern "C" {
 	/// Creates a new journal object and returns a handle to it.
 	/// </summary>
 	/// <returns>A handle to the newly created journal object, or nullptr if memory allocation fails.</returns>
-	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned flags VI_DEF(0U), void *reserved VI_DEF(0));
+	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned flags VI_DEF(0U), void *reserved VI_DEF(NULL));
 
 	/// <summary>
 	/// Resets but does not delete all entries in the journal. All entry handles remain valid.
@@ -289,6 +294,7 @@ extern "C" {
 	
 	/// <summary>
 	/// Retrieves a handle to the measurement associated with the given name, creating it if it does not exist.
+	/// Handle does not need to be released; it will remain valid as long as the journal exists.
 	/// </summary>
 	/// <param name="j">The handle to the journal containing the measurement.</param>
 	/// <param name="name">The name of the measurement entry to retrieve.</param>
@@ -305,13 +311,13 @@ extern "C" {
 	VI_TM_API int VI_TM_CALL vi_tmMeasurementEnumerate(VI_TM_HJOUR j, vi_tmMeasEnumCb_t fn, void* data);
 
 	/// <summary>
-	/// Performs a measurement replenishment operation by adding a time difference and amount to the measurement object.
+	/// Performs a measurement replenishment operation by adding the total duration and number of measured events.
 	/// </summary>
-	/// <param name="m">A handle to the measurement object to be updated.</param>
-	/// <param name="tick_diff">The time difference value to add to the measurement.</param>
-	/// <param name="amount">The amount associated with the time difference to add.</param>
+	/// <param name="m">A handle to the measurement to be updated.</param>
+	/// <param name="dur">The duration value to add to the measurement.</param>
+	/// <param name="amt">The number of measured events.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementRepl(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amount VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the given source measurement stats into the specified measurement handle.
@@ -321,19 +327,17 @@ extern "C" {
     /// <returns>This function does not return a value.</returns>
     VI_TM_API void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
 
-	/// <summary>
-	/// Retrieves measurement information from a VI_TM_HMEAS object, including its name, total time, amount, and number of calls.
-	/// </summary>
-	/// <param name="meas">The measurement handle from which to retrieve information.</param>
-	/// <param name="name">Pointer to a string pointer that will receive the name of the measurement. Can be nullptr if not needed.</param>
-	/// <param name="total">Pointer to a VI_TM_TDIFF variable that will receive the total measured time. Can be nullptr if not needed.</param>
-	/// <param name="amount">Pointer to a VI_TM_SIZE variable that will receive the measured amount. Can be nullptr if not needed.</param>
-	/// <param name="calls_cnt">Pointer to a VI_TM_SIZE variable that will receive the number of calls. Can be nullptr if not needed.</param>
-	/// <returns>This function does not return a value.</returns>
+    /// <summary>
+    /// Retrieves measurement information from a VI_TM_HMEAS object, including its name and statistics.
+    /// </summary>
+    /// <param name="m">The measurement handle from which to retrieve information.</param>
+    /// <param name="name">Pointer to a string pointer that will receive the name of the measurement. Can be nullptr if not needed.</param>
+    /// <param name="dst">Pointer to a vi_tmMeasurementStats_t structure that will receive the measurement statistics. Can be nullptr if not needed.</param>
+    /// <returns>This function does not return a value.</returns>
 	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS m, const char **name, vi_tmMeasurementStats_t *dst);
 	
 	/// <summary>
-	/// Resets the measurement state for the specified measurement handle.
+	/// Resets the measurement state for the specified measurement handle. The handle remains valid.
 	/// </summary>
 	/// <param name="meas">The measurement handle whose state should be reset.</param>
 	/// <returns>This function does not return a value.</returns>
@@ -343,10 +347,10 @@ extern "C" {
     /// Updates the given measurement statistics structure by adding a duration and amount.
     /// </summary>
     /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
-    /// <param name="dur">The time difference value to add to the statistics.</param>
-    /// <param name="amt">The amount associated with the time difference to add. Defaults to 1.</param>
+    /// <param name="dur">The duration value to add to the statistics.</param>
+    /// <param name="amt">The number of measured events.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsRepl(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the source measurement statistics structure into the destination.
@@ -373,6 +377,10 @@ extern "C" {
 
 // Auxiliary functions: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
+	/// <summary>
+	/// Checks if the given measurement statistics structure contains valid data.
+	/// Returns zero if valid.
+	/// </summary>
 	VI_TM_API int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *m) VI_NOEXCEPT;
 
     /// <summary>
@@ -386,37 +394,37 @@ extern "C" {
 	/// <summary>
 	/// Generates a report for the specified journal handle, using a callback function to output the report data.
 	/// </summary>
-	/// <param name="journal_handle">The handle to the journal whose data will be reported.</param>
+	/// <param name="j">The handle to the journal whose data will be reported.</param>
 	/// <param name="flags">Flags that control the formatting and content of the report.</param>
-	/// <param name="fn">A callback function used to output each line of the report. If nullptr, defaults to writing to a FILE* stream.</param>
+	/// <param name="cb">A callback function used to output each line of the report. If nullptr, defaults to writing to a FILE* stream.</param>
 	/// <param name="data">A pointer to user data passed to the callback function. If fn is nullptr and data is nullptr, defaults to stdout.</param>
 	/// <returns>The total number of characters written by the report, or a negative value if an error occurs.</returns>
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmReportCb_t VI_DEF(vi_tmReportCb), void* VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmReportCb_t cb VI_DEF(vi_tmReportCb), void* data VI_DEF(stdout));
 
 	/// <summary>
 	/// Performs a CPU warming routine by running computationally intensive tasks across multiple threads for a specified duration.
 	/// </summary>
-	/// <param name="threads_qty">The number of threads to use for the warming routine. If zero or greater than the number of available hardware threads, the function uses the maximum available.</param>
+	/// <param name="threads">The number of threads to use for the warming routine. If zero or greater than the number of available hardware threads, the function uses the maximum available.</param>
 	/// <param name="ms">The duration of the warming routine in milliseconds. If zero, the function returns immediately.</param>
-	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_Warming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(1000));
+	/// <returns>Returns zero if successful.</returns>
+	VI_TM_API int VI_TM_CALL vi_Warming(unsigned threads VI_DEF(0), unsigned ms VI_DEF(500));
 
 	/// <summary>
 	/// Fixates the CPU affinity of the current thread.
 	/// </summary>
-	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_CurrentThreadAffinityFixate(void);
+	/// <returns>Returns zero if successful.</returns>
+	VI_TM_API int VI_TM_CALL vi_CurrentThreadAffinityFixate(void);
 
 	/// <summary>
 	/// Restores the CPU affinity of the current thread to its previous state.
 	/// </summary>
-	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_CurrentThreadAffinityRestore(void);
+	/// <returns>Returns zero if successful.</returns>
+	VI_TM_API int VI_TM_CALL vi_CurrentThreadAffinityRestore(void);
 
 	/// <summary>
 	/// Yields execution of the current thread, allowing other threads to run.
 	/// </summary>
-	VI_TM_API void VI_TM_CALL vi_ThreadYield(void);
+	VI_TM_API void VI_TM_CALL vi_ThreadYield(void) VI_NOEXCEPT;
 // Auxiliary functions: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #	ifdef __cplusplus

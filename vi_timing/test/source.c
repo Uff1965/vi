@@ -10,9 +10,11 @@
 #include <stdint.h>
 #include <threads.h>
 
+//-V::2611, 2600, 2590, 2572
+
 static inline void finish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
-	vi_tmMeasurementRepl(measure, finish - start, amount);
+	vi_tmMeasurementAdd(measure, finish - start, amount);
 }
 
 void bar_c(void)
@@ -22,7 +24,7 @@ void bar_c(void)
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 	thrd_yield();
 
-	{	VI_TM_HJOUR journal = vi_tmJournalCreate(0, 0);
+	{	VI_TM_HJOUR journal = vi_tmJournalCreate(0, NULL);
 
 		VI_TM_HMEAS const m1 = vi_tmMeasurement(journal, "xxx");
 		VI_TM_HMEAS const m2 = vi_tmMeasurement(journal, "yyy");
@@ -54,7 +56,7 @@ void foo_c(void)
 	
 	vi_Warming(256, 2);
 	
-	printf("Version: \'%s\' [%u]\n", (const char*)vi_tmStaticInfo(VI_TM_INFO_VERSION), *(const unsigned*)vi_tmStaticInfo(VI_TM_INFO_VER));
+	printf("Version: \'%s\' [%u]\n", (const char*)vi_tmStaticInfo(VI_TM_INFO_VERSION), *(const unsigned*)vi_tmStaticInfo(VI_TM_INFO_VER)); //-V206
 	thrd_yield();
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 

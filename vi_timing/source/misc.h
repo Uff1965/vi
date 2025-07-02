@@ -2,13 +2,29 @@
 #	define VI_TIMING_SOURCE_INTERNAL_H
 #	pragma once
 
+#include <cassert>
 #include <chrono>
 #include <locale> // for std::numpunct
 #include <string>
 #include <string_view>
+#ifdef __cpp_lib_source_location
+#	include <source_location>
+#endif
 
 namespace misc
 {
+#ifdef __cpp_lib_source_location
+	constexpr int VI_EXIT_SUCCESS() noexcept { return 0; } // Use zero as success code.
+	constexpr int VI_EXIT_FAILURE(std::source_location location = std::source_location::current()) noexcept
+	{	return(0 - location.line()); // Use negative line number as error code.
+	}
+#else
+#	define VI_EXIT_SUCCESS() (0) // Use zero as success code.
+#	define VI_EXIT_FAILURE() (0 - __LINE__) // Use negative line number as error code.
+#endif
+
+	constexpr bool verify(bool b) noexcept { assert(b && "Verify failed!"); return b; }
+
 	struct space_out final: std::numpunct<char>
 	{	char do_thousands_sep() const override { return '\''; }  // separate with '
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit

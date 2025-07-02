@@ -50,6 +50,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <thread>
 #include <vector>
 
+//-V::-V2600
+
 namespace ch = std::chrono;
 using namespace std::chrono_literals;
 
@@ -66,8 +68,6 @@ namespace
 	constexpr char TYPE[] = "static";
 #endif
 
-	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
-
 	namespace affinity
 	{
 #if defined(_WIN32)
@@ -82,7 +82,7 @@ namespace
 
 		bool restore_affinity(thread_affinity_mask_t prev)
 		{	if (0 != prev)
-			{	if (verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)))
+			{	if (misc::verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)))
 				{	return true;
 				}
 			}
@@ -119,24 +119,31 @@ namespace
 
 		class affinity_fix_t
 		{	static thread_local affinity_fix_t s_instance; // Thread-local instance!!!
-			std::size_t flt_amt_ = 0U;
+			std::size_t cnt_ = 0U;
 			thread_affinity_mask_t previous_affinity_{};
 
-			~affinity_fix_t() { assert(0 == flt_amt_); }
+			~affinity_fix_t() { assert(0 == cnt_); }
 		public:
-			static void fixate()
-			{	if (0 == s_instance.flt_amt_++)
-				{	if (auto prev = set_affinity(); verify(!!prev))
-					{	s_instance.previous_affinity_ = *prev;
+			static int fixate()
+			{	if (0 == s_instance.cnt_++)
+				{	auto prev = set_affinity();
+					if (!misc::verify(!!prev))
+					{	return VI_EXIT_FAILURE();
 					}
+					assert(!!prev);
+					s_instance.previous_affinity_ = *prev;
 				}
-				return;
+				return VI_EXIT_SUCCESS();
 			}
-			static void restore()
-			{	assert(s_instance.flt_amt_ > 0);
-				if (0 == --s_instance.flt_amt_ && restore_affinity(s_instance.previous_affinity_))
-				{	s_instance.previous_affinity_ = thread_affinity_mask_t{};
+			static int restore()
+			{	assert(s_instance.cnt_ > 0);
+				if (0 == --s_instance.cnt_)
+				{	if(!misc::verify(restore_affinity(s_instance.previous_affinity_)))
+					{	return VI_EXIT_FAILURE();
+					}
+					s_instance.previous_affinity_ = thread_affinity_mask_t{};
 				}
+				return VI_EXIT_SUCCESS();
 			}
 		};
 		thread_local affinity_fix_t affinity_fix_t::s_instance;
@@ -237,9 +244,9 @@ namespace
 				std::make_tuple(+0.0, "  ");
 
 			std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "-  6666.66e-308" -> 9 + 6;
-			if (auto len = std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix); verify(len >= 0))
-			{	assert(result.size() > len);
-				result.resize(len);
+			const auto len = static_cast<std::size_t>(std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix));
+			if (misc::verify(result.size() > len)) //-V201 // Error will be converted too long unsigned integer.
+			{	result.resize(len);
 			}
 			else
 			{	result = "ERR";
@@ -247,6 +254,16 @@ namespace
 			return result;
 		}
 	} // namespace to_str
+
+	void busy()
+	{	volatile auto f = 0.0;
+		for (auto n = 10'000U; n; --n)
+		{	// To keep the CPU busy.
+			f = (f + std::sin(n) * std::cos(n)) / 1.0001;
+			std::atomic_thread_fence(std::memory_order_relaxed);
+		}
+	};
+
 } // namespace
 
 [[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
@@ -262,21 +279,21 @@ namespace
 	return to_str::to_string_aux(val, significant, decimal);
 }
 
-void VI_TM_CALL vi_CurrentThreadAffinityFixate()
-{	affinity::affinity_fix_t::fixate();
+int VI_TM_CALL vi_CurrentThreadAffinityFixate()
+{	return affinity::affinity_fix_t::fixate();
 }
 
-void VI_TM_CALL vi_CurrentThreadAffinityRestore()
-{	affinity::affinity_fix_t::restore();
+int VI_TM_CALL vi_CurrentThreadAffinityRestore()
+{	return affinity::affinity_fix_t::restore();
 }
 
-void VI_TM_CALL vi_ThreadYield(void)
+void VI_TM_CALL vi_ThreadYield(void) noexcept
 {	std::this_thread::yield();
 }
 
-void VI_TM_CALL vi_Warming(unsigned int threads_qty, unsigned int ms)
+int  VI_TM_CALL vi_Warming(unsigned int threads_qty, unsigned int ms)
 {	if (0 == ms)
-	{	return;
+	{	return VI_EXIT_SUCCESS();
 	}
 
 	if (threads_qty == 0U || threads_qty > std::thread::hardware_concurrency())
@@ -286,30 +303,31 @@ void VI_TM_CALL vi_Warming(unsigned int threads_qty, unsigned int ms)
 	{	threads_qty--;
 	}
 
-	auto load_dummy = [] { volatile auto f = 0.0; for (auto n = 10'000U; n; --n) f = f + std::sin(n) * std::cos(n); };
-	std::atomic_bool done = false;
-
-	std::vector<std::thread> additional_threads;
-	additional_threads.reserve(threads_qty);
 	try
-	{	for (unsigned i = 0; i < threads_qty; ++i)
-		{	additional_threads.emplace_back([&done, load_dummy] { while (!done) load_dummy(); });
+	{	std::atomic_bool done = false;
+		std::vector<std::thread> additional_threads;
+		additional_threads.reserve(static_cast<std::size_t>(threads_qty)); //-V201
+		for (unsigned i = 0; i < threads_qty; ++i)
+		{	additional_threads.emplace_back([&done] { while (!done) busy(); });
+		}
+
+		for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
+		{	busy();
+		}
+
+		done = true;
+		for (auto &t : additional_threads)
+		{	if (t.joinable())
+			{	t.join();
+			}
 		}
 	}
 	catch (...)
-	{	assert(false); // An exception occurred while starting threads.
+	{	assert(false);
+		return VI_EXIT_FAILURE();
 	}
 
-	for (const auto stop = ch::steady_clock::now() + ch::milliseconds{ ms }; ch::steady_clock::now() < stop;)
-	{	load_dummy();
-	}
-
-	done = true;
-	for (auto &t : additional_threads)
-	{	if (t.joinable())
-		{	t.join();
-		}
-	}
+	return VI_EXIT_SUCCESS();
 }
 
 const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
@@ -328,7 +346,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
-					std::array<char, (std::size("99.999.9999.YYMMDDHHmm") - 1) + 2 + (std::size(TYPE) - 1) + 1> result;
+					std::array<char, (std::size("99.999.9999.YYMMDDHHmm") - 1) + 2 + (std::size(TYPE) - 1) + 1> result; //-V1065
 					[[maybe_unused]] const auto sz = snprintf
 					(	result.data(),
 						result.size(),
@@ -340,7 +358,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 						CONFIG[0],
 						TYPE
 					);
-					assert(0 < sz && sz < static_cast<int>(result.size()));
+					assert(0 < sz && static_cast<std::size_t>(sz) < result.size()); //-V201
 					return result;
 				}();
 			return version.data();
@@ -383,7 +401,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		}
 
 		default:
-			static_assert(VI_TM_INFO__COUNT == 11, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
+			static_assert(VI_TM_INFO_COUNT_ == 11, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
 			assert(false); // If we reach this point, the info type is not recognized.
 			return nullptr;
 	}
@@ -402,7 +420,7 @@ namespace
 	const auto nanotest_to_string = []
 	{	// nanotest for misc::to_string(double d, unsigned char precision, unsigned char dec)
 		struct
-		{	int line_; double value_; std::string_view expected_; unsigned char significant_; unsigned char decimal_;
+		{	int line_; double value_; std::string_view expected_; unsigned char significant_; unsigned char decimal_; // -V802
 		} static const tests_set[] =
 		{
 //****************

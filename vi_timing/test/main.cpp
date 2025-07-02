@@ -127,7 +127,7 @@ namespace
 			{	const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
 				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
-				vi_tmMeasurementRepl(vi_tmMeasurement(h, name.c_str()), f - s, 1);
+				vi_tmMeasurementAdd(vi_tmMeasurement(h, name.c_str()), f - s, 1);
 				v++;
 			}
 		};
@@ -195,9 +195,9 @@ namespace
 					const auto sEmpty = vi_tmGetTicks(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
 					/**/
 					const auto fEmpty = vi_tmGetTicks();
-					vi_tmMeasurementRepl(jEmpty, fEmpty - sEmpty, 1);
+					vi_tmMeasurementAdd(jEmpty, fEmpty - sEmpty, 1);
 					const auto fTm = vi_tmGetTicks();
-					vi_tmMeasurementRepl(jTm, fTm - sTm, 1);
+					vi_tmMeasurementAdd(jTm, fTm - sTm, 1);
 				}
 			}
 
@@ -236,9 +236,27 @@ namespace
 
 	void test_warming()
 	{	std::cout << "\nTest test_warming:\n";
-		{	VI_TM("Warming in main()");
-			vi_Warming(1);
+	
+		std::this_thread::sleep_for(1s);
+
+		{	VI_TM("Warming(0)");
+			vi_Warming(0, 20000);
 		}
+
+		std::this_thread::sleep_for(1s);
+
+		{	VI_TM("Warming(4)");
+			vi_Warming(4, 10000);
+		}
+
+		std::this_thread::sleep_for(1s);
+
+		{	VI_TM("Warming(1)");
+			vi_Warming(1, 10000);
+		}
+
+		std::this_thread::sleep_for(1s);
+
 		assert(0 == errno);
 		std::cout << "Test test_warming - done" << std::endl;
 	}
@@ -290,11 +308,11 @@ namespace
 		auto journal = create_journal();
 		{	const auto unit = *static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT));
 			const auto m = vi_tmMeasurement(journal.get(), "Sample");
-			for (auto x : samples_simple)
-			{	vi_tmMeasurementRepl(m, static_cast<VI_TM_TDIFF>(x / unit));
+			for (double x : samples_simple)
+			{	vi_tmMeasurementAdd(m, static_cast<VI_TM_TDIFF>(x / unit));
 			}
-			for (auto x : samples_multiple)
-			{	vi_tmMeasurementRepl(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
+			for (double x : samples_multiple)
+			{	vi_tmMeasurementAdd(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
 			}
 		}
 		std::cout << "RAW:\n";
@@ -326,14 +344,14 @@ namespace
 		for (int i = 0; i < CNT; ++i)
 		{	const auto v = dist(gen);
 			assert(v >= 0);
-			vi_tmMeasurementRepl(m, static_cast<VI_TM_TICK>(std::round(v)), 1);
+			vi_tmMeasurementAdd(m, static_cast<VI_TM_TICK>(std::round(v)), 1);
 		}
 
 		std::normal_distribution distM(MEAN * MULT, CV * MEAN * MULT);
 		for (int i = 0; i < CNT / MULT; ++i)
 		{	const auto v = distM(gen);
 			assert(v >= 0);
-			vi_tmMeasurementRepl(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
+			vi_tmMeasurementAdd(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
 		}
 
 		vi_tmReport(j.get(), vi_tmShowMask);
@@ -449,6 +467,27 @@ namespace
 
 		std::cout << "Test test_misc - done" << std::endl;
 	}
+
+	void busy()
+	{	volatile auto f = 0.0;
+		for (auto n = 10'000U; n; --n)
+		{	// To keep the CPU busy.
+			f = (f + std::sin(n) * std::cos(n)) / 1.0001;
+			std::atomic_thread_fence(std::memory_order_relaxed);
+		}
+	};
+
+	void test_busy()
+	{	VI_TM("Test test_busy");
+		std::cout << "\nTest test_busy:\n";
+
+		for (int n = 0; n < 1'000; ++n)
+		{	VI_TM("busy");
+			busy();
+		}
+
+		std::cout << "Test test_busy - done" << std::endl;
+	}
 } // namespace
 
 int main()
@@ -459,22 +498,26 @@ int main()
 
 	vi_ThreadYield();
 
-	foo_c();
+	//foo_c();
 
-	//test_warming();
-	test_misc();
-	test_empty();
-	test_sleep();
-	normal_distribution();
-	prn_clock_properties();
+	//test_busy();
+	////test_warming();
+	//test_misc();
+	//test_empty();
+	//test_sleep();
+	//normal_distribution();
+	//prn_clock_properties();
 
-	test_report();
-	test_multithreaded();
-	test_access();
+	//test_report();
+	//test_multithreaded();
+	//test_access();
 	//std::cout << "\nRAW report:\n";
 	//report_RAW(VI_TM_HGLOBAL);
 
 	vi_CurrentThreadAffinityRestore();
+
+	vi_tmInit();
+	vi_tmFinit();
 
 	std::cout << "\nHello, World!\n" << std::endl;
 
