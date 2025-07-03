@@ -100,7 +100,7 @@ namespace
 		auto set_affinity()
 		{	std::optional<thread_affinity_mask_t> result;
 			const auto current_thread = pthread_self();
-			if (thread_affinity_mask_t prev{}; verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
+			if (thread_affinity_mask_t prev{}; misc::verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
 			{	if (const auto current_core = sched_getcpu(); misc::verify(current_core >= 0))
 				{	cpu_set_t current_affinity;
 					CPU_ZERO(&current_affinity);
@@ -116,9 +116,9 @@ namespace
 		// Restores the thread's CPU affinity to a previously saved mask.
 		// Returns true if the restoration succeeds, otherwise false.
 		bool restore_affinity(thread_affinity_mask_t prev)
-		{	static constexpr cpu_set_t AFFINITY_ZERO = [] { cpu_set_t result; CPU_ZERO(&result); return result; }();
+		{	static const cpu_set_t AFFINITY_ZERO = [] { cpu_set_t result; CPU_ZERO(&result); return result; }();
 			if (0 != CPU_EQUAL(&prev, &AFFINITY_ZERO))
-			{	if (verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
+			{	if (misc::verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
 				{	return true;
 				}
 			}
