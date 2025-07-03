@@ -65,8 +65,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define cpu_relax() std::this_thread::yield() // Fallback
 #	endif
 
-//-V::550, 2550
-
 namespace
 {
 	constexpr auto VI_TM_FP_ZERO = static_cast<VI_TM_FP>(0); // Zero value for floating-point type.
@@ -291,7 +289,7 @@ inline void measuring_t::merge(const vi_tmMeasurementStats_t &src) noexcept
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT
-{	if(!verify(!!dst) || !verify(!!src) || src->amt_ == 0)
+{	if(!verify(!!dst && !!src && !!src->amt_))
 	{	return;
 	}
 
@@ -338,7 +336,7 @@ vi_tmMeasurementsJournal_t::~vi_tmMeasurementsJournal_t()
 	}
 
 	if (this == &from_handle(VI_TM_HGLOBAL))
-	{	std::lock_guard{ global_mtx_ };
+	{	std::lock_guard lg{ global_mtx_ };
 		assert(0U == global_initialized_ && "The number of library initializations does not match the number of deinitializations!");
 	}
 }

@@ -15,7 +15,7 @@
 #	else
 		// Auxiliary macros for generating a unique identifier.
 #		ifndef __COUNTER__ // __COUNTER__ is not included in the standard yet.
-#			define __COUNTER__ __LINE__ //-V2573 // Use __LINE__ as a fallback.
+#			define __COUNTER__ __LINE__ // Use __LINE__ as a fallback.
 #		endif
 #		define VI_STR_CONCAT_AUX( a, b ) a##b // Concatenate two tokens without expansion
 #		define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b ) // Concatenate two tokens

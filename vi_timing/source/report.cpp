@@ -46,8 +46,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 namespace
 {
-	inline bool verify(bool b) { assert(b && "Verify failed!"); return b; }
-
 	constexpr char TitleNumber[] = "#";
 	constexpr char TitleName[] = "Name";
 	constexpr char TitleAverage[] = "Avg.";
@@ -259,7 +257,7 @@ namespace
 metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, unsigned flags) noexcept
 :	name_{ name }
 {
-	if (!verify(0 == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.amt_)
+	if (!misc::verify(0 == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.amt_)
 	{	return; // If the measurement is invalid or has no amount, we do not create a metering_t.
 	}
 

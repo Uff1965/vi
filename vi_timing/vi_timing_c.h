@@ -159,7 +159,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
  
 // Stringification and token-pasting macros for unique identifier generation.
 #	ifndef __COUNTER__
-#		define __COUNTER__ __LINE__ //-V2573 Use __LINE__ as a fallback.
+#		define __COUNTER__ __LINE__ // Use __LINE__ as a fallback.
 #	endif
 #	define VI_STR_CONCAT_AUX( a, b ) a##b
 #	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
@@ -239,7 +239,6 @@ typedef enum vi_tmReportFlags_e
 	vi_tmDoNotSubtractOverhead = 0x1000, // If set, the overhead is not subtracted from the measured time in report.
 } vi_tmReportFlags_e;
 
-//-V:VI_TM_HGLOBAL:2571, 2611
 #define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
 
 #	ifdef __cplusplus

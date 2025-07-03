@@ -50,8 +50,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <thread>
 #include <vector>
 
-//-V::-V2600
-
 namespace ch = std::chrono;
 using namespace std::chrono_literals;
 
@@ -69,46 +67,57 @@ namespace
 #endif
 
 	namespace affinity
-	{
+	{	// The affinity namespace provides platform-specific utilities for setting and restoring
+        // the CPU affinity of the current thread. This ensures that timing measurements are not
+        // affected by thread migration between CPU cores, which can introduce variability.
+
 #if defined(_WIN32)
+		// On Windows, thread_affinity_mask_t is defined as DWORD_PTR, which is used to represent the thread affinity mask.
 		using thread_affinity_mask_t = DWORD_PTR;
 
-		std::optional<thread_affinity_mask_t> set_affinity()
-		{	const auto affinity = static_cast<thread_affinity_mask_t>(1U) << GetCurrentProcessorNumber();
-			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), affinity))
-				return ret;
-			return {};
+		// The set_affinity() function sets the current thread's affinity to the processor it is currently running on.
+		// If successful, the previous affinity mask is returned as an optional value; otherwise, an empty optional is returned.
+		auto set_affinity()
+		{	std::optional<thread_affinity_mask_t> result;
+			const auto current_affinity = static_cast<thread_affinity_mask_t>(1U) << GetCurrentProcessorNumber();
+			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), current_affinity); misc::verify(0 != ret))
+			{	result = ret; // Ok!
+			}
+			return result;
 		}
 
+		// The restore_affinity() function restores the thread's affinity to a previous mask.
+		// The function returns true if the restoration succeeds, otherwise false.
 		bool restore_affinity(thread_affinity_mask_t prev)
-		{	if (0 != prev)
-			{	if (misc::verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)))
-				{	return true;
-				}
-			}
-			return false;
+		{	return (0 != prev && misc::verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)));
 		}
 #elif defined(__linux__)
+		// Define the thread affinity mask type for Linux as cpu_set_t.
 		using thread_affinity_mask_t = cpu_set_t;
 
-		std::optional<thread_affinity_mask_t> set_affinity()
-		{	const auto thread = pthread_self();
-			if (thread_affinity_mask_t prev{}; verify(0 == pthread_getaffinity_np(thread, sizeof(prev), &prev)))
-			{	if (const auto core_id = sched_getcpu(); verify(core_id >= 0))
-				{	cpu_set_t affinity;
-					CPU_ZERO(&affinity);
-					CPU_SET(core_id, &affinity);
-					if (verify(0 == pthread_setaffinity_np(thread, sizeof(affinity), &affinity)))
-					{	return prev; // Ok!
+		// Sets the current thread's CPU affinity to the core it is currently running on.
+		// Returns the previous affinity mask as an optional value if successful, otherwise returns an empty optional.
+		auto set_affinity()
+		{	std::optional<thread_affinity_mask_t> result;
+			const auto current_thread = pthread_self();
+			if (thread_affinity_mask_t prev{}; verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
+			{	if (const auto current_core = sched_getcpu(); misc::verify(current_core >= 0))
+				{	cpu_set_t current_affinity;
+					CPU_ZERO(&current_affinity);
+					CPU_SET(current_core, &current_affinity);
+					if (misc::verify(0 == pthread_setaffinity_np(current_thread, sizeof(current_affinity), &current_affinity)))
+					{	result = prev; // Ok!
 					}
 				}
 			}
-			return {};
+			return result;
 		}
 
+		// Restores the thread's CPU affinity to a previously saved mask.
+		// Returns true if the restoration succeeds, otherwise false.
 		bool restore_affinity(thread_affinity_mask_t prev)
-		{	static const cpu_set_t affinity_zero{};
-			if (!CPU_EQUAL(&prev, &affinity_zero))
+		{	static constexpr cpu_set_t AFFINITY_ZERO = [] { cpu_set_t result; CPU_ZERO(&result); return result; }();
+			if (0 != CPU_EQUAL(&prev, &AFFINITY_ZERO))
 			{	if (verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
 				{	return true;
 				}
@@ -245,7 +254,7 @@ namespace
 
 			std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "-  6666.66e-308" -> 9 + 6;
 			const auto len = static_cast<std::size_t>(std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix));
-			if (misc::verify(result.size() > len)) //-V201 // Error will be converted too long unsigned integer.
+			if (misc::verify(result.size() > len)) // Error will be converted too long unsigned integer.
 			{	result.resize(len);
 			}
 			else
@@ -306,7 +315,7 @@ int  VI_TM_CALL vi_Warming(unsigned int threads_qty, unsigned int ms)
 	try
 	{	std::atomic_bool done = false;
 		std::vector<std::thread> additional_threads;
-		additional_threads.reserve(static_cast<std::size_t>(threads_qty)); //-V201
+		additional_threads.reserve(static_cast<std::size_t>(threads_qty));
 		for (unsigned i = 0; i < threads_qty; ++i)
 		{	additional_threads.emplace_back([&done] { while (!done) busy(); });
 		}
@@ -346,7 +355,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		case VI_TM_INFO_VERSION:
 		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
-					std::array<char, (std::size("99.999.9999.YYMMDDHHmm") - 1) + 2 + (std::size(TYPE) - 1) + 1> result; //-V1065
+					std::array<char, (std::size("99.999.9999.YYMMDDHHmm") - 1) + 2 + (std::size(TYPE) - 1) + 1> result;
 					[[maybe_unused]] const auto sz = snprintf
 					(	result.data(),
 						result.size(),
@@ -358,7 +367,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 						CONFIG[0],
 						TYPE
 					);
-					assert(0 < sz && static_cast<std::size_t>(sz) < result.size()); //-V201
+					assert(0 < sz && static_cast<std::size_t>(sz) < result.size());
 					return result;
 				}();
 			return version.data();

@@ -2,11 +2,6 @@
 #	define VI_TIMING_SOURCE_BUILD_NUMBER_MAKER_H
 #	pragma once
 
-//V_ASSERT_CONTRACT
-//V_ASSERT_CONTRACT, assertMacro:verify
-//V_ASSERT_CONTRACT, assertMacro:misc::verify
-//-V:assert:2570, 2528
-
 namespace misc
 {
 	// Updates the global variable based on the last compilation time.

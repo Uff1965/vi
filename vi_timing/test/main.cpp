@@ -2,7 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-#   define _CRTDBG_MAP_ALLOC //-V2573
+#   define _CRTDBG_MAP_ALLOC
 #   include <crtdbg.h>
 #   include <stdlib.h>
 #endif
@@ -126,7 +126,7 @@ namespace
 			for (auto n = CNT; n; --n)
 			{	const auto s = vi_tmGetTicks();
 				const auto f = vi_tmGetTicks();
-				const auto name = "check_" + std::to_string(n % 4); //-V112 "Dangerous magic number 4 used"
+				const auto name = "check_" + std::to_string(n % 4);
 				vi_tmMeasurementAdd(vi_tmMeasurement(h, name.c_str()), f - s, 1);
 				v++;
 			}
@@ -192,7 +192,7 @@ namespace
 			{
 				{
 					const auto sTm = vi_tmGetTicks();
-					const auto sEmpty = vi_tmGetTicks(); //-V656 Variables 'sTm', 'sEmpty' are initialized through the call to the same function.
+					const auto sEmpty = vi_tmGetTicks();
 					/**/
 					const auto fEmpty = vi_tmGetTicks();
 					vi_tmMeasurementAdd(jEmpty, fEmpty - sEmpty, 1);
@@ -308,10 +308,10 @@ namespace
 		auto journal = create_journal();
 		{	const auto unit = *static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT));
 			const auto m = vi_tmMeasurement(journal.get(), "Sample");
-			for (double x : samples_simple)
+			for (auto x : samples_simple)
 			{	vi_tmMeasurementAdd(m, static_cast<VI_TM_TDIFF>(x / unit));
 			}
-			for (double x : samples_multiple)
+			for (auto x : samples_multiple)
 			{	vi_tmMeasurementAdd(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
 			}
 		}

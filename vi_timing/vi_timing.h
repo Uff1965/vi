@@ -29,7 +29,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #ifdef VI_TM_DISABLE
 #	ifndef __COUNTER__ // __COUNTER__ is not included in the standard yet.
-#		define __COUNTER__ __LINE__ //-V2573 // Use __LINE__ as a fallback.
+#		define __COUNTER__ __LINE__ // Use __LINE__ as a fallback.
 #	endif
 #	define VI_STR_CONCAT_AUX( a, b ) a##b
 #	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
@@ -174,7 +174,6 @@ namespace vi_tm
 	// The VI_TM macro creates a measurer_t object with a unique identifier based on the line number.
 	// It stores the pointer to the named measurer entry in a static variable. Therefore, it cannot 
 	// be called with different measurement names.
-	//-V:VI_TM:2528, 2570, 2571
 #	define VI_TM(...) \
 		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, VI_TM_SIZE amount = 1) -> vi_tm::measurer_t { \
 			static const auto meas = vi_tmMeasurement(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \

@@ -10,8 +10,6 @@
 #include <stdint.h>
 #include <threads.h>
 
-//-V::2611, 2600, 2590, 2572
-
 static inline void finish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
 	vi_tmMeasurementAdd(measure, finish - start, amount);
@@ -52,11 +50,11 @@ void bar_c(void)
 void foo_c(void)
 {	VI_TM_HMEAS const foo_c_measuring = vi_tmMeasurement(VI_TM_HGLOBAL, "foo_c");
 	const VI_TM_TICK foo_c_start = vi_tmGetTicks();
-	printf("\n%s:\n", __func__); //-V2600
+	printf("\n%s:\n", __func__);
 	
 	vi_Warming(256, 2);
 	
-	printf("Version: \'%s\' [%u]\n", (const char*)vi_tmStaticInfo(VI_TM_INFO_VERSION), *(const unsigned*)vi_tmStaticInfo(VI_TM_INFO_VER)); //-V206
+	printf("Version: \'%s\' [%u]\n", (const char*)vi_tmStaticInfo(VI_TM_INFO_VERSION), *(const unsigned*)vi_tmStaticInfo(VI_TM_INFO_VER));
 	thrd_yield();
 	thrd_sleep(&(struct timespec) { .tv_nsec = 100 }, NULL);
 
@@ -118,6 +116,6 @@ void foo_c(void)
 		finish(meas, start, 1);
 	}
 
-	printf("%s - done\n", __func__); //-V2600
+	printf("%s - done\n", __func__);
 	finish(foo_c_measuring, foo_c_start, 1);
 }

@@ -53,13 +53,13 @@ namespace
 	};
 
 	constexpr unsigned to_num(const char* str)
-	{	return 10 * c2d(str[0]) + c2d(str[1]); //-V2563
+	{	return 10 * c2d(str[0]) + c2d(str[1]);
 	};
 
 	// The time_stamp function converts date and time strings in the __DATE__ and __TIME__ formats to
 	// a number representing a timestamp in the YYMMDDhhmm format.
 	constexpr unsigned time_stamp(const char (&date)[12], const char (&time)[9])
-	{	static_assert(sizeof(unsigned) >= 4U); //-V112
+	{	static_assert(sizeof(unsigned) >= 4U);
 		assert(0 == date[11] && 0 == time[8]);
 		// "__DATE__ <...> a character string literal of the form 'Mmm dd yyyy'" [15.11 Predefined macro names ISO/IEC JTC1 SC22 WG21 N4860]
 		assert(date[3] == ' ' && date[6] == ' ' && "The date must be in the __DATE__ macro format.");
