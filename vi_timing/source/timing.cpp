@@ -31,11 +31,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include "misc.h"
 
 #include <cassert> // assert()
+#include <chrono> // std::chrono::milliseconds
 #include <cmath> // std::sqrt
 #include <cstdint> // std::uint64_t, std::size_t
 #include <functional> // std::invoke
 #include <memory> // std::unique_ptr
-#include <mutex>
+#include <mutex> // std::mutex, std::lock_guard
 #include <numeric> // std::accumulate
 #include <string> // std::string
 #include <unordered_map> // unordered_map: "does not invalidate pointers or references to elements".
@@ -49,7 +50,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 
 #	include <atomic> // std::atomic
-#	include <mutex> // std::mutex, std::lock_guard
 #	include <thread> // std::this_thread::yield()
 
 #	if defined(_MSC_VER)
@@ -61,15 +61,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	elif defined(__arm__) || defined(__aarch64__)
 #		define cpu_relax() __asm__ __volatile__("yield") // For ARM architectures: use yield hint
 #	else
-#		include <thread>
 #		define cpu_relax() std::this_thread::yield() // Fallback
 #	endif
 
 namespace
 {
-	constexpr auto VI_TM_FP_ZERO = static_cast<VI_TM_FP>(0); // Zero value for floating-point type.
-	constexpr auto VI_TM_FP_ONE = static_cast<VI_TM_FP>(1);
-
 	// A mutex optimized for short captures, using spin-waiting and yielding to reduce contention.
 	// This mutex is designed to be used in scenarios where the lock is held for a very short time,
 	// minimizing the overhead of locking and unlocking.
@@ -91,14 +87,14 @@ namespace
 				{	std::this_thread::yield(); // Yield the thread to allow other threads to run.
 				}
 				else
-				{	auto sleep_ms = 1U << std::min(spins - (SPIN_LIMIT + YIELD_LIMIT), 5U); // exponential back-off
+				{	const auto sleep_ms = 1U << std::min(spins - (SPIN_LIMIT + YIELD_LIMIT), 5U); // exponential back-off
 					std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
 				}
 			}
 		}
 		void unlock() noexcept { locked_.clear(std::memory_order_release); }
 		bool try_lock() noexcept { return !locked_.test_and_set(std::memory_order_acquire); }
-#	pragma warning(suppress: 4324) // Suppress warning: "structure was padded due to alignment specifier"
+#	pragma warning(suppress: 4324) // Suppress MSVC warning: "structure was padded due to alignment specifier"
 	};
 }
 
@@ -107,16 +103,15 @@ namespace
 #	define VI_THREADSAFE_ONLY(t)
 #endif
 
-using namespace misc;
-
 namespace
 {
 	using fp_limits_t = std::numeric_limits<VI_TM_FP>;
+	constexpr auto fp_ZERO = static_cast<VI_TM_FP>(0); // Zero value for floating-point type.
+	constexpr auto fp_ONE = static_cast<VI_TM_FP>(1);
 
-	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
 	class measuring_t: public vi_tmMeasurementStats_t
-	{
-#pragma warning(suppress: 4324) // Suppress warning: "structure was padded due to alignment specifier"
+	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
+#pragma warning(suppress: 4324) // Suppress MSVC warning: "structure was padded due to alignment specifier"
 		VI_THREADSAFE_ONLY(mutable spin_lock_t mtx_);
 	public:
 		measuring_t() noexcept
@@ -125,18 +120,18 @@ namespace
 		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
 		void merge(const vi_tmMeasurementStats_t &src) noexcept;
 		vi_tmMeasurementStats_t get() const noexcept;
-		void reset() noexcept
-		{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-			vi_tmMeasurementStatsReset(this);
-		}
+		void reset() noexcept;
 	};
 
 	using storage_t = std::unordered_map<std::string, measuring_t>;
 } // namespace
 
+// 'vi_tmMeasurement_t' is simply an alias for a measurement entry in the storage map.
+// It inherits from 'storage_t::value_type', which is typically 'std::pair<const std::string, measuring_t>'.
 struct vi_tmMeasurement_t: storage_t::value_type {/**/};
 static_assert
-	(	sizeof(vi_tmMeasurement_t) == sizeof(storage_t::value_type) && alignof(vi_tmMeasurement_t) == alignof(storage_t::value_type),
+	(	sizeof(vi_tmMeasurement_t) == sizeof(storage_t::value_type) &&
+		alignof(vi_tmMeasurement_t) == alignof(storage_t::value_type),
 		"'vi_tmMeasurement_t' should simply be a synonym for 'storage_t::value_type'."
 	);
 
@@ -145,15 +140,15 @@ struct vi_tmMeasurementsJournal_t
 private:
 	static constexpr auto MAX_LOAD_FACTOR = 0.7F;
 	static constexpr size_t DEFAULT_STORAGE_CAPACITY = 64U;
-	VI_THREADSAFE_ONLY(spin_lock_t storage_guard_);
+	static inline std::mutex global_mtx_;
+	static inline std::size_t global_initialized_ = 0U;
 	storage_t storage_;
 	bool need_report_ = false;
-	inline static std::mutex global_mtx_;
-	inline static std::size_t global_initialized_ = 0U;
+#	pragma warning(suppress: 4324) // Suppress MSVC warning: "structure was padded due to alignment specifier"
+	VI_THREADSAFE_ONLY(spin_lock_t storage_guard_);
 public:
-	static int global_init(); // Initialize the global journal.
-	static int global_finit();
-	static auto& from_handle(VI_TM_HJOUR journal); // Get the journal from the handle or return the global journal.
+	vi_tmMeasurementsJournal_t(const vi_tmMeasurementsJournal_t &) = delete;
+	vi_tmMeasurementsJournal_t &operator=(const vi_tmMeasurementsJournal_t &) = delete;
 	explicit vi_tmMeasurementsJournal_t(bool need_report = false);
 	~vi_tmMeasurementsJournal_t();
 	int init();
@@ -161,121 +156,134 @@ public:
 	auto& try_emplace(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
 	int for_each_measurement(vi_tmMeasEnumCb_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
 	void clear();
+	// Global journal management functions.
+	static int global_init(); // Initialize the global journal.
+	static int global_finit();
+	static auto& from_handle(VI_TM_HJOUR journal); // Get the journal from the handle or return the global journal.
 };
 
-int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *src) noexcept
-{
-	if(!verify((0U != src->amt_) == (0U != src->calls_))) return VI_EXIT_FAILURE();
-	if (!verify(src->amt_ >= src->calls_)) return VI_EXIT_FAILURE();
-	if (src->amt_ == 0U && !verify(src->sum_ == 0U)) return VI_EXIT_FAILURE();
+int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *meas) noexcept
+{	if(!misc::verify(!!meas))
+	{	return VI_EXIT_FAILURE;
+	}
+
+	if(!misc::verify((0U != meas->amt_) == (0U != meas->calls_))) return VI_EXIT_FAILURE;
+	if (!misc::verify(meas->amt_ >= meas->calls_)) return VI_EXIT_FAILURE;
+	if (meas->amt_ == 0U && !misc::verify(meas->sum_ == 0U)) return VI_EXIT_FAILURE;
 
 #ifdef VI_TM_STAT_USE_MINMAX
-	if (src->calls_ == 1U && !verify(src->min_ == src->max_)) return VI_EXIT_FAILURE();
-	if (src->calls_ == 1U && !verify(src->sum_ == src->min_ * src->amt_)) return VI_EXIT_FAILURE();
-	if (src->amt_ == 0U)
-	{	if (!verify(src->min_ == fp_limits_t::infinity())) return VI_EXIT_FAILURE();
-		if (!verify(src->max_ == -fp_limits_t::infinity())) return VI_EXIT_FAILURE();
+	if (meas->calls_ == 1U && !misc::verify(meas->min_ == meas->max_)) return VI_EXIT_FAILURE;
+	if (meas->calls_ == 1U && !misc::verify(meas->sum_ == meas->min_ * meas->amt_)) return VI_EXIT_FAILURE;
+	if (meas->amt_ == 0U)
+	{	if (!misc::verify(meas->min_ == fp_limits_t::infinity())) return VI_EXIT_FAILURE;
+		if (!misc::verify(meas->max_ == -fp_limits_t::infinity())) return VI_EXIT_FAILURE;
 	}
-	else if (src->amt_ == 1U)
-	{	if (!verify(static_cast<VI_TM_FP>(src->sum_) == src->min_)) return VI_EXIT_FAILURE();
-		if (!verify(static_cast<VI_TM_FP>(src->sum_) == src->max_)) return VI_EXIT_FAILURE();
+	else if (meas->amt_ == 1U)
+	{	if (!misc::verify(static_cast<VI_TM_FP>(meas->sum_) == meas->min_)) return VI_EXIT_FAILURE;
+		if (!misc::verify(static_cast<VI_TM_FP>(meas->sum_) == meas->max_)) return VI_EXIT_FAILURE;
 	}
 	else
-	{	if (!verify(src->min_ <= src->max_)) return VI_EXIT_FAILURE();
-		if (!verify(src->min_ != fp_limits_t::infinity())) return VI_EXIT_FAILURE();
-		if (!verify(static_cast<VI_TM_FP>(src->sum_) >= src->max_)) return VI_EXIT_FAILURE();
+	{	if (!misc::verify(meas->min_ <= meas->max_)) return VI_EXIT_FAILURE;
+		if (!misc::verify(meas->min_ != fp_limits_t::infinity())) return VI_EXIT_FAILURE;
+		if (!misc::verify(static_cast<VI_TM_FP>(meas->sum_) >= meas->max_)) return VI_EXIT_FAILURE;
 	}
 #endif
 
 #ifdef VI_TM_STAT_USE_WELFORD
-	if (!verify(src->calls_ >= src->flt_calls_)) return VI_EXIT_FAILURE();
-	if (!verify(static_cast<VI_TM_FP>(src->amt_) >= src->flt_amt_)) return VI_EXIT_FAILURE();
-	if (!verify((VI_TM_FP_ZERO != src->flt_amt_) == (0U != src->flt_calls_))) return VI_EXIT_FAILURE();
-	if (!verify(src->flt_amt_ >= static_cast<VI_TM_FP>(src->flt_calls_))) return VI_EXIT_FAILURE();
-	if (VI_TM_FP _; !verify(std::modf(src->flt_amt_, &_) == VI_TM_FP_ZERO)) return VI_EXIT_FAILURE(); // Check if flt_amt_ is an integer.
-	if (!verify(src->flt_mean_ >= VI_TM_FP_ZERO)) return VI_EXIT_FAILURE();
-	if (!verify(src->flt_ss_ >= VI_TM_FP_ZERO)) return VI_EXIT_FAILURE();
+	if (!misc::verify(meas->calls_ >= meas->flt_calls_)) return VI_EXIT_FAILURE;
+	if (!misc::verify(static_cast<VI_TM_FP>(meas->amt_) >= meas->flt_amt_)) return VI_EXIT_FAILURE;
+	if (!misc::verify((fp_ZERO != meas->flt_amt_) == (0U != meas->flt_calls_))) return VI_EXIT_FAILURE;
+	if (!misc::verify(meas->flt_amt_ >= static_cast<VI_TM_FP>(meas->flt_calls_))) return VI_EXIT_FAILURE;
+	if (VI_TM_FP _; !misc::verify(std::modf(meas->flt_amt_, &_) == fp_ZERO)) return VI_EXIT_FAILURE; // Check if flt_amt_ is an integer.
+	if (!misc::verify(meas->flt_mean_ >= fp_ZERO)) return VI_EXIT_FAILURE;
+	if (!misc::verify(meas->flt_ss_ >= fp_ZERO)) return VI_EXIT_FAILURE;
 
-	if (src->flt_amt_ == VI_TM_FP_ZERO)
-	{	if (!verify(src->flt_mean_ == VI_TM_FP_ZERO)) return VI_EXIT_FAILURE();
-		if (!verify(src->flt_ss_ == VI_TM_FP_ZERO)) return VI_EXIT_FAILURE();
+	if (meas->flt_amt_ == fp_ZERO)
+	{	if (!misc::verify(meas->flt_mean_ == fp_ZERO)) return VI_EXIT_FAILURE;
+		if (!misc::verify(meas->flt_ss_ == fp_ZERO)) return VI_EXIT_FAILURE;
 	}
-	else if (src->flt_amt_ == VI_TM_FP_ONE)
-	{	if (!verify(src->flt_calls_ == 1U)) return VI_EXIT_FAILURE();
-		if (!verify(src->flt_ss_ == VI_TM_FP_ZERO)) return VI_EXIT_FAILURE();
+	else if (meas->flt_amt_ == fp_ONE)
+	{	if (!misc::verify(meas->flt_calls_ == 1U)) return VI_EXIT_FAILURE;
+		if (!misc::verify(meas->flt_ss_ == fp_ZERO)) return VI_EXIT_FAILURE;
 	}
 #	ifdef VI_TM_STAT_USE_MINMAX
 	else
-	{	if (!verify((src->min_ - src->flt_mean_) / src->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE();
-		if (!verify((src->flt_mean_ - src->max_) / src->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE();
+	{	if (!misc::verify((meas->min_ - meas->flt_mean_) / meas->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE;
+		if (!misc::verify((meas->flt_mean_ - meas->max_) / meas->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE;
 	}
 #	endif
 #endif
-	return VI_EXIT_SUCCESS();
+	return VI_EXIT_SUCCESS;
 }
 
-void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *m) noexcept
-{	m->calls_ = 0U;
-	m->amt_ = 0U;
-	m->sum_ = 0U;
-#ifdef VI_TM_STAT_USE_MINMAX
-	m->min_ = fp_limits_t::infinity();
-	m->max_ = -fp_limits_t::infinity();
-#endif
-#ifdef VI_TM_STAT_USE_WELFORD
-	m->flt_calls_ = 0U;
-	m->flt_amt_ = VI_TM_FP_ZERO;
-	m->flt_mean_ = VI_TM_FP_ZERO;
-	m->flt_ss_ = VI_TM_FP_ZERO;
-#endif
-	assert(0 == vi_tmMeasurementStatsIsValid(m));
-}
-
-void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TDIFF dur, VI_TM_SIZE amt) noexcept
-{	assert(meas);
-	assert(0 == vi_tmMeasurementStatsIsValid(meas));
-
-	if (!verify(0U != amt))
+void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *meas) noexcept
+{	if (!misc::verify(!!meas))
 	{	return;
 	}
 
-	++meas->calls_;
+	meas->calls_ = 0U;
+	meas->amt_ = 0U;
+	meas->sum_ = 0U;
+#ifdef VI_TM_STAT_USE_MINMAX
+	meas->min_ = fp_limits_t::infinity();
+	meas->max_ = -fp_limits_t::infinity();
+#endif
+#ifdef VI_TM_STAT_USE_WELFORD
+	meas->flt_calls_ = 0U;
+	meas->flt_amt_ = fp_ZERO;
+	meas->flt_mean_ = fp_ZERO;
+	meas->flt_ss_ = fp_ZERO;
+#endif
+	assert(0 == vi_tmMeasurementStatsIsValid(meas));
+}
+
+void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TDIFF dur, VI_TM_SIZE amt) noexcept
+{	if (!misc::verify(!!meas) || !misc::verify(0U != amt))
+	{	return;
+	}
+
+	assert(!!meas && 0 == vi_tmMeasurementStatsIsValid(meas));
+
+	meas->calls_++;
 	meas->amt_ += amt;
 	meas->sum_ += dur;
 
 #if defined(VI_TM_STAT_USE_WELFORD) || defined(VI_TM_STAT_USE_MINMAX)
-	const auto v_f = static_cast<VI_TM_FP>(dur);
-	const auto n_f = static_cast<VI_TM_FP>(amt);
-#endif
-#ifdef VI_TM_STAT_USE_MINMAX
-	const auto a_f = v_f / n_f;
-	if (meas->min_ > a_f) { meas->min_ = a_f; }
-	if (meas->max_ < a_f) { meas->max_ = a_f; }
-#endif
+	const auto f_dur = static_cast<VI_TM_FP>(dur);
+	const auto f_amt = static_cast<VI_TM_FP>(amt);
+	const auto f_val = f_dur / f_amt;
 
-#ifdef VI_TM_STAT_USE_WELFORD
-	constexpr VI_TM_FP K2 = 6.25; // 2.5^2 Threshold for outliers.
-	const auto deviation = v_f / n_f - meas->flt_mean_; // Difference from the mean value.
+#	ifdef VI_TM_STAT_USE_MINMAX
+	if (meas->min_ > f_val) { meas->min_ = f_val; }
+	if (meas->max_ < f_val) { meas->max_ = f_val; }
+#	endif
+
+#	ifdef VI_TM_STAT_USE_WELFORD
+	constexpr VI_TM_FP K = 2.5; // Threshold for outliers.
 	if
-	(	const auto sum_square_dev = deviation * deviation * meas->flt_amt_;
+	(	const auto deviation = f_val - meas->flt_mean_; // Difference from the mean value.
 		meas->flt_amt_ <= 2.0 || // If we have less than 3 measurements, we cannot calculate the standard deviation.
 		meas->flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
-		deviation < 0.0 || // The minimum value is usually closest to the true value.
-		sum_square_dev < K2 * meas->flt_ss_ // Avoids outliers.
+//		deviation < 0.0 || // The minimum value is usually closest to the true value.
+		deviation * deviation * meas->flt_amt_ < (K * K) * meas->flt_ss_ // Avoids outliers.
 	)
-	{	const auto flt_amt = meas->flt_amt_;
-		meas->flt_amt_ += n_f;
-		const auto rev_total = VI_TM_FP_ONE / meas->flt_amt_;
-		meas->flt_mean_ = std::fma(meas->flt_mean_, flt_amt, v_f) * rev_total;
-		meas->flt_ss_ = std::fma(sum_square_dev, n_f * rev_total, meas->flt_ss_);
-		meas->flt_calls_++; // Increment the number of invocations only if the value was added to the statistics.
+	{	meas->flt_amt_ += f_amt;
+		meas->flt_mean_ = std::fma(deviation, f_amt / meas->flt_amt_, meas->flt_mean_);
+		meas->flt_ss_ = std::fma(deviation * (f_val - meas->flt_mean_), f_amt, meas->flt_ss_);
+		meas->flt_calls_++;
 	}
+#	endif
 #endif
 	assert(0 == vi_tmMeasurementStatsIsValid(meas));
 }
 
+inline void measuring_t::reset() noexcept
+{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+	vi_tmMeasurementStatsReset(this);
+}
+
 inline void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
-{	if (!verify(0U != n))
+{	if (!misc::verify(0U != n))
 	{	return;
 	}
 
@@ -289,7 +297,7 @@ inline void measuring_t::merge(const vi_tmMeasurementStats_t &src) noexcept
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT
-{	if(!verify(!!dst && !!src && !!src->amt_))
+{	if(!misc::verify(!!dst && !!src && !!src->amt_))
 	{	return;
 	}
 
@@ -301,8 +309,8 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const v
 	dst->sum_ += src->sum_;
 
 #ifdef VI_TM_STAT_USE_WELFORD
-	if (src->flt_amt_ > VI_TM_FP_ZERO)
-	{	const auto rev_amt = VI_TM_FP_ONE / (dst->flt_amt_ + src->flt_amt_);
+	if (src->flt_amt_ > fp_ZERO)
+	{	const auto rev_amt = fp_ONE / (dst->flt_amt_ + src->flt_amt_);
 		const auto diff_mean = src->flt_mean_ - dst->flt_mean_;
 		dst->flt_ss_ = std::fma(dst->flt_amt_ * src->flt_amt_ * rev_amt, diff_mean * diff_mean, (dst->flt_ss_ + src->flt_ss_));
 		dst->flt_mean_ = std::fma(dst->flt_mean_, dst->flt_amt_, src->flt_mean_ * src->flt_amt_) * rev_amt;
@@ -342,18 +350,16 @@ vi_tmMeasurementsJournal_t::~vi_tmMeasurementsJournal_t()
 }
 
 int vi_tmMeasurementsJournal_t::init()
-{	
-	return VI_EXIT_SUCCESS();
+{	return VI_EXIT_SUCCESS;
 }
 
 int vi_tmMeasurementsJournal_t::finit()
-{
-	clear(); // Clear the journal on finalization.
-	return VI_EXIT_SUCCESS();
+{	clear(); // Clear the journal on finalization.
+	return VI_EXIT_SUCCESS;
 }
 
 inline auto& vi_tmMeasurementsJournal_t::try_emplace(const char *name)
-{
+{	assert(name);
 	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	return *storage_.try_emplace(name).first;
 }
@@ -383,16 +389,16 @@ int vi_tmMeasurementsJournal_t::global_init()
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
 		global.init();
 	}
-	return VI_EXIT_SUCCESS();
+	return VI_EXIT_SUCCESS;
 }
 
 int vi_tmMeasurementsJournal_t::global_finit()
 {	std::lock_guard lg{global_mtx_};
-	if (verify(0U != global_initialized_) && 0U == --global_initialized_)
+	if (misc::verify(0U != global_initialized_) && 0U == --global_initialized_)
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
 		global.finit();
 	}
-	return VI_EXIT_SUCCESS();
+	return VI_EXIT_SUCCESS;
 }
 
 //vvvv API Implementation vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -431,22 +437,22 @@ VI_TM_HMEAS VI_TM_CALL vi_tmMeasurement(VI_TM_HJOUR journal, const char *name)
 }
 
 void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
-{	if (verify(meas)) { meas->second.add(tick_diff, amount); }
+{	if (misc::verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
 void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS meas, const vi_tmMeasurementStats_t *src) noexcept
-{	if (verify(meas)) { meas->second.merge(*src); }
+{	if (misc::verify(meas)) { meas->second.merge(*src); }
 }
 
 void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS meas, const char* *name, vi_tmMeasurementStats_t *data)
-{	if (verify(meas))
+{	if (misc::verify(meas))
 	{	if (name) { *name = meas->first.c_str(); }
 		if (data) { *data = meas->second.get(); }
 	}
 }
 
 void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS meas)
-{	if (verify(meas)) { meas->second.reset(); }
+{	if (misc::verify(meas)) { meas->second.reset(); }
 }
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -454,10 +460,6 @@ void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS meas)
 // This code is only compiled in debug mode to test certain library functionality.
 namespace
 {
-	constexpr auto DBG_EPS()
-	{	return fp_limits_t::epsilon();
-	};
-
 	const auto nanotest = []
 		{
 			static constexpr VI_TM_TDIFF samples_simple[] = { 34, 32, 36 }; // Samples that will be added one at a time.
@@ -514,18 +516,20 @@ namespace
 				vi_tmMeasurementGet(m, &name, &md); // Get the measurement data and name.
 			}
 
+			constexpr auto DBG_EPS = fp_limits_t::epsilon();
+
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
 #	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.flt_amt_ == static_cast<VI_TM_FP>(exp_flt_cnt));
-			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < DBG_EPS());
-			const auto s = std::sqrt(md.flt_ss_ / (md.flt_amt_ - VI_TM_FP_ONE));
-			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < DBG_EPS());
+			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < DBG_EPS);
+			const auto s = std::sqrt(md.flt_ss_ / (md.flt_amt_ - fp_ONE));
+			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < DBG_EPS);
 #	else
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
-			assert(std::abs(static_cast<VI_TM_FP>(md.sum_) / md.amt_ - exp_flt_mean) < DBG_EPS());
+			assert(std::abs(static_cast<VI_TM_FP>(md.sum_) / md.amt_ - exp_flt_mean) < DBG_EPS);
 #	endif
 			return 0;
 		}();

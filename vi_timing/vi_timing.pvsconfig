@@ -41,7 +41,7 @@
 
 #//V_ASSERT_CONTRACT
 //V_ASSERT_CONTRACT, assertMacro:verify
-//V_ASSERT_CONTRACT, assertMacro:misc::verify
+#//V_ASSERT_CONTRACT, assertMacro:misc::verify
 //-V:verify:2528, 2570
 //-V:assert:2528, 2570
 //-V::2600

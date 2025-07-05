@@ -14,13 +14,11 @@
 namespace misc
 {
 #ifdef __cpp_lib_source_location
-	constexpr int VI_EXIT_SUCCESS() noexcept { return 0; } // Use zero as success code.
-	constexpr int VI_EXIT_FAILURE(std::source_location location = std::source_location::current()) noexcept
-	{	return(0 - location.line()); // Use negative line number as error code.
-	}
+#	define VI_EXIT_SUCCESS (0) // Use zero as success code.
+#	define VI_EXIT_FAILURE []() noexcept ->int { return(0 - std::source_location::current().line()); } () // Use negative line number as error code.
 #else
-#	define VI_EXIT_SUCCESS() (0) // Use zero as success code.
-#	define VI_EXIT_FAILURE() (0 - __LINE__) // Use negative line number as error code.
+#	define VI_EXIT_SUCCESS (0) // Use zero as success code.
+#	define VI_EXIT_FAILURE (0 - __LINE__) // Use negative line number as error code.
 #endif
 
 	constexpr bool verify(bool b) noexcept { assert(b && "Verify failed!"); return b; }

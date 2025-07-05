@@ -151,7 +151,7 @@ namespace vi_tm
 		{	return 0U != amt_;
 		}
 		void start(VI_TM_SIZE amt = 1U) noexcept
-		{	assert(!is_active() && amt); // Ensure that the measurer is not already running and that a valid amount is provided.
+		{	assert(!is_active() && 0U != amt); // Ensure that the measurer is not already running and that a valid amount is provided.
 			amt_ = amt;
 			start_ = vi_tmGetTicks(); // Reset start time.
 		}

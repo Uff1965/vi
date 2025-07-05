@@ -183,10 +183,10 @@ typedef struct vi_tmMeasurementStats_t
 	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
 	VI_TM_TDIFF sum_;		// Total time spent measuring all events, in ticks.
 #ifdef VI_TM_STAT_USE_WELFORD
-	VI_TM_SIZE flt_calls_;	// Number of invokes processed. Filtered!
-	VI_TM_FP flt_amt_;		// Number of events counted. Filtered!
-	VI_TM_FP flt_mean_;		// The mean (average) time taken per processed events. In ticks. Filtered!
-	VI_TM_FP flt_ss_;		// Sum of Squares. In ticks. Filtered!
+	VI_TM_SIZE flt_calls_;	// Filtered! Number of invokes processed.
+	VI_TM_FP flt_amt_;		// Filtered! Number of events counted.
+	VI_TM_FP flt_mean_;		// Filtered! Current mean (average) time taken per processed events. In ticks.
+	VI_TM_FP flt_ss_;		// Filtered! Current sum of squares. In ticks.
 #endif
 #ifdef VI_TM_STAT_USE_MINMAX
 	// The minimum and maximum times are represented with a floating point because they can be initialized with the average of the batch.
@@ -232,7 +232,7 @@ typedef enum vi_tmReportFlags_e
 	vi_tmShowDurationEx = 0x0080, // If set, the report will show the duration, including overhead costs, in seconds.
 	vi_tmShowDurationNonThreadsafe = 0x0100, // If this parameter is set, the report will indicate the duration of the threadunsafe measurement.
 	vi_tmShowResolution = 0x0200, // If set, the report will show the clock resolution in seconds.
-	vi_tmShowCorrected = 0x0400, // If set, the report will show corrected values (subtracting overhead).
+	vi_tmShowAux = 0x0400, // If set, the report will show auxiliary information such as overhead.
 	vi_tmShowMask = 0x7F0, // Mask for all show flags.
 
 	vi_tmHideHeader = 0x0800, // If set, the report will not show the header with column names.

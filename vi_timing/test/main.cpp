@@ -222,7 +222,7 @@ namespace
 	void prn_header()
 	{	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
 
-	#pragma warning(suppress: 4996)
+#pragma warning(suppress: 4996) // Suppress MSVC warning: 'localtime': This function or variable may be unsafe.
 		std::cout << "\nStart: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
 			std::endl;
 
@@ -503,9 +503,9 @@ int main()
 	//test_busy();
 	////test_warming();
 	//test_misc();
-	//test_empty();
+	test_empty();
 	//test_sleep();
-	//normal_distribution();
+	normal_distribution();
 	//prn_clock_properties();
 
 	//test_report();

@@ -203,8 +203,13 @@ namespace
 			auto &props = misc::properties_t::props();
 
 			auto to_string = [](auto d) { return misc::to_string(d, DURATION_PREC, DURATION_DEC) + "s. "; };
-			if (flags & vi_tmShowCorrected)
-			{	str << (flags & vi_tmDoNotSubtractOverhead? "": "Corrected. ");
+			if (flags & vi_tmShowAux)
+			{
+#ifdef VI_TM_THREADSAFE
+				str << (flags & vi_tmDoNotSubtractOverhead? "": "Corrected; Thread-safe. ");
+#else
+				str << (flags & vi_tmDoNotSubtractOverhead? "": "Corrected. ");
+#endif
 			}
 			if (flags & vi_tmShowResolution)
 			{	str << "Resolution: " << to_string(props.seconds_per_tick_.count() * props.clock_resolution_ticks_);
