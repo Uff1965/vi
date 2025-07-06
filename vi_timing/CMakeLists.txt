@@ -82,12 +82,13 @@ PUBLIC
 target_compile_definitions(${PROJECT_NAME}
 PRIVATE
   $<$<CONFIG:Release>: NDEBUG>
+  $<$<CONFIG:Debug>: VI_TM_DEBUG=1>
 )
 
 if(VI_TM_BUILD_SHARED)
     target_compile_definitions(${PROJECT_NAME}
     PUBLIC
-        "VI_TM_SHARED"
+        VI_TM_SHARED
     )
 endif()
 

@@ -467,7 +467,7 @@ void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS meas)
 }
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#ifndef NDEBUG
+#if VI_TM_DEBUG
 // This code is only compiled in debug mode to test certain library functionality.
 namespace
 {
@@ -545,4 +545,4 @@ namespace
 			return 0;
 		}();
 }
-#endif // #ifndef NDEBUG
+#endif // #if VI_TM_DEBUG

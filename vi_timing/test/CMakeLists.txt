@@ -48,7 +48,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 target_compile_definitions(${PROJECT_NAME}
 PRIVATE
   $<$<CONFIG:Debug>: _DEBUG> # Microsoft debug RTL
-  $<$<CONFIG:Release>: NDEBUG>
+  $<$<CONFIG:Release>: NDEBUG> # Disable debug assertions in release builds.
 )
 
 if (WIN32)
@@ -60,19 +60,20 @@ if (WIN32)
 
   target_compile_options(${PROJECT_NAME}
   PRIVATE
-    /MP /W3 /nologo /EHsc /Zi
+    /MP /W3 /nologo /EHsc # Enable multi-processor compilation, set warning level 3, disable logo, enable C++ exceptions.
+    /Zi # Generate complete debugging information.
     /Zc:__cplusplus # By default, Visual Studio always returns the value 199711L for the __cplusplus preprocessor macro.
     /experimental:c11atomics # "Atomics are available in Visual Studio 2022 version 17.5 Preview 2 with the /experimental:c11atomics flag, in /std:c11 mode or later."
-    $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy>
-    $<$<CONFIG:Debug>:   /MDd /Od /RTC1>
+    $<$<CONFIG:Release>: /MD  /O2 /Oi /GL /Gy> # Optimize for speed, use multi-threaded DLL runtime, inline functions, enable link-time code generation, enable function-level linking.
+    $<$<CONFIG:Debug>:   /MDd /Od /RTC1> # Use multi-threaded DLL debug runtime, enable runtime checks, no optimizations.
   )
 elseif (UNIX)
   target_compile_options(${PROJECT_NAME}
   PRIVATE
-    -fvisibility=hidden
+    -fvisibility=hidden # Hide symbols by default.
     -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
-    $<$<COMPILE_LANGUAGE:CXX>: -fPIC>
-    $<$<CONFIG:Release>: -O3 -ggdb3 -s>
+    $<$<COMPILE_LANGUAGE:CXX>: -fPIC> # Position independent code for C++.
+    $<$<CONFIG:Release>: -O3 -ggdb3 -s> # Optimize for speed, generate debug info, strip symbols.
   )
 endif()
 
@@ -87,19 +88,19 @@ if (WIN32)
   target_link_options(${PROJECT_NAME}
   PRIVATE
     /SUBSYSTEM:CONSOLE /DEBUG
-    $<$<CONFIG:Release>: /INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF>
-    $<$<CONFIG:Debug>:   /INCREMENTAL>
+    $<$<CONFIG:Release>: /INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF> # Disable incremental linking, enable link-time code generation, optimize for speed and size.
+    $<$<CONFIG:Debug>:   /INCREMENTAL> # Enable incremental linking for debug builds.
   )
 elseif (UNIX)
   target_link_options(${PROJECT_NAME}
   PRIVATE
-    -Wl,--exclude-libs,ALL
+    -Wl,--exclude-libs,ALL # Exclude all symbols from static libraries.
   )
 
   target_link_libraries(${PROJECT_NAME}
   PRIVATE
-    rt
-    pthread
-    atomic
+    rt # Real-time extensions library for UNIX-like systems.
+    pthread # POSIX threads library for UNIX-like systems.
+    atomic # C11 atomic operations library for UNIX-like systems.
   )
 endif()

@@ -338,7 +338,7 @@ namespace
 		const auto j = create_journal();
 		const auto m = vi_tmMeasurement(j.get(), "ITEM");
 		
-		std::mt19937 gen{ VI_DEBUG_ONLY(std::random_device{}()) };
+		std::mt19937 gen{ VI_TM_DEBUG_ONLY(std::random_device{}()) };
 		std::normal_distribution dist(MEAN, CV * MEAN);
 
 		for (int i = 0; i < CNT; ++i)

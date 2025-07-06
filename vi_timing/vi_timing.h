@@ -177,7 +177,7 @@ namespace vi_tm
 #	define VI_TM(...) \
 		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, VI_TM_SIZE amount = 1) -> vi_tm::measurer_t { \
 			static const auto meas = vi_tmMeasurement(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
-			VI_DEBUG_ONLY \
+			VI_TM_DEBUG_ONLY \
 			(	const char* registered_name = nullptr; \
 				vi_tmMeasurementGet(meas, &registered_name, nullptr); \
 				assert(registered_name && 0 == std::strcmp(name, registered_name) && \

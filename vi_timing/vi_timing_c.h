@@ -41,6 +41,11 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 //*******************************************************************************************************************
 // Library configuration options:
 
+// If VI_TM_DEBUG defined, the library is built in debug mode.
+#if !defined(VI_TM_DEBUG) && !defined(NDEBUG)
+#	define VI_TM_DEBUG 1 // Enable debug mode.
+#endif
+
 // If VI_TM_SHARED defined, the library is a shared library.
 // If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
 
@@ -79,18 +84,18 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		elif defined(VI_TM_SHARED)
 #			define VI_TM_API __declspec(dllimport)
 
-#			ifdef NDEBUG
-#				pragma comment(lib, "vi_timing_s.lib")
-#			else
+#			if VI_TM_DEBUG
 #				pragma comment(lib, "vi_timing_sd.lib")
+#			else
+#				pragma comment(lib, "vi_timing_s.lib")
 #			endif
 #		else
 #			define VI_TM_API
 
-#			ifdef NDEBUG
-#				pragma comment(lib, "vi_timing.lib")
-#			else
+#			if VI_TM_DEBUG
 #				pragma comment(lib, "vi_timing_d.lib")
+#			else
+#				pragma comment(lib, "vi_timing.lib")
 #			endif
 #		endif
 #	elif defined (__GNUC__) || defined(__clang__)
@@ -149,12 +154,12 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
 
 // VI_[N]DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
-#	ifdef NDEBUG
-#		define VI_NDEBUG_ONLY(t) t
-#		define VI_DEBUG_ONLY(t)
+#	if VI_TM_DEBUG
+#		define VI_TM_NDEBUG_ONLY(t)
+#		define VI_TM_DEBUG_ONLY(t) t
 #	else
-#		define VI_NDEBUG_ONLY(t)
-#		define VI_DEBUG_ONLY(t) t
+#		define VI_TM_NDEBUG_ONLY(t) t
+#		define VI_TM_DEBUG_ONLY(t)
 #	endif
  
 // Stringification and token-pasting macros for unique identifier generation.

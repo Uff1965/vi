@@ -61,10 +61,10 @@ using namespace std::chrono_literals;
 
 namespace
 {
-#ifdef NDEBUG
-	constexpr char CONFIG[] = "Release";
-#else
+#if VI_TM_DEBUG
 	constexpr char CONFIG[] = "Debug";
+#else
+	constexpr char CONFIG[] = "Release";
 #endif
 #ifdef VI_TM_SHARED
 	constexpr char TYPE[] = "shared";
@@ -477,7 +477,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 	}
 } // vi_tmStaticInfo(vi_tmInfo_e info)
 
-#ifndef NDEBUG
+#if VI_TM_DEBUG
 namespace
 {	// nanotest to array consistency to_str::factors.
 	const auto nanotest_factors = []
@@ -561,4 +561,4 @@ namespace
 		return 0;
 	}();
 }
-#endif // #ifndef NDEBUG
+#endif // #if VI_TM_DEBUG

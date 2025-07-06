@@ -75,7 +75,7 @@ namespace
 		return(100U * (100U * (100U * (100U * year + month) + day) + hour) + minute);
 	}
 
-#ifndef	NDEBUG // Nanotest for time_stamp() function.
+#if	VI_TM_DEBUG // Nanotest for time_stamp() function.
 	constexpr char sample_DATE_[] = "Jun 17 2025";
 	constexpr char sample_TIME_[] = "09:33:00";
 	static_assert(time_stamp(sample_DATE_, sample_TIME_) == 2506170933U, "time_stamp() is not working correctly.");
