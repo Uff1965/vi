@@ -506,7 +506,7 @@ int main()
 	test_empty();
 	//test_sleep();
 	normal_distribution();
-	//prn_clock_properties();
+	prn_clock_properties();
 
 	//test_report();
 	//test_multithreaded();
