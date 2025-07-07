@@ -35,12 +35,11 @@ namespace misc
 		std::chrono::duration<double> duration_ex_threadsafe_;
 		std::chrono::duration<double> duration_threadsafe_; // Duration of one measurement with preservation. [nanoseconds]
 		double clock_resolution_ticks_; // [ticks]
-		static const properties_t &props() { return self_; }
+		static const properties_t& props();
 	private:
 		properties_t();
 		static const properties_t self_;
 	};
-	inline const properties_t properties_t::self_;
 
 	std::string to_string(double d, unsigned char precision, unsigned char dec);
 }

@@ -520,6 +520,9 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRepo
 
 int VI_SYS_CALL vi_tmReportCb(const char *str, void *data)
 {
+	if (nullptr == data)
+	{	data = stdout;
+	}
 #ifdef _WIN32
 	// If the output is directed to stdout and the standard output handle is not available, return 0.
 	// In /SUBSYSTEM:WINDOWS, stdout does not work by default.

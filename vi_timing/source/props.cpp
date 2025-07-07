@@ -210,6 +210,12 @@ namespace
 	}
 } // namespace
 
+const misc::properties_t&
+misc::properties_t::props()
+{	static const properties_t self;
+	return self;
+}
+
 misc::properties_t::properties_t()
 {
 	struct thread_affinity_fix_guard_t // RAII guard to fixate the current thread's affinity.

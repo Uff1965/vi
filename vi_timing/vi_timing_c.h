@@ -401,7 +401,7 @@ extern "C" {
 	/// <param name="cb">A callback function used to output each line of the report. If nullptr, defaults to writing to a FILE* stream.</param>
 	/// <param name="data">A pointer to user data passed to the callback function. If fn is nullptr and data is nullptr, defaults to stdout.</param>
 	/// <returns>The total number of characters written by the report, or a negative value if an error occurs.</returns>
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmReportCb_t cb VI_DEF(vi_tmReportCb), void* data VI_DEF(stdout));
+	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmReportCb_t cb VI_DEF(vi_tmReportCb), void* data VI_DEF(NULL));
 
 	/// <summary>
 	/// Performs a CPU warming routine by running computationally intensive tasks across multiple threads for a specified duration.
