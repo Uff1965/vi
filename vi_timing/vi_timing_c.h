@@ -391,7 +391,7 @@ extern "C" {
     /// <param name="str">The string to output.</param>
     /// <param name="data">A pointer to a FILE* stream. If nullptr, defaults to stdout.</param>
     /// <returns>On success, returns a non-negative value.</returns>
-    VI_TM_API int VI_SYS_CALL vi_tmReportCb(const char *str, void *data);
+    VI_TM_API int VI_SYS_CALL vi_tmReportCb(const char *str, void *ignored VI_DEF(NULL));
 
 	/// <summary>
 	/// Generates a report for the specified journal handle, using a callback function to output the report data.

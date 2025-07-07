@@ -243,7 +243,7 @@ int vi_tmMeasurementsJournal_t::global_init()
 {	std::lock_guard lg{global_mtx_};
 	if (global_initialized_++ == 0U)
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
-		global.init();
+		misc::verify(VI_EXIT_SUCCESS == global.init());
 	}
 	return VI_EXIT_SUCCESS;
 }
@@ -252,7 +252,7 @@ int vi_tmMeasurementsJournal_t::global_finit()
 {	std::lock_guard lg{global_mtx_};
 	if (misc::verify(0U != global_initialized_) && 0U == --global_initialized_)
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
-		global.finit();
+		misc::verify(VI_EXIT_SUCCESS == global.finit());
 	}
 	return VI_EXIT_SUCCESS;
 }

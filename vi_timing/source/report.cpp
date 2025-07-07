@@ -518,17 +518,14 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRepo
 	return result;
 }
 
-int VI_SYS_CALL vi_tmReportCb(const char *str, void *data)
+int VI_SYS_CALL vi_tmReportCb(const char *str, void*)
 {
-	if (nullptr == data)
-	{	data = stdout;
-	}
 #ifdef _WIN32
-	// If the output is directed to stdout and the standard output handle is not available, return 0.
 	// In /SUBSYSTEM:WINDOWS, stdout does not work by default.
-	if (static_cast<FILE*>(data) == stdout && nullptr == GetStdHandle(STD_OUTPUT_HANDLE))
+	// If the standard output handle is not available, return 0.
+	if (nullptr == GetStdHandle(STD_OUTPUT_HANDLE))
 	{	return 0;
 	}
 #endif
-	return fputs(str, static_cast<FILE*>(data));
+	return fputs(str, static_cast<FILE*>(stdout));
 }
