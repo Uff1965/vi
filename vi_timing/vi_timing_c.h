@@ -163,12 +163,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
  
 // Stringification and token-pasting macros for unique identifier generation.
-#	ifndef __COUNTER__
-#		define __COUNTER__ __LINE__ // Use __LINE__ as a fallback.
-#	endif
+#	define VI_ID __LINE__ // An identifier based on the line number does not significantly reduce applicability, but it does facilitate debugging.
 #	define VI_STR_CONCAT_AUX( a, b ) a##b
 #	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
-#	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, __COUNTER__ )
+#	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, VI_ID )
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 typedef double VI_TM_FP; // Floating-point type used for timing calculations, typically double precision.
@@ -392,7 +390,7 @@ extern "C" {
     /// </summary>
     /// <param name="str">The string to output.</param>
     /// <param name="data">A pointer to a FILE* stream. If nullptr, defaults to stdout.</param>
-    /// <returns>The number of characters written, or a negative value if an error occurs.</returns>
+    /// <returns>On success, returns a non-negative value.</returns>
     VI_TM_API int VI_SYS_CALL vi_tmReportCb(const char *str, void *data);
 
 	/// <summary>
