@@ -186,7 +186,7 @@ namespace
 			{	const char *name;
 				vi_tmMeasurementStats_t meas;
 				vi_tmMeasurementGet(h, &name, &meas);
-				auto& [vec, flags] = *static_cast<data_t*>(callback_data);
+				auto& [vec, flags] = *static_cast<data_t*>(callback_data); //-V2571 Need C compatible.
 				vec.emplace_back(name, std::move(meas), flags);
 				return 0; // Ok, continue enumerate.
 			},
@@ -267,16 +267,21 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	}
 
 	{	amt_ = meas.amt_;
-		std::ostringstream str;
-		str.imbue(std::locale(str.getloc(), new misc::space_out));
-		str << amt_;
-		amt_txt_ = str.str();
+		std::ostringstream str_stream;
+		try
+		{	str_stream.imbue(std::locale(str_stream.getloc(), new misc::space_out));
+		}
+		catch (const std::exception &)
+		{	assert(false);
+		}
+		str_stream << amt_;
+		amt_txt_ = str_stream.str();
 	}
 
 	const auto &props = misc::properties_t::props();
 	const auto correction_ticks = (0U == (flags & vi_tmDoNotSubtractOverhead)) ? props.clock_latency_ticks_ : 0.0;
-	const auto total_ticks = meas.sum_ - correction_ticks * meas.calls_; // Total time in ticks, corrected for overhead if necessary.
-	const auto mean_ticks = total_ticks / meas.amt_; // Mean time in ticks, corrected for overhead if necessary.
+	const auto total_ticks = static_cast<double>(meas.sum_) - correction_ticks * static_cast<double>(meas.calls_); // Total time in ticks, corrected for overhead if necessary.
+	const auto mean_ticks = total_ticks / static_cast<double>(meas.amt_); // Mean time in ticks, corrected for overhead if necessary.
 	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.amt_); // Limit for insignificant values, based on the clock resolution and the number of measurements.
 
 	if (mean_ticks <= limit_ticks)
@@ -319,8 +324,8 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	}
 
 	if (meas.flt_calls_ >= 2) // To calculate the measurement spread, at least two measurements must be taken.
-	{	assert(meas.flt_amt_ >= 2); // The first two measurements cannot be filtered out.
-		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_amt_ - VI_TM_FP(1))) / avg_ticks;
+	{	assert(meas.flt_amt_ >= static_cast<VI_TM_FP>(2)); // The first two measurements cannot be filtered out.
+		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_amt_ - static_cast<VI_TM_FP>(1))) / avg_ticks;
 		if (const auto cv_pct = std::round(cv_ * 100.0); cv_pct < 1.0)
 		{	cv_txt_ = "<1 %"; // Coefficient of Variation (CV) is too low.
 		}
@@ -476,7 +481,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
 	n_++;
-	const char fill = ((0 != guideline_interval_) && (0 == n_ % guideline_interval_)) ? UNDERSCORE : ' ';
+	const char fill = ((0U != guideline_interval_) && (0U == n_ % static_cast<std::size_t>(guideline_interval_))) ? UNDERSCORE : ' ';
 	str <<
 		std::setw(max_len_number_) << n_ << ". " << 
 		std::left << std::setfill(fill) <<
@@ -496,13 +501,9 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 }
 
 int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmReportCb_t fn, void *data)
-{	
+{	assert(!data || !!fn); // If data is not null, then fn must be valid.
 	if (nullptr == fn)
-	{	fn = [](const char *str, void *data) { return std::fputs(str, static_cast<std::FILE *>(data)); };
-		if (nullptr == data)
-		{	data = stdout;
-		}
-	}
+		fn = vi_tmReportCb; // Default callback function.
 
 	int result = print_props(fn, data, flags);
 
@@ -518,8 +519,8 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRepo
 	return result;
 }
 
-int VI_SYS_CALL vi_tmReportCb(const char *str, void*)
-{
+int VI_SYS_CALL vi_tmReportCb(const char *str, void* stream)
+{	assert(nullptr == stream); // The output stream must be from the same RTL library as the output function!
 #ifdef _WIN32
 	// In /SUBSYSTEM:WINDOWS, stdout does not work by default.
 	// If the standard output handle is not available, return 0.
@@ -527,5 +528,5 @@ int VI_SYS_CALL vi_tmReportCb(const char *str, void*)
 	{	return 0;
 	}
 #endif
-	return fputs(str, static_cast<FILE*>(stdout));
+	return fputs(str, stdout); // stdout!!!
 }
