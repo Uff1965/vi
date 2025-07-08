@@ -77,11 +77,11 @@ namespace
 	constexpr auto multiple_invoke_aux(std::index_sequence<Is...>, Args&&... args)
 	{	using return_t = std::invoke_result_t<decltype(F), Args...>;
 		if constexpr (std::is_void_v<return_t>)
-		{	((static_cast<void>(Is), std::invoke(F, args...)), ...);
+		{	((static_cast<void>(Is), std::invoke(F, args...)), ...); //-V2528
 		}
 		else
 		{	return_t result{};
-			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(F, args...)), ...);
+			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(F, args...)), ...); //-V2528
 			return result; // Return the last result.
 		}
 	}
@@ -115,10 +115,10 @@ namespace
 	template <auto F, typename... Args>
 	double diff_calc(Args&&... args)
 	{	constexpr auto BASE = 4U;
-		constexpr auto FULL = BASE + 32U;
-		const double full = diff_calc_aux<F, FULL>(args...);
+		constexpr auto EXTRA = 32U;
+		const double full = diff_calc_aux<F, BASE + EXTRA>(args...);
 		const double base = diff_calc_aux<F, BASE>(args...);
-		return (full - base) / static_cast<double>(FULL - BASE);
+		return (full - base) / static_cast<double>(EXTRA);
 	}
 
 	void measuring(VI_TM_HJOUR journal, const char* name)
