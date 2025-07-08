@@ -72,6 +72,15 @@ namespace
 	constexpr char TYPE[] = "static";
 #endif
 
+	// Keeps the CPU busy for a short period to simulate workload.
+	void busy()
+	{	volatile auto f = 0.0;
+		for (auto n = 10'000U; n; --n)
+		{	f = (f + std::sin(n) * std::cos(n)) / 1.0001;
+			std::atomic_thread_fence(std::memory_order_relaxed);
+		}
+	};
+
 	namespace affinity
 	{	// The affinity namespace provides platform-specific utilities for setting and restoring
         // the CPU affinity of the CURRENT thread. This ensures that timing measurements are not
@@ -217,23 +226,20 @@ namespace
 		static_assert(0 == factors[0].exp_ % GROUP_SIZE); // The first factor must be a multiple of GROUP_SIZE.
 		static_assert(0 == factors[std::size(factors) / 2].exp_); // The middle factor must be zero.
 		static_assert((factors[std::size(factors) - 1].exp_ - factors[0].exp_) == (GROUP_SIZE * (std::size(factors) - 1))); // The last factor must be GROUP_SIZE * (number of factors - 1) away from the first factor.
-		using suffix_t = std::array<char, 6>; // Buffer for SI suffixes or scientific notation.
-		static_assert(sizeof(suffix_t) == 6, "SI suffix buffer must be exactly 6 bytes to accommodate the longest suffix and null-termination.");
+		constexpr auto suffix_size = 6U; // The SI suffix buffer must contain at least 6 characters to accommodate the longest suffix and null-termination (e.g., " k" or "e+308").
+		static_assert(sizeof(factors_t::suffix_) < suffix_size);
 
 		// Returns the appropriate SI suffix for a given group position.
 		// If the group position does not match a known SI prefix, returns scientific notation (e.g., "e6").
 		std::string get_suffix(int group_pos)
-		{	static_assert(sizeof(factors_t::suffix_) <= 6);
-			std::string result(6, '\0');
+		{	std::string result(suffix_size, '\0');
 			if (const int idx = (group_pos - factors[0].exp_) / GROUP_SIZE; idx >= 0 && static_cast<std::size_t>(idx) < std::size(factors))
-			{	const auto &factor = factors[idx];
-				assert(factor.exp_ == group_pos);
-				std::memcpy(result.data(), factor.suffix_, sizeof(factor.suffix_));
-				result.back() = '\0'; // Ensure null-termination.
+			{	assert(factors[idx].exp_ == group_pos);
+				result = factors[idx].suffix_;
 			}
 			else
-			{	// Use snprintf for scientific notation, always null-terminated
-				std::snprintf(result.data(), result.size(), "e%d", group_pos);
+			{	std::snprintf(result.data(), result.size(), "e%d", group_pos);
+				result.shrink_to_fit();
 			}
 			return result;
 		}
@@ -300,16 +306,6 @@ namespace
 			return result;
 		}
 	} // namespace to_str
-
-	// Keeps the CPU busy for a short period to simulate workload.
-	void busy()
-	{	volatile auto f = 0.0;
-		for (auto n = 10'000U; n; --n)
-		{	f = (f + std::sin(n) * std::cos(n)) / 1.0001;
-			std::atomic_thread_fence(std::memory_order_relaxed);
-		}
-	};
-
 } // namespace
 
 // Converts a double value to a formatted string with SI prefix or scientific notation.
@@ -317,7 +313,7 @@ namespace
 // - significant: Number of significant digits to display (must be > decimal).
 // - decimal: Number of decimal places to display.
 // Returns: Formatted string representation, or "ERR" if arguments are invalid.
-[[nodiscard]] std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
+std::string misc::to_string(double val, unsigned char significant, unsigned char decimal)
 {	if (!verify(decimal < significant))
 	{	return "ERR";
 	}

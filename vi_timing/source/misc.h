@@ -41,7 +41,7 @@ namespace misc
 		static const properties_t self_;
 	};
 
-	std::string to_string(double d, unsigned char precision, unsigned char dec);
+	[[nodiscard]] std::string to_string(double d, unsigned char precision, unsigned char dec);
 }
 
 #endif // #ifndef VI_TIMING_SOURCE_INTERNAL_H

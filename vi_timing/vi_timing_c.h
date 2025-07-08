@@ -383,7 +383,7 @@ extern "C" {
 	/// Checks if the given measurement statistics structure contains valid data.
 	/// Returns zero if valid.
 	/// </summary>
-	VI_TM_API int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *m) VI_NOEXCEPT;
+	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *m) VI_NOEXCEPT;
 
     /// <summary>
     /// Default report callback function. Writes the given string to the specified output stream.
