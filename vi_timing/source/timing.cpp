@@ -52,16 +52,17 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <atomic> // std::atomic
 #	include <thread> // std::this_thread::yield()
 
+// define CPU_RELAX for spin_lock_t.
 #	if defined(_MSC_VER)
 #		include <intrin.h>
-#		define cpu_relax() _mm_pause()
+#		define CPU_RELAX() _mm_pause()
 #	elif defined(__i386__) || defined(__x86_64__)
 #		include <immintrin.h>
-#		define cpu_relax() _mm_pause() // __builtin_ia32_pause()
+#		define CPU_RELAX() _mm_pause() // __builtin_ia32_pause()
 #	elif defined(__arm__) || defined(__aarch64__)
-#		define cpu_relax() __asm__ __volatile__("yield") // For ARM architectures: use yield hint
+#		define CPU_RELAX() __asm__ __volatile__("yield") // For ARM architectures: use yield hint
 #	else
-#		define cpu_relax() std::this_thread::yield() // Fallback
+#		define CPU_RELAX() std::this_thread::yield() // Fallback
 #	endif
 
 namespace
@@ -69,7 +70,7 @@ namespace
 	// A mutex optimized for short captures, using spin-waiting and yielding to reduce contention.
 	// This mutex is designed to be used in scenarios where the lock is held for a very short time,
 	// minimizing the overhead of locking and unlocking.
-	class alignas(64) spin_lock_t // Ensure 64-byte alignment for better cache performance.
+	class spin_lock_t
 	{	std::atomic_flag locked_ = ATOMIC_FLAG_INIT;
 	public:
 		spin_lock_t() noexcept = default;
@@ -81,7 +82,7 @@ namespace
 			constexpr unsigned YIELD_LIMIT = 100;
 			for(unsigned spins = 0; locked_.test_and_set(std::memory_order_acquire); ++spins)
 			{	if (spins < SPIN_LIMIT)
-				{	cpu_relax(); // Spin-wait with a CPU relaxation hint.
+				{	CPU_RELAX(); // Spin-wait with a CPU relaxation hint.
 				}
 				else if (spins < SPIN_LIMIT + YIELD_LIMIT)
 				{	std::this_thread::yield(); // Yield the thread to allow other threads to run.
@@ -94,7 +95,6 @@ namespace
 		}
 		void unlock() noexcept { locked_.clear(std::memory_order_release); }
 		bool try_lock() noexcept { return !locked_.test_and_set(std::memory_order_acquire); }
-#	pragma warning(suppress: 4324) // Suppress MSVC warning: "structure was padded due to alignment specifier"
 	};
 }
 
@@ -109,9 +109,14 @@ namespace
 	constexpr auto fp_ZERO = static_cast<VI_TM_FP>(0); // Zero value for floating-point type.
 	constexpr auto fp_ONE = static_cast<VI_TM_FP>(1);
 
-	class measuring_t: public vi_tmMeasurementStats_t
+#ifdef VI_TM_STAT_USE_MINMAX
+#	define MEASURE_ALIGN // Too large alignment can lead to performance degradation.
+#else
+#	define MEASURE_ALIGN alignas(64) // 64-byte alignment for better cache performance.
+#endif // VI_TM_STAT_USE_MINMAX
+
+	class MEASURE_ALIGN measuring_t: public vi_tmMeasurementStats_t
 	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
-#pragma warning(suppress: 4324) // Suppress MSVC warning: "structure was padded due to alignment specifier"
 		VI_THREADSAFE_ONLY(mutable spin_lock_t mtx_);
 	public:
 		measuring_t() noexcept
@@ -122,9 +127,10 @@ namespace
 		vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept;
 	};
+	static_assert(sizeof(measuring_t) <= 64);
 
 	using storage_t = std::unordered_map<std::string, measuring_t>;
-} // namespace
+}
 
 // 'vi_tmMeasurement_t' is simply an alias for a measurement entry in the storage map.
 // It inherits from 'storage_t::value_type', which is typically 'std::pair<const std::string, measuring_t>'.
@@ -144,7 +150,6 @@ private:
 	static inline std::size_t global_initialized_ = 0U;
 	storage_t storage_;
 	bool need_report_ = false;
-#	pragma warning(suppress: 4324) // Suppress MSVC warning: "structure was padded due to alignment specifier"
 	VI_THREADSAFE_ONLY(spin_lock_t storage_guard_);
 public:
 	vi_tmMeasurementsJournal_t(const vi_tmMeasurementsJournal_t &) = delete;
