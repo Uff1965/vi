@@ -52,7 +52,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <atomic> // std::atomic
 #	include <thread> // std::this_thread::yield()
 
-// define CPU_RELAX for spin_lock_t.
+// define CPU_RELAX for adaptive_mutex_t.
 #	if defined(_MSC_VER)
 #		include <intrin.h>
 #		define CPU_RELAX() _mm_pause()
@@ -70,16 +70,17 @@ namespace
 	// A mutex optimized for short captures, using spin-waiting and yielding to reduce contention.
 	// This mutex is designed to be used in scenarios where the lock is held for a very short time,
 	// minimizing the overhead of locking and unlocking.
-	class spin_lock_t
+	class adaptive_mutex_t
 	{	std::atomic_flag locked_ = ATOMIC_FLAG_INIT;
 	public:
-		spin_lock_t() noexcept = default;
-		spin_lock_t(const spin_lock_t&) = delete;
-		spin_lock_t& operator=(const spin_lock_t&) = delete;
+		adaptive_mutex_t() noexcept = default;
+		adaptive_mutex_t(const adaptive_mutex_t&) = delete;
+		adaptive_mutex_t& operator=(const adaptive_mutex_t&) = delete;
 
 		void lock() noexcept
 		{	constexpr unsigned SPIN_LIMIT = 50;
 			constexpr unsigned YIELD_LIMIT = 100;
+
 			for(unsigned spins = 0; locked_.test_and_set(std::memory_order_acquire); ++spins)
 			{	if (spins < SPIN_LIMIT)
 				{	CPU_RELAX(); // Spin-wait with a CPU relaxation hint.
@@ -117,7 +118,7 @@ namespace
 
 	class MEASURE_ALIGN measuring_t: public vi_tmMeasurementStats_t
 	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
-		VI_THREADSAFE_ONLY(mutable spin_lock_t mtx_);
+		VI_THREADSAFE_ONLY(mutable adaptive_mutex_t mtx_);
 	public:
 		measuring_t() noexcept
 		{	vi_tmMeasurementStatsReset(this);
@@ -150,7 +151,7 @@ private:
 	static inline std::size_t global_initialized_ = 0U;
 	storage_t storage_;
 	bool need_report_ = false;
-	VI_THREADSAFE_ONLY(spin_lock_t storage_guard_);
+	VI_THREADSAFE_ONLY(adaptive_mutex_t storage_guard_);
 public:
 	vi_tmMeasurementsJournal_t(const vi_tmMeasurementsJournal_t &) = delete;
 	vi_tmMeasurementsJournal_t &operator=(const vi_tmMeasurementsJournal_t &) = delete;
