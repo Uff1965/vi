@@ -41,12 +41,4 @@
     <CurrentVersion>3</CurrentVersion>
     <IsPrimary>false</IsPrimary>
   </SuppressVersion>
-  <vi_timing>
-    <FileName>vi_timing_c.h</FileName>
-    <ErrorCode>V2573</ErrorCode>
-    <Message>Identifiers that contain '__' or start with '_[A-Z]' are reserved. Consider inspecting the '__COUNTER__' identifier.</Message>
-    <CodePrev>1039553</CodePrev>
-    <CodeCurrent>2359278515</CodeCurrent>
-    <CodeNext>100</CodeNext>
-  </vi_timing>
 </NewDataSet>

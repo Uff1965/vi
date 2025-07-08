@@ -14,12 +14,10 @@
 #		include <vi_timing/vi_timing.h>
 #	else
 		// Auxiliary macros for generating a unique identifier.
-#		ifndef __COUNTER__ // __COUNTER__ is not included in the standard yet.
-#			define __COUNTER__ __LINE__ // Use __LINE__ as a fallback.
-#		endif
+#		define VI_ID __LINE__
 #		define VI_STR_CONCAT_AUX( a, b ) a##b // Concatenate two tokens without expansion
 #		define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b ) // Concatenate two tokens
-#		define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, __COUNTER__ ) // Unique identifier macro
+#		define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, VI_ID ) // Unique identifier macro
 
 		// Fallback macros for global journal timing functions.
 #		define VI_TM_INIT(...) static const int VI_UNIC_ID(vi_tm__) = 0

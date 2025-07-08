@@ -129,9 +129,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // for specific code sections. They must appear outside of a function and takes 
 // effect at the first function defined after the macros is seen.
 // Usage:
-//   VI_NOINLINE void my_function() { /* ... */ }
+//   VI_NOINLINE void my_function() { ... }
 //   VI_OPTIMIZE_OFF
-//   /* unoptimized code section */
+//		... unoptimized code section
 //   VI_OPTIMIZE_ON
 #	if defined(_MSC_VER)
 #		define VI_NOINLINE		__declspec(noinline)
@@ -163,7 +163,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	endif
  
 // Stringification and token-pasting macros for unique identifier generation.
-#	define VI_ID __LINE__ // An identifier based on the line number does not significantly reduce applicability, but it does facilitate debugging.
+#	define VI_ID __LINE__ // An identifier based on the line number does not significantly reduce applicability compared to __COUNTER__, but it does facilitate debugging.
 #	define VI_STR_CONCAT_AUX( a, b ) a##b
 #	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
 #	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, VI_ID )
