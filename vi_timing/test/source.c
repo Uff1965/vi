@@ -10,6 +10,9 @@
 #include <stdint.h>
 #include <threads.h>
 
+//-V::2611 [MISRA-C-11.2] Implicit casts between a pointer to an incomplete type and any other type shouldn't be performed.
+// Consider inspecting the first argument of the 'vi_tmMeasurementAdd' function call.
+
 static inline void finish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
 	vi_tmMeasurementAdd(measure, finish - start, amount);
@@ -32,15 +35,15 @@ void bar_c(void)
 		finish(m1, s, 10);
 
 		puts("Original:");
-		vi_tmReport(journal, vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
+		vi_tmReport(journal, (unsigned)vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
 
 		vi_tmMeasurementReset(m1);
 		puts("After vi_tmMeasurementReset(m1) (Clear \"xxx\"):");
-		vi_tmReport(journal, vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
+		vi_tmReport(journal, (unsigned)vi_tmHideHeader, NULL, NULL);
 
 		vi_tmJournalReset(journal);
 		puts("After vi_tmJournalReset(htimer):");
-		vi_tmReport(journal, vi_tmHideHeader, (vi_tmReportCb_t)fputs, stdout);
+		vi_tmReport(journal, (unsigned)vi_tmHideHeader, NULL, NULL);
 		vi_tmJournalClose(journal);
 	}
 

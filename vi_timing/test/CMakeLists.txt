@@ -5,6 +5,14 @@ project(vi_timing_test)
 ### Files #####################################################################
 set(SOURCE_FILES)
 
+if(MSVC)
+    set(FILE_GROUP
+      "vi_timing_test.pvsconfig"
+    )
+    source_group("Extras" FILES ${FILE_GROUP})
+    list(APPEND SOURCE_FILES ${FILE_GROUP})
+endif()
+
 set(FILE_GROUP
   "header.h"
   "main.cpp"
