@@ -243,7 +243,7 @@ int vi_tmMeasurementsJournal_t::global_init()
 {	std::lock_guard lg{global_mtx_};
 	if (global_initialized_++ == 0U)
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
-		misc::verify(VI_EXIT_SUCCESS == global.init());
+		(void)misc::verify(VI_EXIT_SUCCESS == global.init());
 	}
 	return VI_EXIT_SUCCESS;
 }
@@ -252,7 +252,7 @@ int vi_tmMeasurementsJournal_t::global_finit()
 {	std::lock_guard lg{global_mtx_};
 	if (misc::verify(0U != global_initialized_) && 0U == --global_initialized_)
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
-		misc::verify(VI_EXIT_SUCCESS == global.finit());
+		(void)misc::verify(VI_EXIT_SUCCESS == global.finit());
 	}
 	return VI_EXIT_SUCCESS;
 }
@@ -329,11 +329,11 @@ void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *meas) noexce
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TDIFF dur, VI_TM_SIZE amt) noexcept
-{	assert(nullptr != meas && 0 == vi_tmMeasurementStatsIsValid(meas));
-	if (!misc::verify(!!meas) || 0U == amt)
+{	if (!misc::verify(!!meas) || 0U == amt)
 	{	return;
 	}
-
+	assert(nullptr != meas && 0 == vi_tmMeasurementStatsIsValid(meas));
+	
 #if defined(VI_TM_STAT_USE_WELFORD) || defined(VI_TM_STAT_USE_MINMAX)
 	const auto f_dur = static_cast<VI_TM_FP>(dur);
 	const auto f_amt = static_cast<VI_TM_FP>(amt);
@@ -421,8 +421,9 @@ void VI_TM_CALL vi_tmFinit(void)
 {	vi_tmMeasurementsJournal_t::global_finit();
 }
 
-VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned flags, void */*reserved*/)
-{	try
+VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned flags, void *reserved)
+{	(void)reserved; // Reserved parameter, currently unused.
+	try
 	{	return new vi_tmMeasurementsJournal_t{0U != flags};
 	}
 	catch (const std::bad_alloc &)
@@ -533,7 +534,7 @@ namespace
 #	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
-			assert(md.flt_amt_ == static_cast<VI_TM_FP>(exp_flt_cnt));
+			assert(md.flt_amt_ == static_cast<VI_TM_FP>(exp_flt_cnt)); //-V550 //-V2550
 			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < DBG_EPS);
 			const auto s = std::sqrt(md.flt_ss_ / (md.flt_amt_ - fp_ONE));
 			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < DBG_EPS);

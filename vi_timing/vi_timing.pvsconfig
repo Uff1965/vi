@@ -46,7 +46,11 @@
 //-V:verify:2528, 2570
 //-V:assert:2528, 2570
 
-#//-V:VI_TM_HGLOBAL:2571
+//-V:VI_TM_HGLOBAL:2571
+//-V:fp_ZERO:2550
+//-V:fp_ZERO:550
+//-V:fp_ONE:550
+//-V:fp_ONE:2550
 
 //-V::2600
 //-V::201

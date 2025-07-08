@@ -17,6 +17,15 @@ endif()
 ### Files #####################################################################
 set(SOURCE_FILES)
 
+if(MSVC)
+    set(FILE_GROUP
+      "${VI_ROOT_DIR}/vi_timing/vi_timing.pvsconfig"
+      "${VI_ROOT_DIR}/vi_timing/vi_timing.suppress"
+    )
+    source_group("Extras" FILES ${FILE_GROUP})
+    list(APPEND SOURCE_FILES ${FILE_GROUP})
+endif()
+
 set(FILE_GROUP
   "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
   "${VI_ROOT_DIR}/vi_timing/vi_timing_c.h"
