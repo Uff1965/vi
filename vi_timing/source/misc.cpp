@@ -86,6 +86,7 @@ namespace
 		// If successful, the previous affinity mask is returned as an optional value; otherwise, an empty optional is returned.
 		auto set_affinity()
 		{	std::optional<thread_affinity_mask_t> result{};
+
 			const auto current_affinity = static_cast<thread_affinity_mask_t>(1U) << GetCurrentProcessorNumber();
 			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), current_affinity); misc::verify(0U != ret))
 			{	result.emplace( ret); // Ok!
@@ -96,7 +97,7 @@ namespace
 		// The restore_affinity() function restores the thread's affinity to a previous mask.
 		// The function returns true if the restoration succeeds, otherwise false.
 		bool restore_affinity(thread_affinity_mask_t prev)
-		{	return (0 != prev && misc::verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)));
+		{	return (0U != prev && misc::verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)));
 		}
 #elif defined(__linux__)
 		// Define the thread affinity mask type for Linux as cpu_set_t.
@@ -107,6 +108,7 @@ namespace
 		// Returns the previous affinity mask as an optional value if successful, otherwise returns an empty optional.
 		auto set_affinity()
 		{	std::optional<thread_affinity_mask_t> result{};
+
 			const auto current_thread = pthread_self();
 			if (thread_affinity_mask_t prev{}; misc::verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
 			{	if (const auto current_core = sched_getcpu(); misc::verify(current_core >= 0))
@@ -165,23 +167,26 @@ namespace
 	} // namespace affinity
 
 	namespace to_str
-	{
+	{	// The to_str namespace provides utilities for converting floating-point values to strings with SI prefixes or scientific notation.
 		constexpr auto GROUP_SIZE = 3;
 
 		// Returns the non-negative remainder of v divided by GROUP_SIZE.
 		// This is a "floor modulus" operation, ensuring the result is always in [0, GROUP_SIZE).
-		constexpr int floor_mod(int v) noexcept
+		constexpr int group_mod(int v) noexcept
 		{	const auto m = v % GROUP_SIZE;
 			return m < 0 ? m + GROUP_SIZE : m;
 		}
-		static_assert(floor_mod(3) == 0 && floor_mod(2) == 2 && floor_mod(1) == 1 && floor_mod(0) == 0 && floor_mod(-1) == 2 && floor_mod(-2) == 1 && floor_mod(-3) == 0);
+		static_assert
+			(	group_mod(3) == 0 && group_mod(2) == 2 && group_mod(1) == 1 && group_mod(0) == 0 &&
+				group_mod(-1) == 2 && group_mod(-2) == 1 && group_mod(-3) == 0
+			);
 
 		// "Floor Division". Returns the group index for a given exponent value.
 		// Groups are in steps of GROUP_SIZE (e.g., 3 for SI prefixes).
-		constexpr int floor_div(int v) noexcept
-		{	return (v - floor_mod(v)) / GROUP_SIZE;
+		constexpr int group_div(int v) noexcept
+		{	return (v - group_mod(v)) / GROUP_SIZE;
 		};
-		static_assert(floor_div(9) == 3 && floor_div(2) == 0 && floor_div(0) == 0 && floor_div(-1) == -1 && floor_div(-6) == -2);
+		static_assert(group_div(9) == 3 && group_div(2) == 0 && group_div(0) == 0 && group_div(-1) == -1 && group_div(-6) == -2);
 
 		struct factors_t
 		{	int exp_;
@@ -244,7 +249,7 @@ namespace
 			auto val = std::abs(val_org);
 			auto fact = static_cast<int>(std::floor(std::log10(val)));
 			// Adjust sig_pos to align groupings for SI prefixes
-			if (auto d = floor_mod(sig_pos - dec) - floor_mod(fact); d > 0)
+			if (auto d = group_mod(sig_pos - dec) - group_mod(fact); d > 0)
 			{	sig_pos -= d;
 			}
 
@@ -267,7 +272,7 @@ namespace
 			}
 
 			// Determine SI group position and scale value accordingly
-			const auto group_pos = (floor_div(fact) - floor_div(sig_pos - dec)) * GROUP_SIZE;
+			const auto group_pos = (group_div(fact) - group_div(sig_pos - dec)) * GROUP_SIZE;
 			val *= std::pow(10, rounded_f - group_pos);
 			assert(0 == errno);
 			return { std::copysign(val, val_org), get_suffix(group_pos) };
