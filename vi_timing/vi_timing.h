@@ -169,6 +169,15 @@ namespace vi_tm
 	// Initializes the global journal and sets up the report callback.
 #	define VI_TM_INIT(...) vi_tm::init_t VI_UNIC_ID(_vi_tm_) {__VA_ARGS__}
 
+// VI_[N]DEBUG_ONLY macro: Expands to its argument only in debug builds, otherwise expands to nothing.
+#	if VI_TM_DEBUG
+#		define VI_TM_NDEBUG_ONLY(t)
+#		define VI_TM_DEBUG_ONLY(t) t
+#	else
+#		define VI_TM_NDEBUG_ONLY(t) t
+#		define VI_TM_DEBUG_ONLY(t)
+#	endif
+
 	// The VI_TM macro creates a measurer_t object with a unique identifier based on the line number.
 	// It stores the pointer to the named measurer entry in a static variable. Therefore, it cannot 
 	// be called with different measurement names.

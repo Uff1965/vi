@@ -226,8 +226,8 @@ int vi_tmMeasurementsJournal_t::for_each_measurement(vi_tmMeasEnumCb_t fn, void 
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
 	{	if (!it.first.empty())
-		{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data))
-			{	return interrupt;
+		{	if (const auto breaker = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data))
+			{	return breaker;
 			}
 		}
 	}
@@ -241,6 +241,7 @@ void vi_tmMeasurementsJournal_t::clear()
 
 int vi_tmMeasurementsJournal_t::global_init()
 {	std::lock_guard lg{global_mtx_};
+
 	if (global_initialized_++ == 0U)
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
 		(void)misc::verify(VI_EXIT_SUCCESS == global.init());
@@ -250,6 +251,7 @@ int vi_tmMeasurementsJournal_t::global_init()
 
 int vi_tmMeasurementsJournal_t::global_finit()
 {	std::lock_guard lg{global_mtx_};
+
 	if (misc::verify(0U != global_initialized_) && 0U == --global_initialized_)
 	{	auto& global = from_handle(VI_TM_HGLOBAL);
 		(void)misc::verify(VI_EXIT_SUCCESS == global.finit());
