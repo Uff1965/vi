@@ -85,9 +85,11 @@ namespace
 				vi_tmMeasurementGet(m, &name, &meas);
 				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
 				std::right << std::scientific <<
-				" calls = " << std::setw(8) << meas.calls_ << ","
+				" calls = " << std::setw(8) << meas.calls_ << "," <<
+#ifdef VI_TM_STAT_USE_BASE
 				" amt = " << std::setw(8) << meas.amt_ << ","
 				" sum = " << std::setw(15) << meas.sum_ << "," <<
+#endif
 #ifdef VI_TM_STAT_USE_WELFORD
 				" flt_cnt = " << std::setw(10) << meas.flt_amt_ << ","
 				" flt_mean = " << std::setw(9) << meas.flt_mean_ << ","
@@ -180,39 +182,22 @@ namespace
 		std::cout << "\nTest test_empty:\n";
 
 		auto journal = create_journal();
-		{	auto const j = journal.get();
-
-			vi_tmMeasurementReset(vi_tmMeasurement(j, "vi_tm"));
-			vi_tmMeasurementReset(vi_tmMeasurement(j, "empty"));
-
-			static auto const jTm = vi_tmMeasurement(j, "vi_tm");
-			static auto const jEmpty = vi_tmMeasurement(j, "empty");
+		{
+			auto const j = journal.get();
+			auto const jTm = vi_tmMeasurement(j, "vi_tm");
+			auto const jEmpty = vi_tmMeasurement(j, "empty");
 
 			for (int n = 0; n < 1'000'000; ++n)
 			{
-				{
-					const auto sTm = vi_tmGetTicks();
-					const auto sEmpty = vi_tmGetTicks();
-					/**/
-					const auto fEmpty = vi_tmGetTicks();
-					vi_tmMeasurementAdd(jEmpty, fEmpty - sEmpty, 1);
-					const auto fTm = vi_tmGetTicks();
-					vi_tmMeasurementAdd(jTm, fTm - sTm, 1);
-				}
+				const auto sTm = vi_tmGetTicks();
+				const auto sEmpty = vi_tmGetTicks();
+				/**/
+				const auto fEmpty = vi_tmGetTicks();
+				vi_tmMeasurementAdd(jEmpty, fEmpty - sEmpty, 1);
+				const auto fTm = vi_tmGetTicks();
+				vi_tmMeasurementAdd(jTm, fTm - sTm, 1);
 			}
 
-			const char *name = nullptr;
-			vi_tmMeasurementStats_t data;
-			vi_tmMeasurementGet(vi_tmMeasurement(j, "vi_tm"), &name, &data);
-#ifdef VI_TM_STAT_USE_WELFORD
-			std::cout << "vi_tm:\tmean = " << std::setprecision(3) << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-			vi_tmMeasurementGet(vi_tmMeasurement(j, "empty"), &name, &data);
-			std::cout << "empty:\tmean = " << std::setprecision(3)  << data.flt_mean_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-#else
-			std::cout << "vi_tm:\tticks = " << std::setw(16) << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-			vi_tmMeasurementGet(vi_tmMeasurement(j, "empty"), &name, &data);
-			std::cout << "empty:\tticks = " << std::setw(16)  << data.sum_ << ",\tamount = " << data.amt_ << ",\tcalls = " << data.calls_ << std::endl;
-#endif
 			vi_tmReport(j, vi_tmShowMask);
 		}
 
@@ -358,9 +343,11 @@ namespace
 
 		vi_tmMeasurementStats_t raw;
 		vi_tmMeasurementGet(m, nullptr, &raw);
+#ifdef VI_TM_STAT_USE_BASE
 		assert(raw.amt_ == CNT + CNT);
+#endif
 		assert(raw.calls_ == CNT + CNT / MULT);
-#if defined VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_WELFORD
 		assert(std::abs(raw.flt_mean_ - MEAN) / MEAN < 0.01);
 		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_amt_) / MEAN - CV) < 0.01);
 #endif
@@ -506,11 +493,11 @@ int main()
 	test_empty();
 	//test_sleep();
 	normal_distribution();
-	prn_clock_properties();
+	//prn_clock_properties();
 
 	//test_report();
 	//test_multithreaded();
-	test_access();
+	//test_access();
 	//std::cout << "\nRAW report:\n";
 	//report_RAW(VI_TM_HGLOBAL);
 

@@ -46,12 +46,13 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_DEBUG 1 // Enable debug mode.
 #endif
 
-// If VI_TM_SHARED defined, the library is a shared library.
-// If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
-
 // If VI_TM_THREADSAFE not defined, the library is not thread-safe and may be faster in single-threaded applications.
 // Comment out the next line and rebuild project if you do not need thread safety.
 #	define VI_TM_THREADSAFE
+
+// VI_TM_STAT_USE_BASE enables base statistics (amount, sum) tracking.
+// Comment out the next line and rebuild project if you do not need base statistics in reports.
+#	define VI_TM_STAT_USE_BASE
 
 // If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
@@ -60,6 +61,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
 // Comment out the next line and rebuild project if you do not need min/max values in reports.
 //#	define VI_TM_STAT_USE_MINMAX
+
+// If VI_TM_SHARED defined, the library is a shared library.
+// If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
 
 // Uses high-performance timing methods (typically platform-specific optimizations like ASM).
 // To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
@@ -183,8 +187,10 @@ typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Call
 // !!!Use the vi_tmMeasurementStatsReset function to reset the structure to its initial state!!!
 typedef struct vi_tmMeasurementStats_t
 {	VI_TM_SIZE calls_;		// The number of times the measurement was invoked.
+#ifdef VI_TM_STAT_USE_BASE
 	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
 	VI_TM_TDIFF sum_;		// Total time spent measuring all events, in ticks.
+#endif
 #ifdef VI_TM_STAT_USE_WELFORD
 	VI_TM_SIZE flt_calls_;	// Filtered! Number of invokes processed.
 	VI_TM_FP flt_amt_;		// Filtered! Number of events counted.

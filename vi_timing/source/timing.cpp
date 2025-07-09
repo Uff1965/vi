@@ -40,6 +40,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <numeric> // std::accumulate
 #include <string> // std::string
 #include <unordered_map> // unordered_map: "does not invalidate pointers or references to elements".
+#include <new>
 
 #ifdef VI_TM_THREADSAFE
 #	ifdef __STDC_NO_ATOMICS__
@@ -110,31 +111,25 @@ namespace
 	constexpr auto fp_ZERO = static_cast<VI_TM_FP>(0); // Zero value for floating-point type.
 	constexpr auto fp_ONE = static_cast<VI_TM_FP>(1);
 
-#ifdef VI_TM_STAT_USE_MINMAX
-#	define MEASURE_ALIGN // Too large alignment can lead to performance degradation.
-#else
-#	define MEASURE_ALIGN alignas(64) // 64-byte alignment for better cache performance.
-#endif // VI_TM_STAT_USE_MINMAX
-
-	class MEASURE_ALIGN measuring_t: public vi_tmMeasurementStats_t
+	class alignas(std::hardware_constructive_interference_size) meterage_t: public vi_tmMeasurementStats_t
 	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
 		VI_THREADSAFE_ONLY(mutable adaptive_mutex_t mtx_);
 	public:
-		measuring_t() noexcept
+		meterage_t() noexcept
 		{	vi_tmMeasurementStatsReset(this);
 		}
 		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
 		void merge(const vi_tmMeasurementStats_t &src) noexcept;
 		vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept;
+#pragma warning(suppress: 4324)
 	};
-	static_assert(sizeof(measuring_t) <= 64);
 
-	using storage_t = std::unordered_map<std::string, measuring_t>;
+	using storage_t = std::unordered_map<std::string, meterage_t>;
 }
 
 // 'vi_tmMeasurement_t' is simply an alias for a measurement entry in the storage map.
-// It inherits from 'storage_t::value_type', which is typically 'std::pair<const std::string, measuring_t>'.
+// It inherits from 'storage_t::value_type', which is typically 'std::pair<const std::string, meterage_t>'.
 struct vi_tmMeasurement_t: storage_t::value_type {/**/};
 static_assert
 	(	sizeof(vi_tmMeasurement_t) == sizeof(storage_t::value_type) &&
@@ -168,22 +163,22 @@ public:
 	static auto& from_handle(VI_TM_HJOUR journal); // Get the journal from the handle or return the global journal.
 };
 
-inline void measuring_t::reset() noexcept
+inline void meterage_t::reset() noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsReset(this);
 }
 
-inline void measuring_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
+inline void meterage_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsAdd(this, v, n);
 }
 
-inline void measuring_t::merge(const vi_tmMeasurementStats_t &src) noexcept
+inline void meterage_t::merge(const vi_tmMeasurementStats_t &src) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsMerge(this, &src);
 }
 
-inline vi_tmMeasurementStats_t measuring_t::get() const noexcept
+inline vi_tmMeasurementStats_t meterage_t::get() const noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	return *this;
 }
@@ -230,8 +225,7 @@ int vi_tmMeasurementsJournal_t::for_each_measurement(vi_tmMeasEnumCb_t fn, void 
 {	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
-	{	assert(it.second.amt_ >= it.second.calls_);
-		if (!it.first.empty())
+	{	if (!it.first.empty())
 		{	if (const auto interrupt = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data))
 			{	return interrupt;
 			}
@@ -269,29 +263,34 @@ int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *meas)
 	{	return VI_EXIT_FAILURE;
 	}
 
+#ifdef VI_TM_STAT_USE_BASE
 	if (!misc::verify((0U != meas->amt_) == (0U != meas->calls_))) return VI_EXIT_FAILURE; // amt_ and calls_ must be both zero or both non-zero.
 	if (!misc::verify(meas->amt_ >= meas->calls_)) return VI_EXIT_FAILURE; // amt_ must be greater than or equal to calls_.
-	if (meas->amt_ == 0U && !misc::verify(meas->sum_ == 0U)) return VI_EXIT_FAILURE; // If amt_ is zero, sum_ must also be zero.
+#endif
 
 #ifdef VI_TM_STAT_USE_MINMAX
-	if (meas->calls_ == 1U)
-	{	if (!misc::verify(meas->min_ == meas->max_)) return VI_EXIT_FAILURE; // If there is only one call, min_ and max_ must be equal.
-		if (!misc::verify(meas->sum_ == meas->min_ * meas->amt_)) return VI_EXIT_FAILURE; // If there is only one call, sum_ must equal min_ multiplied by amt_.
-	}
-	if (meas->amt_ == 0U)
-	{	if (!misc::verify(meas->min_ == fp_limits_t::infinity())) return VI_EXIT_FAILURE; // If amt_ is zero, min_ must be infinity.
-		if (!misc::verify(meas->max_ == -fp_limits_t::infinity())) return VI_EXIT_FAILURE; // If amt_ is zero, max_ must be negative infinity.
+	if (meas->calls_ == 0U)
+	{	if (!misc::verify(meas->min_ == fp_limits_t::infinity())) return VI_EXIT_FAILURE; // If calls_ is zero, min_ must be infinity.
+		if (!misc::verify(meas->max_ == -fp_limits_t::infinity())) return VI_EXIT_FAILURE; // If calls_ is zero, max_ must be negative infinity.
 	}
 	else
-	{	if (!misc::verify(meas->min_ != fp_limits_t::infinity())) return VI_EXIT_FAILURE; // If amt_ is non-zero, min_ must not be infinity.
-		if (!misc::verify(meas->min_ <= meas->max_)) return VI_EXIT_FAILURE; // min_ must be less than or equal to max_.
-		if (!misc::verify(meas->sum_ >= meas->max_)) return VI_EXIT_FAILURE; // sum_ must be greater than or equal to max_.
+	{	if (!misc::verify(meas->min_ != fp_limits_t::infinity())) return VI_EXIT_FAILURE; // min_ must not be infinity.
+		if (meas->calls_ == 1U)
+		{	if (!misc::verify(meas->min_ == meas->max_)) return VI_EXIT_FAILURE; // If there is only one call, min_ and max_ must be equal.
+		}
+		else
+		{	if (!misc::verify(meas->min_ <= meas->max_)) return VI_EXIT_FAILURE; // min_ must be less than or equal to max_.
+		}
 	}
+#endif
+
+#if defined(VI_TM_STAT_USE_BASE) && defined(VI_TM_STAT_USE_MINMAX)
+	if (meas->calls_ == 1U && !misc::verify(meas->sum_ == meas->min_ * meas->amt_)) return VI_EXIT_FAILURE; // If there is only one call, sum_ must equal min_ multiplied by amt_.
+	if (meas->calls_ >= 1U && !misc::verify(meas->sum_ >= meas->max_)) return VI_EXIT_FAILURE; // sum_ must be greater than or equal to max_.
 #endif
 
 #ifdef VI_TM_STAT_USE_WELFORD
 	if (!misc::verify(meas->flt_calls_ <= meas->calls_)) return VI_EXIT_FAILURE; // flt_calls_ must be less than or equal to calls_.
-	if (!misc::verify(meas->flt_amt_ <= static_cast<VI_TM_FP>(meas->amt_))) return VI_EXIT_FAILURE; // flt_amt_ must be less than or equal to amt_.
 	if (!misc::verify((fp_ZERO != meas->flt_amt_) == (0U != meas->flt_calls_))) return VI_EXIT_FAILURE; // flt_amt_ and flt_calls_ must be both zero or both non-zero.
 	if (!misc::verify(meas->flt_amt_ >= static_cast<VI_TM_FP>(meas->flt_calls_))) return VI_EXIT_FAILURE; // flt_amt_ must be greater than or equal to flt_calls_.
 	if (VI_TM_FP _; !misc::verify(std::modf(meas->flt_amt_, &_) == fp_ZERO)) return VI_EXIT_FAILURE; // flt_amt_ must be an integer value.
@@ -304,12 +303,20 @@ int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *meas)
 	}
 	else if (meas->flt_amt_ == fp_ONE)
 	{	if (!misc::verify(meas->flt_ss_ == fp_ZERO)) return VI_EXIT_FAILURE;
-#	ifdef VI_TM_STAT_USE_MINMAX
-		if (!misc::verify((meas->min_ - meas->flt_mean_) / meas->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE;
-		if (!misc::verify((meas->flt_mean_ - meas->max_) / meas->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE;
-#	endif
 	}
 #endif
+
+#if defined(VI_TM_STAT_USE_BASE) && defined(VI_TM_STAT_USE_WELFORD)
+	if (!misc::verify(meas->flt_amt_ <= static_cast<VI_TM_FP>(meas->amt_))) return VI_EXIT_FAILURE; // flt_amt_ must be less than or equal to amt_.
+#endif
+
+#if defined(VI_TM_STAT_USE_MINMAX) && defined(VI_TM_STAT_USE_WELFORD)
+	if (meas->flt_calls_ > 0U)
+	{	if (!misc::verify((meas->min_ - meas->flt_mean_) / meas->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE;
+		if (!misc::verify((meas->flt_mean_ - meas->max_) / meas->flt_mean_ < fp_limits_t::epsilon())) return VI_EXIT_FAILURE;
+	}
+#endif
+
 	return VI_EXIT_SUCCESS;
 }
 
@@ -319,8 +326,10 @@ void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *meas) noexce
 	}
 
 	meas->calls_ = 0U;
+#ifdef VI_TM_STAT_USE_BASE
 	meas->amt_ = 0U;
 	meas->sum_ = 0U;
+#endif
 #ifdef VI_TM_STAT_USE_MINMAX
 	meas->min_ = fp_limits_t::infinity();
 	meas->max_ = -fp_limits_t::infinity();
@@ -335,11 +344,12 @@ void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *meas) noexce
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TDIFF dur, VI_TM_SIZE amt) noexcept
-{	if (!misc::verify(!!meas) || 0U == amt)
+{	(void)dur;
+	if (!misc::verify(!!meas) || 0U == amt)
 	{	return;
 	}
 	assert(nullptr != meas && 0 == vi_tmMeasurementStatsIsValid(meas));
-	
+
 #if defined(VI_TM_STAT_USE_WELFORD) || defined(VI_TM_STAT_USE_MINMAX)
 	const auto f_dur = static_cast<VI_TM_FP>(dur);
 	const auto f_amt = static_cast<VI_TM_FP>(amt);
@@ -348,8 +358,10 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 
 	if (0U == meas->calls_++)
 	{	// No complex calculations are required for the first (and possibly only) call.
+#ifdef VI_TM_STAT_USE_BASE
 		meas->amt_ = amt;
 		meas->sum_ = dur;
+#endif
 #ifdef VI_TM_STAT_USE_MINMAX
 		meas->min_ = f_val;
 		meas->max_ = f_val;
@@ -361,8 +373,11 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 #endif
 	}
 	else
-	{	meas->amt_ += amt;
+	{
+#ifdef VI_TM_STAT_USE_BASE
+		meas->amt_ += amt;
 		meas->sum_ += dur;
+#endif
 #ifdef VI_TM_STAT_USE_MINMAX
 		if (meas->min_ > f_val) { meas->min_ = f_val; }
 		if (meas->max_ < f_val) { meas->max_ = f_val; }
@@ -386,7 +401,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT
-{	if(!misc::verify(!!dst && !!src && dst != src && !!src->amt_))
+{	if(!misc::verify(!!dst && !!src && dst != src && !!src->calls_))
 	{	return;
 	}
 
@@ -394,9 +409,10 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const v
 	assert(0 == vi_tmMeasurementStatsIsValid(src));
 
 	dst->calls_ += src->calls_;
+#ifdef VI_TM_STAT_USE_BASE
 	dst->amt_ += src->amt_;
 	dst->sum_ += src->sum_;
-
+#endif
 #ifdef VI_TM_STAT_USE_MINMAX
 	if(src->min_ < dst->min_)
 	{	dst->min_ = src->min_;
@@ -405,7 +421,6 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const v
 	{	dst->max_ = src->max_;
 	}
 #endif
-
 #ifdef VI_TM_STAT_USE_WELFORD
 	if (src->flt_amt_ > fp_ZERO)
 	{	const auto new_amt_reverse = fp_ONE / (dst->flt_amt_ + src->flt_amt_);
@@ -535,19 +550,24 @@ namespace
 			}
 
 			constexpr auto DBG_EPS = fp_limits_t::epsilon();
+			(void)DBG_EPS;
 
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
 #	ifdef VI_TM_STAT_USE_WELFORD
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
+#ifdef VI_TM_STAT_USE_BASE
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));
+#endif
 			assert(md.flt_amt_ == static_cast<VI_TM_FP>(exp_flt_cnt)); //-V550 //-V2550
 			assert(std::abs(md.flt_mean_ - exp_flt_mean) / exp_flt_mean < DBG_EPS);
 			const auto s = std::sqrt(md.flt_ss_ / (md.flt_amt_ - fp_ONE));
 			assert(std::abs(s - exp_flt_stddev) / exp_flt_stddev < DBG_EPS);
 #	else
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple));
+#ifdef VI_TM_STAT_USE_BASE
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple));
 			assert(std::abs(static_cast<VI_TM_FP>(md.sum_) / md.amt_ - exp_flt_mean) < DBG_EPS);
+#endif
 #	endif
 			return 0;
 		}();
