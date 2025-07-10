@@ -113,12 +113,12 @@ namespace
 	constexpr auto fp_EPSILON = fp_limits_t::epsilon();
 
 	class alignas(std::hardware_constructive_interference_size) meterage_t
+		: protected vi_tmMeasurementStats_t // Inheritance turned out to be a little faster than Composition.
 	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
-		vi_tmMeasurementStats_t stats_;
 		VI_THREADSAFE_ONLY(mutable adaptive_mutex_t mtx_);
 	public:
 		meterage_t() noexcept
-		{	vi_tmMeasurementStatsReset(&stats_);
+		{	vi_tmMeasurementStatsReset(this);
 		}
 		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
 		void merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept;
@@ -167,22 +167,22 @@ public:
 
 inline void meterage_t::reset() noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsReset(&stats_);
+	vi_tmMeasurementStatsReset(this);
 }
 
 inline void meterage_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsAdd(&stats_, v, n);
+	vi_tmMeasurementStatsAdd(this, v, n);
 }
 
 inline void meterage_t::merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsMerge(&stats_, &src);
+	vi_tmMeasurementStatsMerge(this, &src);
 }
 
 inline vi_tmMeasurementStats_t meterage_t::get() const noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	return stats_;
+	return *static_cast<const vi_tmMeasurementStats_t*>(this);
 }
 
 inline auto& vi_tmMeasurementsJournal_t::from_handle(VI_TM_HJOUR journal)
