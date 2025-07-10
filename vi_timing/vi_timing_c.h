@@ -60,7 +60,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 // VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
 // Comment out the next line and rebuild project if you do not need min/max values in reports.
-//#	define VI_TM_STAT_USE_MINMAX
+#	define VI_TM_STAT_USE_MINMAX
 
 // If VI_TM_SHARED defined, the library is a shared library.
 // If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
@@ -138,20 +138,24 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 //		... unoptimized code section
 //   VI_OPTIMIZE_ON
 #	if defined(_MSC_VER)
+#		define VI_RESTRICT __restrict
 #		define VI_NOINLINE		__declspec(noinline)
 #		define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
 #		define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
 #	elif defined(__clang__)
+#		define VI_RESTRICT __restrict__
 #		define VI_NOINLINE		[[gnu::noinline]]
 #		define VI_OPTIMIZE_OFF	_Pragma("clang optimize push") \
 								_Pragma("clang optimize off")
 #		define VI_OPTIMIZE_ON	_Pragma("clang optimize pop")
 #	elif defined(__GNUC__)
+#		define VI_RESTRICT __restrict__
 #		define VI_NOINLINE		[[gnu::noinline]]
 #		define VI_OPTIMIZE_OFF	_Pragma("GCC push_options") \
 								_Pragma("GCC optimize(\"O0\")")
 #		define VI_OPTIMIZE_ON	_Pragma("GCC pop_options")
 #	else
+#		define VI_RESTRICT
 #		define VI_NOINLINE
 #		define VI_OPTIMIZE_OFF
 #		define VI_OPTIMIZE_ON
@@ -167,7 +171,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 typedef double VI_TM_FP; // Floating-point type used for timing calculations, typically double precision.
 typedef size_t VI_TM_SIZE; // Size type used for counting events, typically size_t.
 typedef uint64_t VI_TM_TICK; // Represents a tick count (typically from a high-resolution timer).
-typedef uint64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
+typedef int64_t VI_TM_TDIFF; // Represents a difference between two tick counts (duration).
 typedef struct vi_tmMeasurement_t *VI_TM_HMEAS; // Opaque handle to a measurement entry.
 typedef struct vi_tmMeasurementsJournal_t *VI_TM_HJOUR; // Opaque handle to a measurements journal.
 typedef int (VI_TM_CALL *vi_tmMeasEnumCb_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
@@ -316,7 +320,7 @@ extern "C" {
 	/// <param name="dur">The duration value to add to the measurement.</param>
 	/// <param name="amt">The number of measured events.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS VI_RESTRICT m, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the given source measurement stats into the specified measurement handle.
@@ -324,7 +328,7 @@ extern "C" {
     /// <param name="m">A handle to the measurement object to be updated.</param>
     /// <param name="src">Pointer to the source measurement statistics to merge.</param>
     /// <returns>This function does not return a value.</returns>
-    VI_TM_API void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS m, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
+    VI_TM_API void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS VI_RESTRICT m, const vi_tmMeasurementStats_t * VI_RESTRICT src) VI_NOEXCEPT;
 
     /// <summary>
     /// Retrieves measurement information from a VI_TM_HMEAS object, including its name and statistics.
@@ -333,14 +337,14 @@ extern "C" {
     /// <param name="name">Pointer to a string pointer that will receive the name of the measurement. Can be nullptr if not needed.</param>
     /// <param name="dst">Pointer to a vi_tmMeasurementStats_t structure that will receive the measurement statistics. Can be nullptr if not needed.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS m, const char **name, vi_tmMeasurementStats_t *dst);
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS VI_RESTRICT m, const char **name, vi_tmMeasurementStats_t * VI_RESTRICT dst);
 	
 	/// <summary>
 	/// Resets the measurement state for the specified measurement handle. The handle remains valid.
 	/// </summary>
 	/// <param name="meas">The measurement handle whose state should be reset.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS m);
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS VI_RESTRICT m);
 
     /// <summary>
     /// Updates the given measurement statistics structure by adding a duration and amount.
@@ -349,7 +353,7 @@ extern "C" {
     /// <param name="dur">The duration value to add to the statistics.</param>
     /// <param name="amt">The number of measured events.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t * VI_RESTRICT dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the source measurement statistics structure into the destination.
@@ -357,14 +361,14 @@ extern "C" {
     /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
     /// <param name="src">Pointer to the source measurement statistics structure to merge.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t *dst, const vi_tmMeasurementStats_t *src) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t * VI_RESTRICT dst, const vi_tmMeasurementStats_t * VI_RESTRICT src) VI_NOEXCEPT;
 
 	/// <summary>
 	/// Resets the given measurement statistics structure to its initial state.
 	/// </summary>
 	/// <param name="m">Pointer to the measurement statistics structure to reset.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *m) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t * VI_RESTRICT m) VI_NOEXCEPT;
 
 	/// <summary>
 	/// Retrieves static information about the timing module based on the specified info type.
@@ -380,7 +384,7 @@ extern "C" {
 	/// Checks if the given measurement statistics structure contains valid data.
 	/// Returns zero if valid.
 	/// </summary>
-	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *m) VI_NOEXCEPT;
+	VI_TM_API VI_NODISCARD int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t * VI_RESTRICT m) VI_NOEXCEPT;
 
     /// <summary>
     /// Default report callback function. Writes the given string to the specified output stream.

@@ -339,6 +339,9 @@ namespace
 			vi_tmMeasurementAdd(m, static_cast<VI_TM_TICK>(std::round(v)), MULT);
 		}
 
+		std::cout << "\nRAW report:\n";
+		report_RAW(j.get());
+		std::cout << "\nReport:\n";
 		vi_tmReport(j.get(), vi_tmShowMask);
 
 		vi_tmMeasurementStats_t raw;
@@ -488,9 +491,9 @@ int main()
 	//foo_c();
 
 	//test_busy();
-	////test_warming();
+	//// test_warming();
 	//test_misc();
-	test_empty();
+	//test_empty();
 	//test_sleep();
 	normal_distribution();
 	//prn_clock_properties();

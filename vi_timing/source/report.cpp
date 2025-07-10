@@ -263,7 +263,7 @@ namespace
 metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, unsigned flags) noexcept
 :	name_{ name }
 {
-	if (!misc::verify(0 == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.calls_)
+	if (!misc::verify(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.calls_)
 	{	return; // If the measurement is invalid or has no amount, we do not create a metering_t.
 	}
 
