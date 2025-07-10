@@ -2,7 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-#   define _CRTDBG_MAP_ALLOC //-V2573
+#   define _CRTDBG_MAP_ALLOC
 #   include <crtdbg.h>
 #   include <stdlib.h>
 #endif
@@ -493,9 +493,9 @@ int main()
 	//test_busy();
 	//// test_warming();
 	//test_misc();
-	//test_empty();
+	test_empty();
 	//test_sleep();
-	normal_distribution();
+	//normal_distribution();
 	//prn_clock_properties();
 
 	//test_report();

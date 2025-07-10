@@ -41,4 +41,116 @@
     <CurrentVersion>3</CurrentVersion>
     <IsPrimary>false</IsPrimary>
   </SuppressVersion>
+  <vi_timing>
+    <FileName>props.cpp</FileName>
+    <ErrorCode>V2528</ErrorCode>
+    <Message>The comma operator should not be used.</Message>
+    <CodePrev>4002109740</CodePrev>
+    <CodeCurrent>639758083</CodeCurrent>
+    <CodeNext>125</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>props.cpp</FileName>
+    <ErrorCode>V2528</ErrorCode>
+    <Message>The comma operator should not be used.</Message>
+    <CodePrev>10531501</CodePrev>
+    <CodeCurrent>1234703414</CodeCurrent>
+    <CodeNext>2992736150</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>report.cpp</FileName>
+    <ErrorCode>V2571</ErrorCode>
+    <Message>Pointer to void should not be converted to a pointer to object. Consider inspecting the expression: 'static_cast&lt; data_t * &gt; (callback_data)'.</Message>
+    <CodePrev>3448356004</CodePrev>
+    <CodeCurrent>2853118424</CodeCurrent>
+    <CodeNext>3903532008</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2550</ErrorCode>
+    <Message>Floating-point expressions should not be directly tested for equality or inequality. It is better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>1686278686</CodePrev>
+    <CodeCurrent>1261533246</CodeCurrent>
+    <CodeNext>100</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2550</ErrorCode>
+    <Message>Floating-point expressions should not be directly tested for equality or inequality. It is better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>839883468</CodePrev>
+    <CodeCurrent>1686278686</CodeCurrent>
+    <CodeNext>1261533246</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2550</ErrorCode>
+    <Message>Floating-point expressions should not be directly tested for equality or inequality. It is better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>839883468</CodePrev>
+    <CodeCurrent>1686278686</CodeCurrent>
+    <CodeNext>2042128961</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2550</ErrorCode>
+    <Message>Floating-point expressions should not be directly tested for equality or inequality. It is better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>100</CodePrev>
+    <CodeCurrent>2450030656</CodeCurrent>
+    <CodeNext>1528316927</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2561</ErrorCode>
+    <Message>The result of an assignment expression should not be used.</Message>
+    <CodePrev>2523169370</CodePrev>
+    <CodeCurrent>54943149</CodeCurrent>
+    <CodeNext>41</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2564</ErrorCode>
+    <Message>There should be no 'integral to floating' implicit cast. Consider inspecting the left operand 'md.flt_calls_' of the operator '+'.</Message>
+    <CodePrev>1061267523</CodePrev>
+    <CodeCurrent>988626150</CodeCurrent>
+    <CodeNext>3136132722</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2564</ErrorCode>
+    <Message>There should be no 'integral to floating' implicit cast. Consider inspecting the left operand 'md.flt_calls_' of the operator '=='.</Message>
+    <CodePrev>1686278686</CodePrev>
+    <CodeCurrent>1261533246</CodeCurrent>
+    <CodeNext>100</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V550</ErrorCode>
+    <Message>An odd precise comparison. It's probably better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>1686278686</CodePrev>
+    <CodeCurrent>1261533246</CodeCurrent>
+    <CodeNext>100</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V550</ErrorCode>
+    <Message>An odd precise comparison. It's probably better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>839883468</CodePrev>
+    <CodeCurrent>1686278686</CodeCurrent>
+    <CodeNext>1261533246</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V550</ErrorCode>
+    <Message>An odd precise comparison. It's probably better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>839883468</CodePrev>
+    <CodeCurrent>1686278686</CodeCurrent>
+    <CodeNext>2042128961</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V550</ErrorCode>
+    <Message>An odd precise comparison. It's probably better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>100</CodePrev>
+    <CodeCurrent>2450030656</CodeCurrent>
+    <CodeNext>1528316927</CodeNext>
+  </vi_timing>
 </NewDataSet>

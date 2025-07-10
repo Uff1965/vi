@@ -46,6 +46,8 @@
 //-V:verify:2528, 2570
 //-V:assert:2528, 2570
 
+//-V:_CRTDBG_MAP_ALLOC:2573
+
 //-V:VI_TM_HGLOBAL:2571
 //-V:fp_ZERO:2550
 //-V:fp_ZERO:550

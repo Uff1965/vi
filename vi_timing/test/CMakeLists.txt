@@ -8,6 +8,7 @@ set(SOURCE_FILES)
 if(MSVC)
     set(FILE_GROUP
       "vi_timing_test.pvsconfig"
+      "vi_timing_test.suppress"
     )
     source_group("Extras" FILES ${FILE_GROUP})
     list(APPEND SOURCE_FILES ${FILE_GROUP})

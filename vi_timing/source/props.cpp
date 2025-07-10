@@ -77,11 +77,11 @@ namespace
 	constexpr auto multiple_invoke_aux(std::index_sequence<Is...>, Args&&... args)
 	{	using return_t = std::invoke_result_t<decltype(F), Args...>;
 		if constexpr (std::is_void_v<return_t>)
-		{	((static_cast<void>(Is), std::invoke(F, args...)), ...); //-V2528
+		{	((static_cast<void>(Is), std::invoke(F, args...)), ...);
 		}
 		else
 		{	return_t result{};
-			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(F, args...)), ...); //-V2528
+			((static_cast<void>(Is), const_cast<volatile return_t &>(result) = std::invoke(F, args...)), ...);
 			return result; // Return the last result.
 		}
 	}

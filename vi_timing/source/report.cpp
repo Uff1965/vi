@@ -187,7 +187,7 @@ namespace
 			{	const char *name;
 				vi_tmMeasurementStats_t meas;
 				vi_tmMeasurementGet(h, &name, &meas);
-				auto& [vec, flags] = *static_cast<data_t*>(callback_data); //-V2571 Need C compatible.
+				auto& [vec, flags] = *static_cast<data_t*>(callback_data); // The pointer to void is necessary for C compatibility.
 				vec.emplace_back(name, std::move(meas), flags);
 				return 0; // Ok, continue enumerate.
 			},

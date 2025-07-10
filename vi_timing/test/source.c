@@ -10,7 +10,6 @@
 #include <stdint.h>
 #include <threads.h>
 
-//-V::2611 [MISRA-C-11.2] Implicit casts between a pointer to an incomplete type and any other type shouldn't be performed.
 // Consider inspecting the first argument of the 'vi_tmMeasurementAdd' function call.
 
 static inline void finish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)

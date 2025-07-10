@@ -67,12 +67,15 @@ namespace vi_tm
 		init_t(const init_t &) = delete;
 		init_t& operator=(const init_t &) = delete;
 
-		void init() const
-		{	[[maybe_unused]] const auto result = vi_tmInit();
+		template<typename... Args>
+		void init(Args&&... args)
+		{	(init_aux(std::forward<Args>(args)), ...);
+			[[maybe_unused]] const auto result = vi_tmInit();
 			assert(0 == result);
 		}
-		template<typename T, typename... Args>
-		void init(T &&v, Args&&... args)
+
+		template<typename T>
+		void init_aux(T &&v)
 		{	if constexpr (std::is_same_v<std::decay_t<T>, vi_tmReportFlags_e>)
 			{	flags_ |= v;
 			}
@@ -93,8 +96,6 @@ namespace vi_tm
 			else
 			{	assert(false); // Unknown parameter type.
 			}
-
-			init(std::forward<Args>(args)...);
 		}
 	public:
 		init_t() { init(); } // Default flags and other settings.
