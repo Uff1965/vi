@@ -112,16 +112,17 @@ namespace
 	constexpr auto fp_ONE = static_cast<VI_TM_FP>(1);
 	constexpr auto fp_EPSILON = fp_limits_t::epsilon();
 
-	class alignas(std::hardware_constructive_interference_size) meterage_t: public vi_tmMeasurementStats_t
+	class alignas(std::hardware_constructive_interference_size) meterage_t
 	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
+		vi_tmMeasurementStats_t stats_;
 		VI_THREADSAFE_ONLY(mutable adaptive_mutex_t mtx_);
 	public:
 		meterage_t() noexcept
-		{	vi_tmMeasurementStatsReset(this);
+		{	vi_tmMeasurementStatsReset(&stats_);
 		}
-		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) VI_RESTRICT noexcept;
-		void merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) VI_RESTRICT noexcept;
-		vi_tmMeasurementStats_t get() VI_RESTRICT const noexcept;
+		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
+		void merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept;
+		vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept;
 #pragma warning(suppress: 4324)
 	};
@@ -166,22 +167,22 @@ public:
 
 inline void meterage_t::reset() noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsReset(this);
+	vi_tmMeasurementStatsReset(&stats_);
 }
 
-inline void meterage_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) VI_RESTRICT noexcept
+inline void meterage_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsAdd(this, v, n);
+	vi_tmMeasurementStatsAdd(&stats_, v, n);
 }
 
-inline void meterage_t::merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) VI_RESTRICT noexcept
+inline void meterage_t::merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsMerge(this, &src);
+	vi_tmMeasurementStatsMerge(&stats_, &src);
 }
 
-inline vi_tmMeasurementStats_t meterage_t::get() VI_RESTRICT const noexcept
+inline vi_tmMeasurementStats_t meterage_t::get() const noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	return *this;
+	return stats_;
 }
 
 inline auto& vi_tmMeasurementsJournal_t::from_handle(VI_TM_HJOUR journal)
@@ -410,7 +411,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 	assert(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(meas));
 }
 
-void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t * VI_RESTRICT dst, const vi_tmMeasurementStats_t * VI_RESTRICT src) VI_NOEXCEPT
+void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT dst, const vi_tmMeasurementStats_t* VI_RESTRICT src) VI_NOEXCEPT
 {	if(!misc::verify(!!dst && !!src && dst != src) && !!src->calls_)
 	{	return;
 	}
@@ -480,7 +481,7 @@ VI_TM_HMEAS VI_TM_CALL vi_tmMeasurement(VI_TM_HJOUR journal, const char *name)
 {	return static_cast<VI_TM_HMEAS>(&vi_tmMeasurementsJournal_t::from_handle(journal).try_emplace(name));
 }
 
-void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS VI_RESTRICT meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
+void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
 {	if (misc::verify(meas)) { meas->second.add(tick_diff, amount); }
 }
 
@@ -495,7 +496,7 @@ void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS VI_RESTRICT meas, const char* *n
 	}
 }
 
-void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS VI_RESTRICT meas)
+void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS meas)
 {	if (misc::verify(meas)) { meas->second.reset(); }
 }
 //^^^API Implementation ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -550,8 +551,8 @@ namespace
 					vi_tmMeasurementGet(m, &name, &tmp);
 
 					assert(tmp.calls_ == md.calls_ + 1);
-					assert(static_cast<VI_TM_FP>(tmp.calls_) == md.flt_calls_); //-V2550 //-V2564
-					assert(static_cast<VI_TM_FP>(tmp.amt_) == md.flt_amt_); //-V2550
+					assert(static_cast<VI_TM_FP>(tmp.calls_) == md.flt_calls_ + fp_ONE); //-V2550 //-V2564
+					assert(static_cast<VI_TM_FP>(tmp.amt_) == md.flt_amt_ + fp_ONE); //-V2550
 				}
 				vi_tmMeasurementGet(m, &name, &md);
 
