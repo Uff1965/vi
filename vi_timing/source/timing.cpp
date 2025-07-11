@@ -390,10 +390,10 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 		constexpr VI_TM_FP K = 2.5; // Threshold for outliers.
 		if(	const auto deviation = f_val - meas->flt_mean_; // Difference from the mean value.
 			dur <= 1U || // The measurable interval is probably smaller than the resolution of the clock.
+			std::fma(deviation * deviation, meas->flt_amt_, -(K * K) * meas->flt_ss_) < fp_ZERO || // Sigma clipping to avoids outliers.
+			deviation < fp_ZERO || // The minimum value is usually closest to the true value. "deviation < .0" - for some reason slowly!!!
 			meas->flt_calls_ <= 2U || // If we have less than 2 measurements, we cannot calculate the standard deviation.
-			meas->flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
-			std::signbit(std::fma(deviation * deviation, meas->flt_amt_, -(K * K) * meas->flt_ss_)) || // Sigma clipping to avoids outliers.
-			std::signbit(deviation) // The minimum value is usually closest to the true value. "deviation < .0" - for some reason slowly!!!
+			meas->flt_ss_ <= 1.0 // A pair of zero initial measurements will block the addition of other.
 		)
 		{	meas->flt_amt_ += f_amt;
 			meas->flt_mean_ = std::fma(deviation, f_amt / meas->flt_amt_, meas->flt_mean_);
