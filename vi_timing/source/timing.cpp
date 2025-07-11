@@ -113,12 +113,12 @@ namespace
 	constexpr auto fp_EPSILON = fp_limits_t::epsilon();
 
 	class alignas(std::hardware_constructive_interference_size) meterage_t
-		: protected vi_tmMeasurementStats_t // Inheritance turned out to be a little faster than Composition.
 	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
+		vi_tmMeasurementStats_t stats_;
 		VI_THREADSAFE_ONLY(mutable adaptive_mutex_t mtx_);
 	public:
 		meterage_t() noexcept
-		{	vi_tmMeasurementStatsReset(this);
+		{	vi_tmMeasurementStatsReset(&stats_);
 		}
 		void add(VI_TM_TDIFF val, VI_TM_SIZE amt) noexcept;
 		void merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept;
@@ -167,22 +167,22 @@ public:
 
 inline void meterage_t::reset() noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsReset(this);
+	vi_tmMeasurementStatsReset(&stats_);
 }
 
 inline void meterage_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsAdd(this, v, n);
+	vi_tmMeasurementStatsAdd(&stats_, v, n);
 }
 
 inline void meterage_t::merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	vi_tmMeasurementStatsMerge(this, &src);
+	vi_tmMeasurementStatsMerge(&stats_, &src);
 }
 
 inline vi_tmMeasurementStats_t meterage_t::get() const noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
-	return *static_cast<const vi_tmMeasurementStats_t*>(this);
+	return stats_;
 }
 
 inline auto& vi_tmMeasurementsJournal_t::from_handle(VI_TM_HJOUR journal)
@@ -389,11 +389,11 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 #ifdef VI_TM_STAT_USE_WELFORD
 		constexpr VI_TM_FP K = 2.5; // Threshold for outliers.
 		if(	const auto deviation = f_val - meas->flt_mean_; // Difference from the mean value.
-			deviation < 0.0 || // The minimum value is usually closest to the true value.
 			dur <= 1U || // The measurable interval is probably smaller than the resolution of the clock.
-			std::fma(deviation * deviation, meas->flt_amt_, -(K * K) * meas->flt_ss_) < fp_ZERO || // Avoids outliers.
 			meas->flt_calls_ <= 2U || // If we have less than 2 measurements, we cannot calculate the standard deviation.
-			meas->flt_ss_ <= 1.0 // A pair of zero initial measurements will block the addition of other.
+			meas->flt_ss_ <= 1.0 || // A pair of zero initial measurements will block the addition of other.
+			std::fma(deviation * deviation, meas->flt_amt_, -(K * K) * meas->flt_ss_) < fp_ZERO || // Avoids outliers.
+			std::signbit(deviation) // The minimum value is usually closest to the true value. "deviation < .0" - for some reason slowly!!!
 		)
 		{	meas->flt_amt_ += f_amt;
 			meas->flt_mean_ = std::fma(deviation, f_amt / meas->flt_amt_, meas->flt_mean_);
