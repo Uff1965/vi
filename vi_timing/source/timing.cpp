@@ -66,6 +66,13 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define CPU_RELAX() std::this_thread::yield() // Fallback
 #	endif
 
+// Checking for FMA support by the compiler/platform
+#if defined(__FMA__) || defined(__AVX2__) || defined(__AVX512F__)
+    #define FMA(x, y, z) std::fma((x), (y), (z))
+#else
+    #define FMA(x, y, z) ((x) * (y) + (z))
+#endif
+
 namespace
 {
 	// A mutex optimized for short captures, using spin-waiting and yielding to reduce contention.
@@ -390,14 +397,14 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 		constexpr VI_TM_FP K = 2.5; // Threshold for outliers.
 		if(	const auto deviation = f_val - meas->flt_mean_; // Difference from the mean value.
 			dur <= 1U || // The measurable interval is probably smaller than the resolution of the clock.
-			std::fma(deviation * deviation, meas->flt_amt_, -(K * K) * meas->flt_ss_) < fp_ZERO || // Sigma clipping to avoids outliers.
+			FMA(deviation * deviation, meas->flt_amt_, - K * K * meas->flt_ss_) < fp_ZERO || // Sigma clipping to avoids outliers.
 			deviation < fp_ZERO || // The minimum value is usually closest to the true value. "deviation < .0" - for some reason slowly!!!
 			meas->flt_calls_ <= 2U || // If we have less than 2 measurements, we cannot calculate the standard deviation.
 			meas->flt_ss_ <= 1.0 // A pair of zero initial measurements will block the addition of other.
 		)
 		{	meas->flt_amt_ += f_amt;
-			meas->flt_mean_ = std::fma(deviation, f_amt / meas->flt_amt_, meas->flt_mean_);
-			meas->flt_ss_ = std::fma(deviation * (f_val - meas->flt_mean_), f_amt, meas->flt_ss_);
+			meas->flt_mean_ = FMA(deviation, f_amt / meas->flt_amt_, meas->flt_mean_);
+			meas->flt_ss_ = FMA(deviation * (f_val - meas->flt_mean_), f_amt, meas->flt_ss_);
 			meas->flt_calls_++;
 		}
 #endif
@@ -431,8 +438,8 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT 
 	if (src->flt_amt_ > fp_ZERO)
 	{	const auto new_amt_reverse = fp_ONE / (dst->flt_amt_ + src->flt_amt_);
 		const auto diff_mean = src->flt_mean_ - dst->flt_mean_;
-		dst->flt_mean_ = std::fma(dst->flt_mean_, dst->flt_amt_, src->flt_mean_ * src->flt_amt_) * new_amt_reverse;
-		dst->flt_ss_ = std::fma(dst->flt_amt_ * diff_mean, src->flt_amt_ * diff_mean * new_amt_reverse, dst->flt_ss_ + src->flt_ss_);
+		dst->flt_mean_ = FMA(dst->flt_mean_, dst->flt_amt_, src->flt_mean_ * src->flt_amt_) * new_amt_reverse;
+		dst->flt_ss_ = FMA(dst->flt_amt_ * diff_mean, src->flt_amt_ * diff_mean * new_amt_reverse, dst->flt_ss_ + src->flt_ss_);
 		dst->flt_amt_ += src->flt_amt_;
 		dst->flt_calls_ += src->flt_calls_;
 	}
@@ -589,13 +596,13 @@ namespace
 					(	std::cbegin(samples_simple),
 						std::cend(samples_simple),
 						0.0,
-						[](auto i, auto v) { const auto d = static_cast<VI_TM_FP>(v) - exp_flt_mean; return std::fma(d, d, i); }
+						[](auto i, auto v) { const auto d = static_cast<VI_TM_FP>(v) - exp_flt_mean; return FMA(d, d, i); }
 					) +
 					static_cast<double>(M) * std::accumulate
 					(	std::cbegin(samples_multiple),
 						std::cend(samples_multiple),
 						0.0,
-						[](auto i, auto v) { const auto d = static_cast<VI_TM_FP>(v) - exp_flt_mean; return std::fma(d, d, i); }
+						[](auto i, auto v) { const auto d = static_cast<VI_TM_FP>(v) - exp_flt_mean; return FMA(d, d, i); }
 					);
 					return std::sqrt(sum_squared_deviations / static_cast<VI_TM_FP>(exp_flt_cnt));
 				}();
