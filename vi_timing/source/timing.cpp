@@ -66,13 +66,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #		define CPU_RELAX() std::this_thread::yield() // Fallback
 #	endif
 
-// Checking for FMA support by the compiler/platform
-#if defined(__FMA__) || defined(__AVX2__) || defined(__AVX512F__)
-    #define FMA(x, y, z) std::fma((x), (y), (z))
-#else
-    #define FMA(x, y, z) ((x) * (y) + (z))
-#endif
-
 namespace
 {
 	// A mutex optimized for short captures, using spin-waiting and yielding to reduce contention.
@@ -112,10 +105,17 @@ namespace
 #	define VI_THREADSAFE_ONLY(t)
 #endif
 
+// Checking for FMA support by the compiler/platform
+#if defined(__FMA__) || defined(__AVX2__) || defined(__AVX512F__)
+    #define FMA(x, y, z) std::fma((x), (y), (z))
+#else
+    #define FMA(x, y, z) ((x) * (y) + (z))
+#endif
+
 namespace
 {
 	using fp_limits_t = std::numeric_limits<VI_TM_FP>;
-	constexpr auto fp_ZERO = static_cast<VI_TM_FP>(0); // Zero value for floating-point type.
+	constexpr auto fp_ZERO = static_cast<VI_TM_FP>(0);
 	constexpr auto fp_ONE = static_cast<VI_TM_FP>(1);
 	constexpr auto fp_EPSILON = fp_limits_t::epsilon();
 
@@ -412,7 +412,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 	assert(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(meas));
 }
 
-void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT dst, const vi_tmMeasurementStats_t* VI_RESTRICT src) VI_NOEXCEPT
+void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT dst, const vi_tmMeasurementStats_t* VI_RESTRICT src) noexcept
 {	if(!misc::verify(!!dst && !!src && dst != src) && !!src->calls_)
 	{	return;
 	}
@@ -532,7 +532,7 @@ namespace
 					assert(md.calls_ == std::size(samples_simple));
 #ifdef VI_TM_STAT_USE_BASE
 					assert(md.amt_ == md.calls_);
-					assert(md.sum_ == std::accumulate(std::begin(samples_simple), std::end(samples_simple), 0LL));
+					assert(md.sum_ == std::accumulate(std::begin(samples_simple), std::end(samples_simple), VI_TM_TDIFF(0U)));
 #endif
 #ifdef VI_TM_STAT_USE_WELFORD
 					assert(md.flt_amt_ == static_cast<VI_TM_FP>(md.calls_));
@@ -553,7 +553,6 @@ namespace
 
 					assert(tmp.calls_ == md.calls_ + 1U);
 					assert(tmp.calls_ == md.flt_calls_ + 1U);
-					assert(static_cast<VI_TM_FP>(tmp.amt_) == md.flt_amt_ + fp_ONE);
 				}
 				vi_tmMeasurementGet(m, &name, &md);
 

@@ -151,9 +151,9 @@ namespace
 
 	struct formatter_t
 	{	static constexpr auto UNDERSCORE = '.';
-		const std::size_t max_len_number_;
-		const unsigned flags_;
-		const unsigned guideline_interval_;
+		const std::size_t max_len_number_ = 0U;
+		const unsigned flags_ = 0U;
+		const unsigned guideline_interval_ = 0U;
 
 		std::size_t max_len_name_{};
 		std::size_t max_len_average_{};
@@ -173,8 +173,7 @@ namespace
 		int print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *data) const;
 
 		std::size_t width_column(vi_tmReportFlags_e clmn) const;
-		const char* mark_column(vi_tmReportFlags_e clmn) const;
-		std::string item_column(vi_tmReportFlags_e clmn, const char* txt = nullptr) const;
+		std::string item_column(vi_tmReportFlags_e clmn) const;
 	};
 
 	std::vector<metering_t> get_meterings(VI_TM_HJOUR journal_handle, unsigned flags)
@@ -187,8 +186,8 @@ namespace
 			{	const char *name;
 				vi_tmMeasurementStats_t meas;
 				vi_tmMeasurementGet(h, &name, &meas);
-				auto& [vec, flags] = *static_cast<data_t*>(callback_data); // The pointer to void is necessary for C compatibility.
-				vec.emplace_back(name, std::move(meas), flags);
+				auto& [v, f] = *static_cast<data_t*>(callback_data); // The pointer to void is necessary for C compatibility.
+				v.emplace_back(name, std::move(meas), f);
 				return 0; // Ok, continue enumerate.
 			},
 			&data
@@ -242,27 +241,25 @@ namespace
 
 	vi_tmReportFlags_e to_sort_flag(unsigned flags_)
 	{ // Convert flags_ to vi_tmReportFlags_e type, ensuring it is one of the defined sorting types.
-		auto result = vi_tmSortByName;
 		switch (auto s = flags_ & vi_tmSortMask)
 		{
+		case vi_tmSortByTime:
 		case vi_tmSortByName:
 		case vi_tmSortBySpeed:
 		case vi_tmSortByAmount:
-		case vi_tmSortByTime:
-			result = static_cast<vi_tmReportFlags_e>(s);
-			break;
+			return static_cast<vi_tmReportFlags_e>(s);
+
 		default:
 			assert(false);
-			break;
+			return vi_tmSortByName;
 		}
-		return result;
 	}
 
 } // namespace
 
 metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, unsigned flags) noexcept
 :	name_{ name }
-{
+{	
 	if (!misc::verify(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.calls_)
 	{	return; // If the measurement is invalid or has no amount, we do not create a metering_t.
 	}
@@ -270,22 +267,23 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	const auto &props = misc::properties_t::props();
 	const auto correction_ticks = (0U == (flags & vi_tmDoNotSubtractOverhead)) ? props.clock_latency_ticks_ : 0.0;
 
+// calls_
 	calls_ = meas.calls_;
 
+// amt_, sum_ and sum_txt_
 #ifdef VI_TM_STAT_USE_BASE
-	{	amt_ = meas.amt_;
-		try
-		{	std::ostringstream str_stream;
-			str_stream.imbue(std::locale(str_stream.getloc(), new misc::space_out));
-			str_stream << amt_;
-			amt_txt_ = str_stream.str();
-		}
-		catch (const std::exception &)
-		{	assert(false);
-		}
+	amt_ = meas.amt_;
+	try
+	{	std::ostringstream str_stream;
+		str_stream.imbue(std::locale(str_stream.getloc(), new misc::space_out));
+		str_stream << amt_;
+		amt_txt_ = str_stream.str();
 	}
-	const auto total_ticks = static_cast<double>(meas.sum_) - correction_ticks * static_cast<double>(meas.calls_); // Total time in ticks, corrected for overhead if necessary.
+	catch (const std::exception &)
+	{	assert(false);
+	}
 
+	const auto total_ticks = static_cast<double>(meas.sum_) - correction_ticks * static_cast<double>(meas.calls_); // Total time in ticks, corrected for overhead if necessary.
 	if (total_ticks <= props.clock_resolution_ticks_ * std::sqrt(meas.calls_))
 	{	sum_txt_ = Insignificant;
 	}
@@ -293,20 +291,9 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	{	sum_ = props.seconds_per_tick_ * total_ticks;
 		sum_txt_ = to_string(sum_);
 	}
-#elif defined(VI_TM_STAT_USE_WELFORD)
-	{	amt_ = meas.flt_amt_;
-		try
-		{	std::ostringstream str_stream;
-			str_stream.imbue(std::locale(str_stream.getloc(), new misc::space_out));
-			str_stream << amt_;
-			amt_txt_ = str_stream.str();
-		}
-		catch (const std::exception &)
-		{	assert(false);
-		}
-	}
 #endif
 
+// mean, limit, cv_ and cv_txt_
 #ifdef VI_TM_STAT_USE_WELFORD
 	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_);
 	const auto mean_ticks = meas.flt_mean_ - correction_ticks;
@@ -327,11 +314,13 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 		}
 	}
 #elif defined(VI_TM_STAT_USE_BASE)
-	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.amt_);
+	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(static_cast<VI_TM_FP>(meas.amt_));
 	const auto mean_ticks = total_ticks / static_cast<double>(meas.amt_);
 #endif
 
+// average_, average_txt_ and amt_txt_
 #if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
+
 	if (mean_ticks <= limit_ticks)
 	{	average_txt_ = Insignificant;
 	}
@@ -341,6 +330,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	}
 #endif
 
+// min_, max_, min_txt_ and max_txt_
 #ifdef VI_TM_STAT_USE_MINMAX
 	if (meas.calls_ != 0U)
 	{	// If there is more than one measurement, the minimum and maximum values are meaningful.
@@ -368,25 +358,6 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 	flags_{ flags },
 	guideline_interval_{ itms.size() > 4U ? 3U : 0U }
 {	
-	if ((flags & vi_tmHideHeader) == 0)
-	{
-		max_len_name_ = std::size(TitleName) - 1;
-#ifdef VI_TM_STAT_USE_BASE
-		max_len_total_ = std::size(TitleTotal) - 1;
-#endif
-#ifdef VI_TM_STAT_USE_WELFORD
-		max_len_cv_ = std::size(TitleCV) - 1;
-#endif
-#ifdef VI_TM_STAT_USE_MINMAX
-		max_len_min_ = std::size(TitleMin) - 1;
-		max_len_max_ = std::size(TitleMax) - 1;
-#endif
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
-		max_len_average_ = std::size(TitleAverage) - 1;
-		max_len_amount_ = std::size(TitleAmount) - 1;
-#endif
-	}
-
 	for (auto &itm : itms)
 	{	max_len_name_ = std::max(max_len_name_, itm.name_.length());
 #ifdef VI_TM_STAT_USE_BASE
@@ -432,45 +403,39 @@ std::size_t formatter_t::width_column(vi_tmReportFlags_e clmn) const
 	}
 
 	if (to_sort_flag(flags_) == clmn)
-	{	title_len += flags_ & vi_tmSortAscending ? std::size(Ascending) - 1U : std::size(Descending) - 1U;
-		result = std::max(title_len, result);
+	{	title_len += (flags_ & vi_tmSortAscending ? std::size(Ascending): std::size(Descending)) - 1U;
 	}
+	result = std::max(title_len, result);
 
 	return result;
 }
 
-const char* formatter_t::mark_column(vi_tmReportFlags_e clmn) const
-{	return to_sort_flag(flags_) == clmn ? (flags_ & vi_tmSortAscending ? Ascending : Descending) : "";
-};
-
-std::string formatter_t::item_column(vi_tmReportFlags_e clmn, const char* txt) const
-{	std::ostringstream str;
-	if (!txt)
-	{	switch (clmn)
-		{
-		case vi_tmSortByName:
-			txt = TitleName;
-			break;
-		case vi_tmSortBySpeed:
-			txt = TitleAverage;
-			break;
-		case vi_tmSortByTime:
-			txt = TitleTotal;
-			break;
-		case vi_tmSortByAmount:
-			txt = TitleAmount;
-			break;
-		default:
-			assert(false);
-			break;
-		}
-
-		str << txt << mark_column(clmn);
+std::string formatter_t::item_column(vi_tmReportFlags_e clmn) const
+{	std::string result;
+	switch (clmn)
+	{
+	case vi_tmSortByName:
+		result += TitleName;
+		break;
+	case vi_tmSortBySpeed:
+		result += TitleAverage;
+		break;
+	case vi_tmSortByTime:
+		result += TitleTotal;
+		break;
+	case vi_tmSortByAmount:
+		result += TitleAmount;
+		break;
+	default:
+		assert(false);
+		break;
 	}
-	else
-	{	str << txt;
+
+	if (to_sort_flag(flags_) == clmn)
+	{	result += (flags_ & vi_tmSortAscending ? Ascending : Descending);
 	}
-	return str.str();
+
+	return result;
 }
 
 int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
@@ -494,13 +459,8 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 #ifdef VI_TM_STAT_USE_MINMAX
 		"(" << std::setw(max_len_min_) << TitleMin << " - " << std::setw(max_len_max_) << TitleMax << ") " <<
 #endif
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
-		"[" << 
-#endif
 #ifdef VI_TM_STAT_USE_BASE
-		std::setw(width_column(vi_tmSortByTime)) << item_column(vi_tmSortByTime) << " / " <<
-#endif
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
+		"[" << std::setw(width_column(vi_tmSortByTime)) << item_column(vi_tmSortByTime) << " / " <<
 		std::setw(width_column(vi_tmSortByAmount)) << item_column(vi_tmSortByAmount) << "]" <<
 #endif
 		"\n";
@@ -527,13 +487,8 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 #ifdef VI_TM_STAT_USE_MINMAX
 		"(" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << ") " <<
 #endif
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
-		"[" << 
-#endif
 #ifdef VI_TM_STAT_USE_BASE
-		std::setw(width_column(vi_tmSortByTime)) << i.sum_txt_ << " / " <<
-#endif
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
+		"[" << std::setw(width_column(vi_tmSortByTime)) << i.sum_txt_ << " / " <<
 		std::setw(width_column(vi_tmSortByAmount)) << i.amt_ << "]" <<
 #endif
 		"\n";
@@ -560,13 +515,10 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRepo
 }
 
 int VI_SYS_CALL vi_tmReportCb(const char *str, void* stream)
-{	assert(nullptr == stream); // The output stream must be from the same RTL library as the output function!
-(void)stream;
+{	(void)misc::verify(nullptr == stream); // The output stream must be from the same RTL library as the output function!
 #ifdef _WIN32
-	// In /SUBSYSTEM:WINDOWS, stdout does not work by default.
-	// If the standard output handle is not available, return 0.
-	if (nullptr == GetStdHandle(STD_OUTPUT_HANDLE))
-	{	return 0;
+	if (nullptr == GetStdHandle(STD_OUTPUT_HANDLE)) // If the standard output handle is not available, return 0.
+	{	return 0; // In /SUBSYSTEM:WINDOWS, stdout does not work by default.
 	}
 #endif
 	return fputs(str, stdout); // stdout!!!

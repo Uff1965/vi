@@ -91,9 +91,10 @@ namespace
 				" sum = " << std::setw(15) << meas.sum_ << "," <<
 #endif
 #ifdef VI_TM_STAT_USE_WELFORD
-				" flt_cnt = " << std::setw(10) << meas.flt_amt_ << ","
-				" flt_mean = " << std::setw(9) << meas.flt_mean_ << ","
-				" flt_ss = " << std::setw(9) << meas.flt_ss_ <<
+				std::setprecision(2) << std::defaultfloat << 
+				" flt_cnt = " << std::setw(7) << meas.flt_amt_ << ","
+				" flt_mean = " << std::setw(7) << meas.flt_mean_ << ","
+				" flt_ss = " << std::setw(7) << meas.flt_ss_ <<
 #endif
 #ifdef VI_TM_STAT_USE_MINMAX
 				" min = " << std::setw(9) << meas.min_ << ","
@@ -495,12 +496,12 @@ int main()
 	//test_misc();
 	test_empty();
 	//test_sleep();
-	//normal_distribution();
+	normal_distribution();
 	//prn_clock_properties();
 
 	//test_report();
 	//test_multithreaded();
-	//test_access();
+	test_access();
 	//std::cout << "\nRAW report:\n";
 	//report_RAW(VI_TM_HGLOBAL);
 
