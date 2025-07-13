@@ -135,12 +135,10 @@ namespace
 		// Restores the thread's CPU affinity to a previously saved mask.
 		// Returns true if the restoration succeeds, otherwise false.
 		bool restore_affinity(thread_affinity_mask_t prev)
-		{	if (0 != CPU_EQUAL(&prev, &AFFINITY_ZERO))
-			{	if (verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
-				{	return true;
-				}
+		{	if (0 != CPU_EQUAL(&prev, &AFFINITY_ZERO) && !verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
+			{	return false;
 			}
-			return false;
+			return true;
 		}
 #endif
 
