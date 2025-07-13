@@ -34,6 +34,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <chrono> // std::chrono::milliseconds
 #include <cmath> // std::sqrt
 #include <cstdint> // std::uint64_t, std::size_t
+#include <cstring>
 #include <functional> // std::invoke
 #include <memory> // std::unique_ptr
 #include <mutex> // std::mutex, std::lock_guard
@@ -528,7 +529,7 @@ namespace
 				vi_tmMeasurementStats_t md;
 				vi_tmMeasurementStatsReset(&md);
 				vi_tmMeasurementGet(m, &name, &md);
-				{	assert(!!name && 0 == strcmp(name, NAME));
+				{	assert(!!name && 0 == std::strcmp(name, NAME));
 					assert(md.calls_ == std::size(samples_simple));
 #ifdef VI_TM_STAT_USE_BASE
 					assert(md.amt_ == md.calls_);
