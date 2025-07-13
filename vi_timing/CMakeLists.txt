@@ -102,6 +102,8 @@ if(VI_TM_BUILD_SHARED)
 endif()
 
 if (WIN32)
+    set_source_files_properties("source/timing.cpp" PROPERTIES COMPILE_FLAGS "/fp:fast") # Enable fast floating-point model for 'timing.cpp'
+
     target_compile_definitions(${PROJECT_NAME}
     PRIVATE
       WIN32_LEAN_AND_MEAN # Exclude rarely-used stuff from Windows headers.
@@ -111,10 +113,14 @@ if (WIN32)
 
     target_compile_options(${PROJECT_NAME}
     PRIVATE
-    /MP /W4 /nologo /EHsc /Zi /arch:AVX2 /fp:fast # Enable multi-processor compilation, set warning level 4, disable logo, enable C++ exceptions, generate debug info, use AVX2 instruction set, and fast floating-point model.
-    $<$<CONFIG:Release>: /O2 /Oi /GL /Gy> # Optimize for speed, inline functions, enable link-time code generation, enable function-level linking.
-    $<$<CONFIG:Debug>:   /Od /RTC1> # Enable runtime checks, debug info, no optimizations.
+    /MP /nologo # Enable multi-processor compilation, disable logo.
+    /W4 # Set warning level 4.
+    /EHsc # Enable C++ exceptions.
+    /arch:AVX2 # Enable use AVX2 instruction set.
+    /Zi # Generate debug info
     /Zc:__cplusplus # By default, Visual Studio always returns the value 199711L for the __cplusplus preprocessor macro.
+    $<$<CONFIG:Release>: /O2 /Oi /GL /Gy> # Optimize for speed, inline functions, enable link-time code generation, enable function-level linking.
+    $<$<CONFIG:Debug>: /Od /RTC1> # Enable runtime checks, debug info, no optimizations.
     )
 
     if(VI_TM_BUILD_SHARED)
@@ -131,14 +137,15 @@ if (WIN32)
         )
     endif()
 elseif (UNIX)
+  set_source_files_properties("source/timing.cpp" PROPERTIES COMPILE_FLAGS "-ffast-math") # Allow floating-point optimizations that may violate strict IEEE or ISO rules for 'timing.cpp'.
+
   target_compile_options(${PROJECT_NAME}
   PRIVATE
-    -fvisibility=hidden #Hide symbols by default, only export those marked with VI_TM_EXPORTS.
-    -Wno-psabi #suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
-    -march=native #Switch on all instruction sets supported by the host CPU. Support FMA, AVX, AVX2, etc.
-    -ffast-math #Allow floating-point optimizations that may violate strict IEEE or ISO rules.
-    $<$<COMPILE_LANGUAGE:CXX>: -fPIC> #Position Independent Code for shared libraries.
-    $<$<CONFIG:Release>: -O3 -s> #Optimize for speed, strip symbols.
+    -fvisibility=hidden # Hide symbols by default, only export those marked with VI_TM_EXPORTS.
+    -Wno-psabi # suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
+    -march=native # Switch on all instruction sets supported by the host CPU. Support FMA, AVX, AVX2, etc.
+    $<$<COMPILE_LANGUAGE:CXX>: -fPIC> # Position Independent Code for shared libraries.
+    $<$<CONFIG:Release>: -O3 -s> # Optimize for speed, strip symbols.
   )
 endif()
 
