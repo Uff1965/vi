@@ -89,24 +89,22 @@ namespace
 #if defined(_WIN32)
 		// On Windows, thread_affinity_mask_t is defined as DWORD_PTR, which is used to represent the thread affinity mask.
 		using thread_affinity_mask_t = DWORD_PTR;
-		constexpr thread_affinity_mask_t AFFINITY_ZERO = 0U;
+		constexpr DWORD_PTR AFFINITY_ZERO = 0U;
 
 		// The set_affinity() function sets the current thread's affinity to the processor it is currently running on.
 		// If successful, the previous affinity mask is returned as an optional value; otherwise, an empty optional is returned.
-		auto set_affinity()
-		{	std::optional<thread_affinity_mask_t> result{};
-
-			const auto current_affinity = static_cast<thread_affinity_mask_t>(1U) << GetCurrentProcessorNumber();
+		std::optional<DWORD_PTR> set_affinity()
+		{	const auto current_affinity = static_cast<DWORD_PTR>(1U) << GetCurrentProcessorNumber();
 			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), current_affinity); verify(0U != ret))
-			{	result.emplace( ret); // Ok!
+			{	return ret; // Ok!
 			}
-			return result;
+			return std::nullopt;
 		}
 
 		// The restore_affinity() function restores the thread's affinity to a previous mask.
 		// The function returns true if the restoration succeeds, otherwise false.
-		bool restore_affinity(thread_affinity_mask_t prev)
-		{	return (0U != prev && verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)));
+		bool restore_affinity(DWORD_PTR prev)
+		{	return (0U == prev || verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)));
 		}
 #elif defined(__linux__)
 		// Define the thread affinity mask type for Linux as cpu_set_t.
@@ -115,26 +113,24 @@ namespace
 			
 		// Sets the current thread's CPU affinity to the core it is currently running on.
 		// Returns the previous affinity mask as an optional value if successful, otherwise returns an empty optional.
-		auto set_affinity()
-		{	std::optional<thread_affinity_mask_t> result{};
-
-			const auto current_thread = pthread_self();
-			if (thread_affinity_mask_t prev{}; verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
+		std::optional<cpu_set_t> set_affinity()
+		{	const auto current_thread = pthread_self();
+			if (cpu_set_t prev{}; verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
 			{	if (const auto current_core = sched_getcpu(); verify(current_core >= 0))
-				{	thread_affinity_mask_t current_affinity;
+				{	cpu_set_t current_affinity;
 					CPU_ZERO(&current_affinity);
 					CPU_SET(current_core, &current_affinity);
 					if (verify(0 == pthread_setaffinity_np(current_thread, sizeof(current_affinity), &current_affinity)))
-					{	result = prev; // Ok!
+					{	return prev; // Ok!
 					}
 				}
 			}
-			return result;
+			return std::nullopt;
 		}
 
 		// Restores the thread's CPU affinity to a previously saved mask.
 		// Returns true if the restoration succeeds, otherwise false.
-		bool restore_affinity(thread_affinity_mask_t prev)
+		bool restore_affinity(cpu_set_t prev)
 		{	return CPU_EQUAL(&prev, &AFFINITY_ZERO) || verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev));
 		}
 #endif
@@ -142,6 +138,9 @@ namespace
 		class affinity_fix_t
 		{	inline static thread_local std::size_t cnt_ = 0U;
 			inline static thread_local thread_affinity_mask_t previous_affinity_ = AFFINITY_ZERO;
+			inline static struct watch_dog_t
+			{	~watch_dog_t() { assert(0U == cnt_); }
+			} watch_dog_;
 
 			affinity_fix_t(const affinity_fix_t &) = delete;
 			affinity_fix_t &operator=(const affinity_fix_t &) = delete;
