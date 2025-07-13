@@ -229,7 +229,7 @@ namespace
 			{	str << "One tick: " << to_string(props.seconds_per_tick_.count());
 			}
 			if (flags & vi_tmShowOverhead)
-			{	str << "Overhead: " << to_string(props.seconds_per_tick_.count() * props.clock_latency_ticks_);
+			{	str << "Overhead: " << to_string(props.seconds_per_tick_.count() * props.clock_overhead_ticks_);
 			}
 
 			str << '\n';
@@ -265,7 +265,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	}
 
 	const auto &props = misc::properties_t::props();
-	const auto correction_ticks = (0U == (flags & vi_tmDoNotSubtractOverhead)) ? props.clock_latency_ticks_ : 0.0;
+	const auto correction_ticks = (0U == (flags & vi_tmDoNotSubtractOverhead)) ? props.clock_overhead_ticks_ : 0.0;
 
 // calls_
 	calls_ = meas.calls_;

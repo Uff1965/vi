@@ -95,21 +95,25 @@ namespace
 
 	template <auto F, unsigned N, typename... Args>
 	double diff_calc_aux(Args&&... args)
-	{	constexpr auto MULTIPLIER = 128U;
-		std::array<VI_TM_TICK, 17 + CACHE_WARMUP> diff;
+	{	constexpr auto REPEAT = 128U;
+		constexpr auto CNT = 17U;
+		std::array<VI_TM_TICK, CNT + CACHE_WARMUP> diff;
 		std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
 		for (auto &d : diff)
 		{	const auto s = start_tick();
-			for (auto rpt = 0U; rpt < MULTIPLIER; rpt++)
-			{	std::invoke(multiple_invoke<F, N, Args...>, args...);
+			for (auto rpt = 0U; rpt < REPEAT; rpt++)
+			{	multiple_invoke<F, N, Args...>(args...);
 			}
 			const auto f = vi_tmGetTicks();
 			d = f - s;
 		}
+
 		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
+		assert(diff.size() < CACHE_WARMUP);
+		// Obtain the median value among the remaining ones.
 		auto const mid = diff.begin() + (diff.size() + CACHE_WARMUP) / 2;
 		std::nth_element(diff.begin() + CACHE_WARMUP, mid, diff.end());
-		return static_cast<double>(*mid) / static_cast<double>(MULTIPLIER);
+		return static_cast<double>(*mid) / static_cast<double>(REPEAT);
 	}
 
 	template <auto F, typename... Args>
@@ -165,7 +169,8 @@ namespace
 	}
 
 	auto meas_GetTicks()
-	{	return vi_tmGetTicks();
+	{	/*volatile*/ auto result = vi_tmGetTicks();
+		return result;
 	}
 
 	auto meas_cost_calling_tick_function()
@@ -174,7 +179,8 @@ namespace
 
 	double meas_resolution()
 	{	constexpr auto N = 8U;
-		std::array<VI_TM_TICK, 17U + CACHE_WARMUP> arr;
+		constexpr auto SIZE = 63U;
+		std::array<VI_TM_TICK, SIZE + CACHE_WARMUP> arr;
 		std::this_thread::yield(); // Reduce likelihood of thread interruption during measurement.
 		for (auto &item : arr)
 		{	const auto first = vi_tmGetTicks();
@@ -188,9 +194,8 @@ namespace
 			item = last - first;
 		}
 		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
-		auto const mid = arr.begin() + (arr.size() + CACHE_WARMUP) / 2;
-		std::nth_element(arr.begin() + CACHE_WARMUP, mid, arr.end());
-		return static_cast<double>(*mid) / static_cast<double>(N);
+		auto it = std::min_element(arr.begin() + CACHE_WARMUP, arr.end());
+		return static_cast<double>(*it) / static_cast<double>(N);
 	}
 
 	duration_t meas_seconds_per_tick()
@@ -227,7 +232,7 @@ misc::properties_t::properties_t()
 
 	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
 	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
-	clock_latency_ticks_ = meas_cost_calling_tick_function(); // The cost of a single call of vi_tmGetTicks.
+	clock_overhead_ticks_ = meas_cost_calling_tick_function(); // The cost of a single call of vi_tmGetTicks.
 	duration_non_threadsafe_ = seconds_per_tick_ * meas_duration_with_caching();
 	duration_threadsafe_ = seconds_per_tick_ * meas_threadsafe_duration_with_caching(); // The cost of a single measurement with preservation in seconds.
 	duration_ex_threadsafe_ = seconds_per_tick_ * meas_duration(); // The cost of a single measurement in seconds.

@@ -454,7 +454,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 
 		case VI_TM_INFO_OVERHEAD:
 		{	// Returns a pointer to the clock overhead in ticks (double).
-			static const double overhead = misc::properties_t::props().clock_latency_ticks_;
+			static const double overhead = misc::properties_t::props().clock_overhead_ticks_;
 			return &overhead;
 		}
 

@@ -60,7 +60,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 // VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
 // Comment out the next line and rebuild project if you do not need min/max values in reports.
-#	define VI_TM_STAT_USE_MINMAX
+//#	define VI_TM_STAT_USE_MINMAX
 
 // If VI_TM_SHARED defined, the library is a shared library.
 // If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
