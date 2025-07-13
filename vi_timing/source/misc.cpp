@@ -97,7 +97,7 @@ namespace
 		{	std::optional<thread_affinity_mask_t> result{};
 
 			const auto current_affinity = static_cast<thread_affinity_mask_t>(1U) << GetCurrentProcessorNumber();
-			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), current_affinity); misc::verify(0U != ret))
+			if (const auto ret = SetThreadAffinityMask(GetCurrentThread(), current_affinity); verify(0U != ret))
 			{	result.emplace( ret); // Ok!
 			}
 			return result;
@@ -106,7 +106,7 @@ namespace
 		// The restore_affinity() function restores the thread's affinity to a previous mask.
 		// The function returns true if the restoration succeeds, otherwise false.
 		bool restore_affinity(thread_affinity_mask_t prev)
-		{	return (0U != prev && misc::verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)));
+		{	return (0U != prev && verify(0 != SetThreadAffinityMask(GetCurrentThread(), prev)));
 		}
 #elif defined(__linux__)
 		// Define the thread affinity mask type for Linux as cpu_set_t.
@@ -119,12 +119,12 @@ namespace
 		{	std::optional<thread_affinity_mask_t> result{};
 
 			const auto current_thread = pthread_self();
-			if (thread_affinity_mask_t prev{}; misc::verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
-			{	if (const auto current_core = sched_getcpu(); misc::verify(current_core >= 0))
+			if (thread_affinity_mask_t prev{}; verify(0 == pthread_getaffinity_np(current_thread, sizeof(prev), &prev)))
+			{	if (const auto current_core = sched_getcpu(); verify(current_core >= 0))
 				{	thread_affinity_mask_t current_affinity;
 					CPU_ZERO(&current_affinity);
 					CPU_SET(current_core, &current_affinity);
-					if (misc::verify(0 == pthread_setaffinity_np(current_thread, sizeof(current_affinity), &current_affinity)))
+					if (verify(0 == pthread_setaffinity_np(current_thread, sizeof(current_affinity), &current_affinity)))
 					{	result = prev; // Ok!
 					}
 				}
@@ -136,7 +136,7 @@ namespace
 		// Returns true if the restoration succeeds, otherwise false.
 		bool restore_affinity(thread_affinity_mask_t prev)
 		{	if (0 != CPU_EQUAL(&prev, &AFFINITY_ZERO))
-			{	if (misc::verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
+			{	if (verify(0 == pthread_setaffinity_np(pthread_self(), sizeof(prev), &prev)))
 				{	return true;
 				}
 			}
@@ -155,7 +155,7 @@ namespace
 			static int fixate()
 			{	if (0 == cnt_++)
 				{	const auto prev = set_affinity();
-					if (!misc::verify(prev.has_value()))
+					if (!verify(prev.has_value()))
 					{	return VI_EXIT_FAILURE;
 					}
 					previous_affinity_ = *prev;
@@ -165,7 +165,7 @@ namespace
 			static int restore()
 			{	assert(cnt_ > 0);
 				if (0 == --cnt_)
-				{	if(!misc::verify(!!restore_affinity(previous_affinity_)))
+				{	if(!verify(!!restore_affinity(previous_affinity_)))
 					{	return VI_EXIT_FAILURE;
 					}
 					previous_affinity_ = AFFINITY_ZERO;
@@ -297,7 +297,7 @@ namespace
 
 			std::string result(sig + (9 + 1), '\0'); // 2.1 -> "-  2.2e-308" -> 9 + 2; 6.2 -> "-  6666.66e-308" -> 9 + 6;
 			const auto len = static_cast<std::size_t>(std::snprintf(result.data(), result.size(), "%.*f%s", dec, val, suffix.data()));
-			if (misc::verify(result.size() > len)) // Error will be converted too long unsigned integer.
+			if (verify(result.size() > len)) // Error will be converted too long unsigned integer.
 			{	result.resize(len);
 			}
 			else

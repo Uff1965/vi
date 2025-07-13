@@ -260,7 +260,7 @@ namespace
 metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, unsigned flags) noexcept
 :	name_{ name }
 {	
-	if (!misc::verify(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.calls_)
+	if (!verify(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.calls_)
 	{	return; // If the measurement is invalid or has no amount, we do not create a metering_t.
 	}
 
@@ -514,7 +514,7 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRepo
 }
 
 int VI_SYS_CALL vi_tmReportCb(const char *str, void* stream)
-{	(void)misc::verify(nullptr == stream); // The output stream must be from the same RTL library as the output function!
+{	(void)verify(nullptr == stream); // The output stream must be from the same RTL library as the output function!
 #ifdef _WIN32
 	if (nullptr == GetStdHandle(STD_OUTPUT_HANDLE)) // If the standard output handle is not available, return 0.
 	{	return 0; // In /SUBSYSTEM:WINDOWS, stdout does not work by default.
