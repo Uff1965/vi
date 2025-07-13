@@ -109,7 +109,7 @@ namespace
 		}
 
 		// First CACHE_WARMUP elements are for warming up the cache, so we ignore them.
-		assert(diff.size() < CACHE_WARMUP);
+		static_assert(diff.size() > CACHE_WARMUP);
 		// Obtain the median value among the remaining ones.
 		auto const mid = diff.begin() + (diff.size() + CACHE_WARMUP) / 2;
 		std::nth_element(diff.begin() + CACHE_WARMUP, mid, diff.end());
