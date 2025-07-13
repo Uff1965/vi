@@ -90,11 +90,12 @@ namespace
 				" amt = " << std::setw(8) << meas.amt_ << ","
 				" sum = " << std::setw(15) << meas.sum_ << "," <<
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
-				std::setprecision(2) << std::defaultfloat << 
-				" flt_cnt = " << std::setw(7) << meas.flt_amt_ << ","
-				" flt_mean = " << std::setw(7) << meas.flt_mean_ << ","
-				" flt_ss = " << std::setw(7) << meas.flt_ss_ <<
+#ifdef VI_TM_STAT_USE_FILTER
+				std::setprecision(3) << std::defaultfloat << 
+				" flt_calls = " << std::setw(8) << meas.flt_calls_ << ","
+				" flt_amt = " << std::setw(8) << meas.flt_amt_ << ","
+				" flt_mean = " << std::setw(8) << meas.flt_mean_ << ","
+				" flt_ss = " << std::setw(8) << meas.flt_ss_ <<
 #endif
 #ifdef VI_TM_STAT_USE_MINMAX
 				" min = " << std::setw(9) << meas.min_ << ","
@@ -351,7 +352,7 @@ namespace
 		assert(raw.amt_ == CNT + CNT);
 #endif
 		assert(raw.calls_ == CNT + CNT / MULT);
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		assert(std::abs(raw.flt_mean_ - MEAN) / MEAN < 0.01);
 		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_amt_) / MEAN - CV) < 0.01);
 #endif
@@ -489,6 +490,7 @@ int main()
 
 	vi_ThreadYield();
 
+	prn_clock_properties();
 	//foo_c();
 
 	//test_busy();
@@ -497,7 +499,6 @@ int main()
 	test_empty();
 	//test_sleep();
 	normal_distribution();
-	//prn_clock_properties();
 
 	//test_report();
 	//test_multithreaded();

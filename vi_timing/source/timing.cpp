@@ -300,7 +300,7 @@ int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *meas)
 	if (meas->calls_ >= 1U && !misc::verify(static_cast<VI_TM_FP>(meas->sum_) >= meas->max_)) return VI_EXIT_FAILURE; // sum_ must be greater than or equal to max_.
 #endif
 
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 	if (!misc::verify(meas->flt_calls_ <= meas->calls_)) return VI_EXIT_FAILURE; // flt_calls_ must be less than or equal to calls_.
 	if (!misc::verify((fp_ZERO != meas->flt_amt_) == (0U != meas->flt_calls_))) return VI_EXIT_FAILURE; // flt_amt_ and flt_calls_ must be both zero or both non-zero.
 	if (!misc::verify(meas->flt_amt_ >= static_cast<VI_TM_FP>(meas->flt_calls_))) return VI_EXIT_FAILURE; // flt_amt_ must be greater than or equal to flt_calls_.
@@ -317,11 +317,11 @@ int VI_TM_CALL vi_tmMeasurementStatsIsValid(const vi_tmMeasurementStats_t *meas)
 	}
 #endif
 
-#if defined(VI_TM_STAT_USE_BASE) && defined(VI_TM_STAT_USE_WELFORD)
+#if defined(VI_TM_STAT_USE_BASE) && defined(VI_TM_STAT_USE_FILTER)
 	if (!misc::verify(meas->flt_amt_ <= static_cast<VI_TM_FP>(meas->amt_))) return VI_EXIT_FAILURE; // flt_amt_ must be less than or equal to amt_.
 #endif
 
-#if defined(VI_TM_STAT_USE_MINMAX) && defined(VI_TM_STAT_USE_WELFORD)
+#if defined(VI_TM_STAT_USE_MINMAX) && defined(VI_TM_STAT_USE_FILTER)
 	if (meas->flt_calls_ > 0U)
 	{	if (!misc::verify((meas->min_ - meas->flt_mean_) / meas->flt_mean_ < fp_EPSILON)) return VI_EXIT_FAILURE;
 		if (!misc::verify((meas->flt_mean_ - meas->max_) / meas->flt_mean_ < fp_EPSILON)) return VI_EXIT_FAILURE;
@@ -345,7 +345,7 @@ void VI_TM_CALL vi_tmMeasurementStatsReset(vi_tmMeasurementStats_t *meas) noexce
 	meas->min_ = fp_limits_t::infinity();
 	meas->max_ = -fp_limits_t::infinity();
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 	meas->flt_calls_ = 0U;
 	meas->flt_amt_ = fp_ZERO;
 	meas->flt_mean_ = fp_ZERO;
@@ -361,7 +361,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 	}
 	assert(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(meas));
 
-#if defined(VI_TM_STAT_USE_WELFORD) || defined(VI_TM_STAT_USE_MINMAX)
+#if defined(VI_TM_STAT_USE_FILTER) || defined(VI_TM_STAT_USE_MINMAX)
 	const auto f_dur = static_cast<VI_TM_FP>(dur);
 	const auto f_amt = static_cast<VI_TM_FP>(amt);
 	const auto f_val = f_dur / f_amt;
@@ -377,7 +377,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 		meas->min_ = f_val;
 		meas->max_ = f_val;
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		meas->flt_calls_ = 1U; // The first call cannot be filtered.
 		meas->flt_amt_ = f_amt;
 		meas->flt_mean_ = f_val; // The first value is the mean.
@@ -393,7 +393,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 		if (f_val < meas->min_) { meas->min_ = f_val; }
 		if (f_val > meas->max_) { meas->max_ = f_val; }
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		constexpr VI_TM_FP K = 2.5; // Threshold for outliers.
 		if(	const auto deviation = f_val - meas->flt_mean_; // Difference from the mean value.
 			dur <= 1U || // The measurable interval is probably smaller than the resolution of the clock.
@@ -434,7 +434,7 @@ void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT 
 	{	dst->max_ = src->max_;
 	}
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 	if (src->flt_amt_ > fp_ZERO)
 	{	const auto new_amt_reverse = fp_ONE / (dst->flt_amt_ + src->flt_amt_);
 		const auto diff_mean = src->flt_mean_ - dst->flt_mean_;
@@ -534,7 +534,7 @@ namespace
 					assert(md.amt_ == md.calls_);
 					assert(md.sum_ == std::accumulate(std::begin(samples_simple), std::end(samples_simple), VI_TM_TDIFF(0U)));
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 					assert(md.flt_amt_ == static_cast<VI_TM_FP>(md.calls_));
 					assert(md.flt_calls_ == md.calls_);
 #endif
@@ -544,7 +544,7 @@ namespace
 #endif
 				}
 				
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 				vi_tmMeasurementAdd(m, 10111); // It should be filtered out.
 				{	vi_tmMeasurementStats_t tmp;
 					vi_tmMeasurementStatsReset(&tmp);
@@ -588,7 +588,7 @@ namespace
 				(	std::accumulate(std::cbegin(samples_simple), std::cend(samples_simple), 0.0) +
 					static_cast<double>(M) * std::accumulate(std::cbegin(samples_multiple), std::cend(samples_multiple), 0.0)
 				) / static_cast<VI_TM_FP>(exp_flt_cnt); // The mean value of the samples that will be counted.
-#	ifdef VI_TM_STAT_USE_WELFORD
+#	ifdef VI_TM_STAT_USE_FILTER
 			const auto exp_flt_stddev = [] // The standard deviation of the samples that will be counted.
 				{	const auto sum_squared_deviations =
 					std::accumulate
@@ -624,7 +624,7 @@ namespace
 				vi_tmMeasurementMerge(m, &md); // Merge the statistics into the measurement.
 				vi_tmMeasurementStatsReset(&md);
 
-#	ifdef VI_TM_STAT_USE_WELFORD
+#	ifdef VI_TM_STAT_USE_FILTER
 				for (auto x : samples_exclude) // Add samples that will be excluded from the statistics.
 				{	vi_tmMeasurementAdd(m, x, 1);
 				}
@@ -636,7 +636,7 @@ namespace
 			(void)DBG_EPS;
 
 			assert(name && std::strlen(name) + 1 == std::size(NAME) && 0 == std::strcmp(name, NAME));
-#	ifdef VI_TM_STAT_USE_WELFORD
+#	ifdef VI_TM_STAT_USE_FILTER
 			assert(md.calls_ == std::size(samples_simple) + std::size(samples_multiple) + std::size(samples_exclude));
 #ifdef VI_TM_STAT_USE_BASE
 			assert(md.amt_ == std::size(samples_simple) + M * std::size(samples_multiple) + std::size(samples_exclude));

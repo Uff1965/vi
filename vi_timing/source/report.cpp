@@ -85,7 +85,7 @@ namespace
 		std::string sum_txt_{ NotAvailable };
 		duration_t<DURATION_PREC, DURATION_DEC> average_{}; // seconds
 		std::string average_txt_{ NotAvailable };
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		double cv_{}; // Coefficient of Variation.
 		std::string cv_txt_{ NotAvailable }; // Coefficient of Variation (CV) in percent
 #endif
@@ -157,7 +157,7 @@ namespace
 
 		std::size_t max_len_name_{};
 		std::size_t max_len_average_{};
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		std::size_t max_len_cv_{};
 #endif
 #ifdef VI_TM_STAT_USE_MINMAX
@@ -294,7 +294,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 #endif
 
 // mean, limit, cv_ and cv_txt_
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_);
 	const auto mean_ticks = meas.flt_mean_ - correction_ticks;
 
@@ -319,9 +319,8 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 #endif
 
 // average_, average_txt_ and amt_txt_
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
-
-	if (mean_ticks <= limit_ticks)
+#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_FILTER)
+	if (mean_ticks <= std::max(limit_ticks, props.clock_resolution_ticks_ * 1e-2))
 	{	average_txt_ = Insignificant;
 	}
 	else
@@ -363,14 +362,14 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 #ifdef VI_TM_STAT_USE_BASE
 		max_len_total_ = std::max(max_len_total_, itm.sum_txt_.length());
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		max_len_cv_ = std::max(max_len_cv_, itm.cv_txt_.length());
 #endif
 #ifdef VI_TM_STAT_USE_MINMAX
 		max_len_min_ = std::max(max_len_min_, itm.min_txt_.length());
 		max_len_max_ = std::max(max_len_max_, itm.max_txt_.length());
 #endif
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
+#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_FILTER)
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
 		max_len_amount_ = std::max(max_len_amount_, itm.amt_txt_.length());
 #endif
@@ -450,10 +449,10 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 		std::left << std::setfill(UNDERSCORE) <<
 		std::setw(width_column(vi_tmSortByName)) << item_column(vi_tmSortByName) << ": " <<
 		std::right << std::setfill(' ') <<
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
+#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_FILTER)
 		std::setw(width_column(vi_tmSortBySpeed)) << item_column(vi_tmSortBySpeed) << " " <<
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		std::setw(max_len_cv_) << TitleCV << " " <<
 #endif
 #ifdef VI_TM_STAT_USE_MINMAX
@@ -478,10 +477,10 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 		std::left << std::setfill(fill) <<
 		std::setw(width_column(vi_tmSortByName)) << i.name_ << ": " <<
 		std::right << std::setfill(' ') <<
-#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_WELFORD)
+#if defined(VI_TM_STAT_USE_BASE) || defined(VI_TM_STAT_USE_FILTER)
 		std::setw(width_column(vi_tmSortBySpeed)) << i.average_txt_ << " " <<
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 		std::setw(max_len_cv_) << i.cv_txt_ << " " <<
 #endif
 #ifdef VI_TM_STAT_USE_MINMAX

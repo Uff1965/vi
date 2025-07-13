@@ -46,7 +46,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	else
 #		error "Undefined compiler"
 #	endif
-//*
  	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	uint32_t _;
 		// The RDTSCP instruction is not a serializing instruction, but it does wait until all previous instructions have executed.
@@ -57,13 +56,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		_mm_lfence();
 		return result;
 	}
-/*/
-	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
-	{	// The RDTSC executes very quickly, but the CPU may reorder instructions around RDTSC, leading to timing inaccuracies 
-		// unless proper serialization (e.g., LFENCE) is used.
-		return __rdtsc();
-	}
-//*/
 #elif __ARM_ARCH >= 8 // ARMv8 (RaspberryPi4)
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept
 	{	uint64_t result;
@@ -100,13 +92,15 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 				assert(result == 0x2000'0000 || result == 0x3F00'0000);
 			}
 			else
-			{	//printf("SystemTimer_by_DevMem initial filed: Unknown format file \'/proc/device-tree/soc/ranges\'\n");
+			{	// SystemTimer_by_DevMem initial filed: Unknown format file '/proc/device-tree/soc/ranges'
+				assert(false);
 			}
 
 			close(fp);
 		}
 		else
-		{	//perror("SystemTimer_by_DevMem initial filed");
+		{	// SystemTimer_by_DevMem initial filed.
+			assert(false);
 		}
 
 		return result;
@@ -127,15 +121,15 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 				{	result = reinterpret_cast<volatile uint32_t *>(mapped_base);
 				}
 				else
-				{	//perror("SystemTimer_by_DevMem initial filed");
+				{	// SystemTimer_by_DevMem initial filed.
+					assert(false);
 				}
 				close(mem_fd);
 			}
 		}
 
 		if(!result)
-		{	//perror("SystemTimer_by_DevMem initial filed"); // Enhanced privileges are required (sudo).
-			static constexpr char msg[] =
+		{	static constexpr char msg[] =
 				"\x1B""[31m"
 				"Attention! To ensure more accurate time measurements on this machine, the vi_timing library may require elevated privileges.\n"
 				"Please try running the program with sudo.\n"
@@ -156,7 +150,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 		{	const uint64_t lo = timer_base[1]; // Timer low 32 bits
 			const uint64_t hi = timer_base[2]; // Timer high 32 bits
 			result = (hi << 32) | lo;
-//			result = *reinterpret_cast<const volatile uint64_t*>(timer_base);
 		}
 		else
 		{	struct timespec ts;

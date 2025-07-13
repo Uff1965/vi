@@ -54,13 +54,13 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // Comment out the next line and rebuild project if you do not need base statistics in reports.
 #	define VI_TM_STAT_USE_BASE
 
-// If VI_TM_STAT_USE_WELFORD defined, uses Welford's method for calculating variance and standard deviation.
+// If VI_TM_STAT_USE_FILTER defined, uses Welford's method for calculating variance and standard deviation.
 // Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
-#	define VI_TM_STAT_USE_WELFORD
+#	define VI_TM_STAT_USE_FILTER
 
 // VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
 // Comment out the next line and rebuild project if you do not need min/max values in reports.
-//#	define VI_TM_STAT_USE_MINMAX
+#	define VI_TM_STAT_USE_MINMAX
 
 // If VI_TM_SHARED defined, the library is a shared library.
 // If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
@@ -185,7 +185,7 @@ typedef struct vi_tmMeasurementStats_t
 	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
 	VI_TM_TDIFF sum_;		// Total time spent measuring all events, in ticks.
 #endif
-#ifdef VI_TM_STAT_USE_WELFORD
+#ifdef VI_TM_STAT_USE_FILTER
 	VI_TM_SIZE flt_calls_;	// Filtered! Number of invokes processed.
 	VI_TM_FP flt_amt_;		// Filtered! Number of events counted.
 	VI_TM_FP flt_mean_;		// Filtered! Current mean (average) time taken per processed events. In ticks.
