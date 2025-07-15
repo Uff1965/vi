@@ -49,7 +49,7 @@ namespace
 
 	constexpr auto CACHE_WARMUP = 6U;
 	constexpr char SERVICE_NAME[] = "Bla-bla-bla-bla"; // A service item name for the journal (SSO size).
-	constexpr char const* sandbox_names[] =
+	constexpr char const* SANDBOX_NAMES[] =
 	{	"foo", "bar", "baz", "qux", "quux",
 		"corge", "grault", "garply", "waldo", "fred",
 		"plugh", "xyzzy", "thud", "hoge", "fuga",
@@ -73,9 +73,18 @@ namespace
 		return result;
 	}
 
-	std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)>
-	create_journal()
-	{	return { vi_tmJournalCreate(), &vi_tmJournalClose };
+	auto create_journal()
+	{	std::unique_ptr<std::remove_pointer_t<VI_TM_HJOUR>, decltype(&vi_tmJournalClose)> result
+		{	vi_tmJournalCreate(), &vi_tmJournalClose
+		};
+
+		if (auto j = result.get(); verify(!!j))
+		{	(void)vi_tmMeasurement(j, SERVICE_NAME);
+			for (auto n : SANDBOX_NAMES)
+			{	(void)vi_tmMeasurement(j, n);
+			}
+		}
+		return result;
 	}
 
 	template <auto F, typename... Args, std::size_t... Is>
@@ -108,7 +117,7 @@ namespace
 	}
 
 	template <unsigned N, auto F, typename... Args>
-	double calc_diff_ticks_aux(Args&&... args)
+	double calc_duration_ticks(Args&&... args)
 	{	constexpr auto REPEAT = 512U;
 		constexpr auto SIZE = 31U;
 
@@ -132,8 +141,8 @@ namespace
 	double calc_diff_ticks(Args&&... args)
 	{	constexpr auto BASE = 2U;
 		constexpr auto EXTRA = 5U;
-		const double full = calc_diff_ticks_aux<BASE + EXTRA, F>(args...);
-		const double base = calc_diff_ticks_aux<BASE, F>(args...);
+		const double full = calc_duration_ticks<BASE + EXTRA, F>(args...);
+		const double base = calc_duration_ticks<BASE, F>(args...);
 		return (full - base) / static_cast<double>(EXTRA);
 	}
 
@@ -144,7 +153,7 @@ namespace
 		vi_tmMeasurementAdd(h, finish - start, 1U);
 	};
 
-	void body_threadsafe_measuring_with_caching(VI_TM_HMEAS m)
+	void body_measuring_with_caching(VI_TM_HMEAS m)
 	{	const auto start = vi_tmGetTicks();
 		const auto finish = vi_tmGetTicks();
 		vi_tmMeasurementAdd(m, finish - start, 1U);
@@ -171,8 +180,7 @@ namespace
 	}
 
 	auto meas_seconds_per_tick()
-	{
-		time_point_t c_time;
+	{	time_point_t c_time;
 		VI_TM_TICK c_ticks;
 		auto const s_time = start_now();
 		auto const s_ticks = vi_tmGetTicks();
@@ -190,27 +198,19 @@ namespace
 	{	return calc_diff_ticks<vi_tmGetTicks>();
 	}
 
-	auto meas_threadsafe_duration_with_caching()
+	auto meas_duration_with_caching()
 	{	double result{};
-		if (const auto journal = create_journal())
-		{	if (const auto m = vi_tmMeasurement(journal.get(), SERVICE_NAME))
-			{	result = calc_diff_ticks<body_threadsafe_measuring_with_caching>(m);
+		if (const auto journal = create_journal(); verify(!!journal))
+		{	if (const auto m = vi_tmMeasurement(journal.get(), SERVICE_NAME); verify(!!m))
+			{	result = calc_diff_ticks<body_measuring_with_caching>(m);
 			}
 		}
 		return result;
 	}
 
 	auto meas_duration()
-	{	double result{};
-		if (auto journal = create_journal())
-		{	(void)vi_tmMeasurement(journal.get(), SERVICE_NAME);
-			for (auto n : sandbox_names)
-			{	(void)vi_tmMeasurement(journal.get(), n);
-			}
-			
-			result = calc_diff_ticks<body_duration>(journal.get(), SERVICE_NAME);
-		}
-		return result;
+	{	auto journal = create_journal();
+		return (verify(!!journal)) ? calc_diff_ticks<body_duration>(journal.get(), SERVICE_NAME) : 0.0;
 	}
 } // namespace
 
@@ -222,16 +222,16 @@ misc::properties_t::props()
 
 misc::properties_t::properties_t()
 {
-	struct thread_affinity_fix_guard_t // RAII guard to fixate the current thread's affinity.
-	{	thread_affinity_fix_guard_t() { vi_CurrentThreadAffinityFixate(); }
-		~thread_affinity_fix_guard_t() { vi_CurrentThreadAffinityRestore(); }
-	} thread_affinity_fix_guard; // Fixate the current thread's affinity to avoid issues with clock resolution measurement.
+	struct affinity_guard_t // RAII guard to fixate the current thread's affinity.
+	{	affinity_guard_t() { vi_CurrentThreadAffinityFixate(); }
+		~affinity_guard_t() { vi_CurrentThreadAffinityRestore(); }
+	} affinity_guard; // Fixate the current thread's affinity to avoid issues with clock resolution measurement.
 
 	vi_Warming(1, 500);
 
 	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
 	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
 	clock_overhead_ticks_ = meas_cost_calling_tick_function(); // The cost of a single call of vi_tmGetTicks.
-	duration_threadsafe_ = seconds_per_tick_ * meas_threadsafe_duration_with_caching(); // The cost of a single measurement with preservation in seconds.
+	duration_threadsafe_ = seconds_per_tick_ * meas_duration_with_caching(); // The cost of a single measurement with preservation in seconds.
 	duration_ex_threadsafe_ = seconds_per_tick_ * meas_duration(); // The cost of a single measurement in seconds.
 }
