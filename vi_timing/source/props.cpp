@@ -150,12 +150,6 @@ namespace
 		vi_tmMeasurementAdd(m, finish - start, 1U);
 	};
 
-	void body_measuring_with_caching(vi_tmMeasurementStats_t &m)
-	{	const auto start = vi_tmGetTicks();
-		const auto finish = vi_tmGetTicks();
-		vi_tmMeasurementStatsAdd(&m, finish - start, 1U);
-	};
-
 	double meas_resolution()
 	{	constexpr auto N = 8U;
 		constexpr auto SIZE = 17U;
@@ -194,12 +188,6 @@ namespace
 
 	auto meas_cost_calling_tick_function()
 	{	return calc_diff_ticks<vi_tmGetTicks>();
-	}
-
-	auto meas_duration_with_caching()
-	{	vi_tmMeasurementStats_t m;
-		vi_tmMeasurementStatsReset(&m);
-		return calc_diff_ticks<body_measuring_with_caching>(m);
 	}
 
 	auto meas_threadsafe_duration_with_caching()
@@ -244,7 +232,6 @@ misc::properties_t::properties_t()
 	clock_resolution_ticks_ = meas_resolution(); // The resolution of the clock in ticks.
 	seconds_per_tick_ = meas_seconds_per_tick(); // The duration of a single tick in seconds.
 	clock_overhead_ticks_ = meas_cost_calling_tick_function(); // The cost of a single call of vi_tmGetTicks.
-	duration_non_threadsafe_ = seconds_per_tick_ * meas_duration_with_caching();
 	duration_threadsafe_ = seconds_per_tick_ * meas_threadsafe_duration_with_caching(); // The cost of a single measurement with preservation in seconds.
 	duration_ex_threadsafe_ = seconds_per_tick_ * meas_duration(); // The cost of a single measurement in seconds.
 }

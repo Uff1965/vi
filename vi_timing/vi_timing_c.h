@@ -210,7 +210,6 @@ typedef enum vi_tmInfo_e
 	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
 	VI_TM_INFO_DURATION,    // const double*: Measure duration with cache in seconds.
 	VI_TM_INFO_DURATION_EX, // const double*: Measure duration in seconds.
-	VI_TM_INFO_DURATION_UNSAFE, // const double*: Measure thread-unsafe duration in seconds.
 	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
 	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
 

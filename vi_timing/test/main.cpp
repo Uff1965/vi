@@ -256,9 +256,6 @@ namespace
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION)))
 		{	std::cout << "\nDuration: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
-		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION_UNSAFE)))
-		{	std::cout << "\nDuration thread-unsafe: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
-		}
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION_EX)))
 		{	std::cout << "\nDuration ex: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}

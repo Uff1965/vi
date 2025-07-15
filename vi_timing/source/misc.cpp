@@ -440,12 +440,6 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 			return &duration;
 		}
 
-		case VI_TM_INFO_DURATION_UNSAFE:
-		{	// Returns a pointer to the thread-unsafe measure duration in seconds (double).
-			static const double duration = misc::properties_t::props().duration_non_threadsafe_.count();
-			return &duration;
-		}
-
 		case VI_TM_INFO_DURATION_EX:
 		{	// Returns a pointer to the extended measure duration in seconds (double).
 			static const double duration_ex = misc::properties_t::props().duration_ex_threadsafe_.count();
@@ -466,7 +460,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 
 		default:
 			// If the info type is not recognized, assert and return nullptr.
-			static_assert(VI_TM_INFO_COUNT_ == 11, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
+			static_assert(VI_TM_INFO_COUNT_ == 10, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
 			assert(false); // If we reach this point, the info type is not recognized.
 			return nullptr;
 	}

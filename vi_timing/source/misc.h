@@ -31,7 +31,6 @@ namespace misc
 	struct properties_t
 	{	std::chrono::duration<double> seconds_per_tick_; // [nanoseconds]
 		double clock_overhead_ticks_; // Duration of one clock call [ticks]
-		std::chrono::duration<double> duration_non_threadsafe_;
 		std::chrono::duration<double> duration_ex_threadsafe_;
 		std::chrono::duration<double> duration_threadsafe_; // Duration of one measurement with preservation. [nanoseconds]
 		double clock_resolution_ticks_; // [ticks]
