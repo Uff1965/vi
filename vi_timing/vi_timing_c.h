@@ -74,9 +74,9 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_STAT_USE_MINMAX 0
 #endif
 
-// Uses high-performance timing methods (typically platform-specific optimizations like ASM).
-// To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
-// Library rebuild required
+// Used high-performance timing methods (e.g., platform-specific optimizations like ASM).
+// Set the VI_TM_USE_STDCLOCK macro to TRUE to switch to standard C11 `timespec_get()`.
+// Requires library rebuild.
 #ifndef VI_TM_USE_STDCLOCK
 #	define VI_TM_USE_STDCLOCK 0
 #endif
