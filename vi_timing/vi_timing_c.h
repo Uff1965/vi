@@ -41,33 +41,49 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 //*******************************************************************************************************************
 // Library configuration options:
 
-// If VI_TM_DEBUG defined, the library is built in debug mode.
+// Set VI_TM_DEBUG to TRUE to enable debug-mode assertions and diagnostics.
+// Note: This may impact runtime performance.
+// Library rebuild required
 #if !defined(VI_TM_DEBUG) && !defined(NDEBUG)
 #	define VI_TM_DEBUG 1 // Enable debug mode.
 #endif
 
-// If VI_TM_THREADSAFE not defined, the library is not thread-safe and may be faster in single-threaded applications.
-// Comment out the next line and rebuild project if you do not need thread safety.
-#	define VI_TM_THREADSAFE
+// Set VI_TM_THREADSAFE to FALSE to disable thread safety.
+// Improves performance in single-threaded applications.
+// Library rebuild required
+#ifndef VI_TM_THREADSAFE
+#	define VI_TM_THREADSAFE 1
+#endif
 
-// VI_TM_STAT_USE_BASE enables base statistics (amount, sum) tracking.
-// Comment out the next line and rebuild project if you do not need base statistics in reports.
-#	define VI_TM_STAT_USE_BASE
+// Set VI_TM_STAT_USE_BASE macro to FALSE to skip basic statistics collection (amount, sum).
+// Library rebuild required
+#ifndef VI_TM_STAT_USE_BASE
+#	define VI_TM_STAT_USE_BASE 1
+#endif
 
-// If VI_TM_STAT_USE_FILTER defined, uses Welford's method for calculating variance and standard deviation.
-// Comment out the next line and rebuild project if you do not need the coefficient of variation and bounce filtering.
-#	define VI_TM_STAT_USE_FILTER
+// Set the VI_TM_STAT_USE_FILTER macro to FALSE to skip correlation coefficient calculation
+// and bounce filtering in measurements.
+// Library rebuild required
+#ifndef VI_TM_STAT_USE_FILTER
+#	define VI_TM_STAT_USE_FILTER 1
+#endif
 
-// VI_TM_STAT_USE_MINMAX enables min/max tracking for timing statistics.
-// Comment out the next line and rebuild project if you do not need min/max values in reports.
-//#	define VI_TM_STAT_USE_MINMAX
-
-// If VI_TM_SHARED defined, the library is a shared library.
-// If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
+// Set the VI_TM_STAT_USE_MINMAX macro to TRUE to store minimum and maximum measurement values.
+// Library rebuild required
+#ifndef VI_TM_STAT_USE_MINMAX
+#	define VI_TM_STAT_USE_MINMAX 0
+#endif
 
 // Uses high-performance timing methods (typically platform-specific optimizations like ASM).
 // To switch to standard C11 `timespec_get()` instead, uncomment below and rebuild:
-//#	define VI_TM_USE_STDCLOCK
+// Library rebuild required
+#ifndef VI_TM_USE_STDCLOCK
+#	define VI_TM_USE_STDCLOCK 0
+#endif
+
+// If VI_TM_SHARED defined, the library is a shared library.
+
+// If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
 
 //*******************************************************************************************************************
 

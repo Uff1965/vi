@@ -49,7 +49,7 @@ namespace
 
 	constexpr auto CACHE_WARMUP = 6U;
 	constexpr char SERVICE_NAME[] = "Bla-bla-bla-bla"; // A service item name for the journal (SSO size).
-	constexpr char const* SANDBOX_NAMES[] =
+	constexpr std::array SANDBOX_NAMES
 	{	"foo", "bar", "baz", "qux", "quux",
 		"corge", "grault", "garply", "waldo", "fred",
 		"plugh", "xyzzy", "thud", "hoge", "fuga",
@@ -94,7 +94,7 @@ namespace
 		{	((static_cast<void>(Is), std::invoke(F, args...)), ...);
 		}
 		else
-		{	volatile return_t results[] = {(static_cast<void>(Is), std::invoke(F, args...))...};
+		{	volatile return_t results[] {(static_cast<void>(Is), std::invoke(F, args...))...};
 			return results[sizeof...(Is) - 1U]; // Return the last result.
 		}
 	}

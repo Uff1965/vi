@@ -86,18 +86,18 @@ namespace
 				std::cout << std::left << std::setw(d->name_max_len_) << name << ":" <<
 				std::right << std::scientific <<
 				" calls = " << std::setw(8) << meas.calls_ << "," <<
-#ifdef VI_TM_STAT_USE_BASE
+#if VI_TM_STAT_USE_BASE
 				" amt = " << std::setw(8) << meas.amt_ << ","
 				" sum = " << std::setw(15) << meas.sum_ << "," <<
 #endif
-#ifdef VI_TM_STAT_USE_FILTER
+#if VI_TM_STAT_USE_FILTER
 				std::setprecision(3) << std::defaultfloat << 
 				" flt_calls = " << std::setw(8) << meas.flt_calls_ << ","
 				" flt_amt = " << std::setw(8) << meas.flt_amt_ << ","
 				" flt_mean = " << std::setw(8) << meas.flt_mean_ << ","
 				" flt_ss = " << std::setw(8) << meas.flt_ss_ <<
 #endif
-#ifdef VI_TM_STAT_USE_MINMAX
+#if VI_TM_STAT_USE_MINMAX
 				" min = " << std::setw(9) << meas.min_ << ","
 				" max = " << std::setw(9) << meas.max_ << "," <<
 #endif
@@ -345,11 +345,11 @@ namespace
 
 		vi_tmMeasurementStats_t raw;
 		vi_tmMeasurementGet(m, nullptr, &raw);
-#ifdef VI_TM_STAT_USE_BASE
+#if VI_TM_STAT_USE_BASE
 		assert(raw.amt_ == CNT + CNT);
 #endif
 		assert(raw.calls_ == CNT + CNT / MULT);
-#ifdef VI_TM_STAT_USE_FILTER
+#if VI_TM_STAT_USE_FILTER
 		assert(std::abs(raw.flt_mean_ - MEAN) / MEAN < 0.01);
 		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_amt_) / MEAN - CV) < 0.01);
 #endif

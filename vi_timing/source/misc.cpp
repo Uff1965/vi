@@ -57,19 +57,19 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <vector>
 
 namespace ch = std::chrono;
-using namespace std::chrono_literals;
+using namespace std::literals;
 
 namespace
 {
 #if VI_TM_DEBUG
-	constexpr char CONFIG[] = "Debug";
+	constexpr auto CONFIG = "Debug"sv;
 #else
-	constexpr char CONFIG[] = "Release";
+	constexpr cautohar CONFIG = "Release"sv;
 #endif
 #ifdef VI_TM_SHARED
-	constexpr char TYPE[] = "shared";
+	constexpr auto TYPE = "shared"sv;
 #else
-	constexpr char TYPE[] = "static";
+	constexpr auto TYPE = "static"sv;
 #endif
 
 	// Keeps the CPU busy for a short period to simulate workload.
@@ -191,10 +191,8 @@ namespace
 		};
 		static_assert(group_div(9) == 3 && group_div(2) == 0 && group_div(0) == 0 && group_div(-1) == -1 && group_div(-6) == -2);
 
-		struct factors_t
-		{	int exp_;
-			char suffix_[3];
-		} constexpr factors[]
+		struct factors_t { int exp_; char suffix_[3]; };
+		constexpr factors_t factors[]
 		{	{ -30, " q" }, // quecto
 			{ -27, " r" }, // ronto
 			{ -24, " y" }, // yocto
@@ -217,11 +215,11 @@ namespace
 			{ 27, " R" }, // ronna
 			{ 30, " Q" }, // quetta
 		};
+		constexpr auto suffix_size = "e-308"sv.size() + 1U; // The SI suffix buffer must contain at least 6 characters to accommodate the longest suffix and null-termination (e.g., " k" or "e+308").
 		static_assert(0 == factors[0].exp_ % GROUP_SIZE); // The first factor must be a multiple of GROUP_SIZE.
 		static_assert(0 == factors[std::size(factors) / 2].exp_); // The middle factor must be zero.
 		static_assert((factors[std::size(factors) - 1].exp_ - factors[0].exp_) == (GROUP_SIZE * (std::size(factors) - 1))); // The last factor must be GROUP_SIZE * (number of factors - 1) away from the first factor.
-		constexpr auto suffix_size = 6U; // The SI suffix buffer must contain at least 6 characters to accommodate the longest suffix and null-termination (e.g., " k" or "e+308").
-		static_assert(sizeof(factors_t::suffix_) < suffix_size);
+		static_assert(sizeof(factors_t::suffix_)/sizeof(factors_t::suffix_[0]) < suffix_size);
 
 		// Returns the appropriate SI suffix for a given group position.
 		// If the group position does not match a known SI prefix, returns scientific notation (e.g., "e6").
@@ -402,7 +400,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 		{	// Returns a pointer to a static string containing the full version (major.minor.patch.buildType libraryType).
 			static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
-					std::array<char, (std::size("99.999.9999.YYMMDDHHmm") - 1) + 2 + (std::size(TYPE) - 1) + 1> result;
+					std::array<char, "99.999.9999.YYMMDDHHmm"sv.size() + sizeof(CONFIG[0]) + " "sv.size() + TYPE.size() + 1> result;
 					[[maybe_unused]] const auto sz = snprintf
 					(	result.data(),
 						result.size(),
@@ -412,7 +410,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 						VI_TM_VERSION_PATCH,
 						misc::build_number_get(),
 						CONFIG[0],
-						TYPE
+						TYPE.data()
 					);
 					assert(0 < sz && static_cast<std::size_t>(sz) < result.size());
 					return result;
@@ -422,11 +420,11 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 
 		case VI_TM_INFO_BUILDTYPE:
 			// Returns a pointer to the build type string ("Release" or "Debug").
-			return CONFIG;
+			return CONFIG.data();
 
 		case VI_TM_INFO_LIBRARYTYPE:
 			// Returns a pointer to the library type string ("shared" or "static").
-			return TYPE;
+			return TYPE.data();
 
 		case VI_TM_INFO_RESOLUTION:
 		{	// Returns a pointer to the clock resolution in ticks (double).

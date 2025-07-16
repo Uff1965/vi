@@ -116,8 +116,8 @@ namespace vi_tm
 	// Unlike the API, this class is not thread-safe!!!
 	class measurer_t
 	{	VI_TM_HMEAS meas_ = nullptr;
-		VI_TM_SIZE amt_ = 0;
-		VI_TM_TICK start_ = 0; // Order matters!!! 'start_' must be initialized last!
+		VI_TM_SIZE amt_ = 0U;
+		VI_TM_TICK start_ = 0U; // Order matters!!! 'start_' must be initialized last!
 	public:
 		measurer_t() = delete;
 		measurer_t(const measurer_t &) = delete;
