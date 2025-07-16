@@ -151,7 +151,7 @@ elseif (UNIX)
 
   target_precompile_headers(${PROJECT_NAME}
   PRIVATE
-    $<$<COMPILE_LANGUAGE:CXX>:$<OPTIONS:-x c++-header>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<OPTIONS:-x;c++-header>>
     "source/pch.h"
   )
 
