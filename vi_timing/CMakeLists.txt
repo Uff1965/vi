@@ -147,7 +147,10 @@ if (WIN32)
         )
     endif()
 elseif (UNIX)
-  set_source_files_properties("source/timing.cpp" PROPERTIES COMPILE_FLAGS "-ffast-math") # Allow floating-point optimizations that may violate strict IEEE or ISO rules for 'timing.cpp'.
+  set_source_files_properties("source/timing.cpp" PROPERTIES
+    COMPILE_FLAGS "-ffast-math" # Allow floating-point optimizations that may violate strict IEEE or ISO rules for 'timing.cpp'.
+    SKIP_PRECOMPILE_HEADERS ON
+  )
 
   target_compile_options(${PROJECT_NAME}
   PRIVATE
