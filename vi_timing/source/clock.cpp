@@ -26,10 +26,12 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
+#include "pch.h"
+
 #include "../vi_timing_c.h"
 #include "build_number_maker.h"
 
-#ifdef VI_TM_USE_STDCLOCK
+#if VI_TM_USE_STDCLOCK
 	// Use standard clock
 #	include <time.h> // for timespec_get
 	VI_TM_TICK VI_TM_CALL vi_tmGetTicks(void) noexcept

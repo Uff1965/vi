@@ -26,6 +26,8 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
+#include "pch.h"
+
 #include "../vi_timing_c.h"
 #include "build_number_maker.h" // For build number generation.
 #include "misc.h"
@@ -106,15 +108,11 @@ namespace
 #endif
 
 // Checking for FMA support by the compiler/platform
-#if defined(__FMA__) || defined(__AVX2__) || defined(__AVX512F__)
+#if defined(__FMA__) || (defined(_MSC_VER) && (defined(__AVX2__) || defined(__AVX512F__)))
     #define FMA(x, y, z) std::fma((x), (y), (z))
 #else
     #define FMA(x, y, z) ((x) * (y) + (z))
 #endif
-
-constexpr VI_TM_TICK operator"" _tick(unsigned long long val) noexcept
-{	return static_cast<VI_TM_TICK>(val);
-}
 
 namespace
 {
@@ -521,7 +519,7 @@ namespace
 
 			{
 				static constexpr auto samples_simple =
-				{	10010_tick, 9981_tick, 9948_tick, 10030_tick, 10053_tick, 9929_tick, 9894_tick
+				{	10010U, 9981U, 9948U, 10030U, 10053U, 9929U, 9894U
 				};
 
 				for (auto x : samples_simple)
@@ -536,7 +534,7 @@ namespace
 					assert(md.calls_ == std::size(samples_simple));
 #if VI_TM_STAT_USE_BASE
 					assert(md.amt_ == md.calls_);
-					assert(md.sum_ == std::accumulate(std::begin(samples_simple), std::end(samples_simple), 0_tick));
+					assert(md.sum_ == std::accumulate(std::begin(samples_simple), std::end(samples_simple), 0U));
 #endif
 #if VI_TM_STAT_USE_FILTER
 					assert(md.flt_amt_ == static_cast<VI_TM_FP>(md.calls_));
@@ -580,14 +578,14 @@ namespace
 	const auto nanotest2 = []
 		{
 			static constexpr auto samples_simple =
-			{	10010_tick, 9981_tick, 9948_tick, 10030_tick, 10053_tick,
-				9929_tick, 9894_tick, 10110_tick, 10040_tick, 10110_tick,
-				10019_tick, 9961_tick, 10078_tick, 9959_tick, 9966_tick,
-				10030_tick, 10089_tick, 9908_tick, 9938_tick, 9890_tick,
+			{	10010U, 9981U, 9948U, 10030U, 10053U,
+				9929U, 9894U, 10110U, 10040U, 10110U,
+				10019U, 9961U, 10078U, 9959U, 9966U,
+				10030U, 10089U, 9908U, 9938U, 9890U,
 			};
 			static constexpr auto M = 2;
-			static constexpr auto samples_multiple = { 990_tick, }; // Samples that will be added M times at once.
-			static constexpr auto samples_exclude = { 200000_tick }; // Samples that will be excluded from the statistics.
+			static constexpr auto samples_multiple = { 990U, }; // Samples that will be added M times at once.
+			static constexpr auto samples_exclude = { 200000U }; // Samples that will be excluded from the statistics.
 
 			static constexpr auto exp_flt_cnt = std::size(samples_simple) + M * std::size(samples_multiple); // The total number of samples that will be counted.
 			static const auto exp_flt_mean = 

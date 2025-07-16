@@ -10,7 +10,7 @@
 #include "header.h"
 
 #include "vi_timing/vi_timing_proxy.h"
-#ifndef VI_TM_SHARED
+#if !VI_TM_SHARED
 #	include "../source/build_number_maker.h"
 #endif
 

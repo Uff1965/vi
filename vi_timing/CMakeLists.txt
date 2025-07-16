@@ -37,6 +37,7 @@ list(APPEND SOURCE_FILES ${FILE_GROUP})
 set(FILE_GROUP
   "source/build_number_maker.h"
   "source/misc.h"
+  "source/pch.h"
 )
 source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
@@ -45,6 +46,7 @@ set(FILE_GROUP
   "source/build_number_maker.cpp"
   "source/clock.cpp"
   "source/misc.cpp"
+  "source/pch.cpp"
   "source/props.cpp"
   "source/report.cpp"
   "source/timing.cpp"
@@ -79,8 +81,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
 
-  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+  POSITION_INDEPENDENT_CODE ON # Position Independent Code (-fPIC) for shared libraries on UNIX.
 )
+
+target_precompile_headers(${PROJECT_NAME} PRIVATE "source/pch.h")
 
 ### Compiler ##################################################################
 target_include_directories(${PROJECT_NAME}
@@ -97,12 +101,15 @@ PRIVATE
 if(VI_TM_BUILD_SHARED)
     target_compile_definitions(${PROJECT_NAME}
     PUBLIC
-        VI_TM_SHARED
+        VI_TM_SHARED=1
     )
 endif()
 
 if (WIN32)
-    set_source_files_properties("source/timing.cpp" PROPERTIES COMPILE_FLAGS "/fp:fast") # Enable fast floating-point model for 'timing.cpp'
+    set_source_files_properties("source/timing.cpp" PROPERTIES
+        COMPILE_FLAGS "/fp:fast" # Enable fast floating-point model for 'timing.cpp'
+        SKIP_PRECOMPILE_HEADERS ON
+    )
 
     target_compile_definitions(${PROJECT_NAME}
     PRIVATE
@@ -144,7 +151,6 @@ elseif (UNIX)
     -fvisibility=hidden # Hide symbols by default, only export those marked with VI_TM_EXPORTS.
     -Wno-psabi # suppress "note: parameter passing for argument of type <...> changed in GCC 7.1" message.
     -march=native # Switch on all instruction sets supported by the host CPU. Support FMA, AVX, AVX2, etc.
-    $<$<COMPILE_LANGUAGE:CXX>: -fPIC> # Position Independent Code for shared libraries.
     $<$<CONFIG:Release>: -O3 -s> # Optimize for speed, strip symbols.
   )
 endif()
@@ -166,7 +172,6 @@ elseif (UNIX)
   target_link_libraries(${PROJECT_NAME}
   PRIVATE
     rt
-#  PUBLIC
     atomic
   )
 endif()

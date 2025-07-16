@@ -21,8 +21,6 @@ namespace misc
 #	define VI_EXIT_FAILURE (0 - __LINE__) // Use negative line number as error code.
 #endif
 
-#define verify(v) [](bool b) noexcept { assert(b); return b; }(v) // Define for displaying the __FILE__ and __LINE__ during debugging.
-
 	struct space_out final: std::numpunct<char>
 	{	char do_thousands_sep() const override { return '\''; }  // separate with '
 		std::string do_grouping() const override { return "\3"; } // groups of 3 digit

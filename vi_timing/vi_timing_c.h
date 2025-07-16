@@ -81,7 +81,10 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_USE_STDCLOCK 0
 #endif
 
-// If VI_TM_SHARED defined, the library is a shared library.
+// If VI_TM_SHARED macro is TRUE, the library is a shared library.
+#ifndef VI_TM_SHARED
+#	define VI_TM_SHARED 0
+#endif
 
 // If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
 
@@ -99,7 +102,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #		ifdef VI_TM_EXPORTS
 #			define VI_TM_API __declspec(dllexport)
-#		elif defined(VI_TM_SHARED)
+#		elif VI_TM_SHARED
 #			define VI_TM_API __declspec(dllimport)
 
 #			if VI_TM_DEBUG

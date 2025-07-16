@@ -26,6 +26,8 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
+#include "pch.h"
+
 #include "../vi_timing_c.h"
 #include "build_number_maker.h"
 #include "misc.h"

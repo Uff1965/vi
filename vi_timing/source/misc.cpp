@@ -26,6 +26,8 @@ along with this program.
 If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \*****************************************************************************/
 
+#include "pch.h"
+
 #include "misc.h"
 
 #include "build_number_maker.h"
@@ -66,7 +68,7 @@ namespace
 #else
 	constexpr auto CONFIG = "Release"sv;
 #endif
-#ifdef VI_TM_SHARED
+#if VI_TM_SHARED
 	constexpr auto TYPE = "shared"sv;
 #else
 	constexpr auto TYPE = "static"sv;
