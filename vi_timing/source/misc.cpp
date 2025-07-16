@@ -64,7 +64,7 @@ namespace
 #if VI_TM_DEBUG
 	constexpr auto CONFIG = "Debug"sv;
 #else
-	constexpr cautohar CONFIG = "Release"sv;
+	constexpr auto CONFIG = "Release"sv;
 #endif
 #ifdef VI_TM_SHARED
 	constexpr auto TYPE = "shared"sv;
