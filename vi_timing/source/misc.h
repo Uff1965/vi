@@ -11,6 +11,8 @@
 #	include <source_location>
 #endif
 
+#define verify(v) [](bool b) noexcept { assert(b); return b; }(v) // Define for displaying the __FILE__ and __LINE__ during debugging.
+
 namespace misc
 {
 #ifdef __cpp_lib_source_location
