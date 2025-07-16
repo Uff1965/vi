@@ -84,8 +84,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   POSITION_INDEPENDENT_CODE ON # Position Independent Code (-fPIC) for shared libraries on UNIX.
 )
 
-target_precompile_headers(${PROJECT_NAME} PRIVATE "source/pch.h")
-
 ### Compiler ##################################################################
 target_include_directories(${PROJECT_NAME}
 PUBLIC
@@ -109,6 +107,11 @@ if (WIN32)
     set_source_files_properties("source/timing.cpp" PROPERTIES
         COMPILE_FLAGS "/fp:fast" # Enable fast floating-point model for 'timing.cpp'
         SKIP_PRECOMPILE_HEADERS ON
+    )
+
+    target_precompile_headers(${PROJECT_NAME}
+    PRIVATE
+        "source/pch.h"
     )
 
     target_compile_definitions(${PROJECT_NAME}
@@ -145,6 +148,12 @@ if (WIN32)
     endif()
 elseif (UNIX)
   set_source_files_properties("source/timing.cpp" PROPERTIES COMPILE_FLAGS "-ffast-math") # Allow floating-point optimizations that may violate strict IEEE or ISO rules for 'timing.cpp'.
+
+  target_precompile_headers(${PROJECT_NAME}
+  PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-x c++-header>
+    "source/pch.h"
+  )
 
   target_compile_options(${PROJECT_NAME}
   PRIVATE
