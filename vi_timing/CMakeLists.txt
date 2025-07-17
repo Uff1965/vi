@@ -37,7 +37,6 @@ list(APPEND SOURCE_FILES ${FILE_GROUP})
 set(FILE_GROUP
   "source/build_number_maker.h"
   "source/misc.h"
-  "source/pch.hpp"
 )
 source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
@@ -46,7 +45,6 @@ set(FILE_GROUP
   "source/build_number_maker.cpp"
   "source/clock.cpp"
   "source/misc.cpp"
-  "source/pch.cpp"
   "source/props.cpp"
   "source/report.cpp"
   "source/timing.cpp"
