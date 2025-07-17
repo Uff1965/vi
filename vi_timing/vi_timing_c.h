@@ -200,17 +200,17 @@ typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Call
 // !!!Use the vi_tmMeasurementStatsReset function to reset the structure to its initial state!!!
 typedef struct vi_tmMeasurementStats_t
 {	VI_TM_SIZE calls_;		// The number of times the measurement was invoked.
-#ifdef VI_TM_STAT_USE_BASE
+#if VI_TM_STAT_USE_BASE
 	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
 	VI_TM_TDIFF sum_;		// Total time spent measuring all events, in ticks.
 #endif
-#ifdef VI_TM_STAT_USE_FILTER
+#if VI_TM_STAT_USE_FILTER
 	VI_TM_SIZE flt_calls_;	// Filtered! Number of invokes processed.
 	VI_TM_FP flt_amt_;		// Filtered! Number of events counted.
 	VI_TM_FP flt_mean_;		// Filtered! Current mean (average) time taken per processed events. In ticks.
 	VI_TM_FP flt_ss_;		// Filtered! Current sum of squares. In ticks.
 #endif
-#ifdef VI_TM_STAT_USE_MINMAX
+#if VI_TM_STAT_USE_MINMAX
 	// The minimum and maximum times are represented with a floating point because they can be initialized with the average of the batch.
 	VI_TM_FP min_; //!!!! INFINITY - initially!!! Minimum time taken for a single event, in ticks.
 	VI_TM_FP max_; //!!!! -INFINITY - initially!!! Maximum time taken for a single event, in ticks.

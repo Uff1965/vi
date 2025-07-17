@@ -44,21 +44,23 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	include <windows.h> // For GetStdHandle(STD_OUTPUT_HANDLE)
 #endif
 
+using namespace std::literals;
+
 namespace
 {
-	constexpr char TitleNumber[] = "#";
-	constexpr char TitleName[] = "Name";
-	constexpr char TitleAverage[] = "Avg.";
-	constexpr char TitleTotal[] = "Sum.";
-	constexpr char TitleCV[] = "CV";
-	constexpr char TitleAmount[] = "Amt.";
-	constexpr char TitleMin[] = "Min.";
-	constexpr char TitleMax[] = "Max.";
-	constexpr char Ascending[] = " [^]";
-	constexpr char Descending[] = " [v]";
-	constexpr char Insignificant[] = "<ins>"; // insignificant
-	constexpr char Excessive[] = "<exc>"; // excessively
-	constexpr char NotAvailable[] = "n/a";
+	constexpr auto TitleNumber = "#"sv;
+	constexpr auto TitleName = "Name"sv;
+	constexpr auto TitleAverage = "Avg."sv;
+	constexpr auto TitleTotal = "Sum."sv;
+	constexpr auto TitleCV = "CV"sv;
+	constexpr auto TitleAmount = "Amt."sv;
+	constexpr auto TitleMin = "Min."sv;
+	constexpr auto TitleMax = "Max."sv;
+	constexpr auto Ascending = " [^]"sv;
+	constexpr auto Descending = " [v]"sv;
+	constexpr auto Insignificant = "<ins>"sv; // insignificant
+	constexpr auto Excessive = "<exc>"sv; // excessively
+	constexpr auto NotAvailable = ""sv;
 
 	constexpr unsigned char DURATION_PREC = 2;
 	constexpr unsigned char DURATION_DEC = 1;
@@ -155,17 +157,17 @@ namespace
 		const unsigned flags_ = 0U;
 		const unsigned guideline_interval_ = 0U;
 
-		std::size_t max_len_name_{};
-		std::size_t max_len_average_{};
+		std::size_t max_len_name_{TitleName.length()};
+		std::size_t max_len_average_{TitleAverage.length()};
 #if VI_TM_STAT_USE_FILTER
-		std::size_t max_len_cv_{};
+		std::size_t max_len_cv_{TitleCV.length()};
 #endif
 #if VI_TM_STAT_USE_MINMAX
-		std::size_t max_len_min_{};
-		std::size_t max_len_max_{};
+		std::size_t max_len_min_{TitleMin.length()};
+		std::size_t max_len_max_{TitleMax.length()};
 #endif
-		std::size_t max_len_total_{};
-		std::size_t max_len_amount_{};
+		std::size_t max_len_total_{TitleTotal.length()};
+		std::size_t max_len_amount_{TitleAmount.length()};
 		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
@@ -377,19 +379,19 @@ std::size_t formatter_t::width_column(vi_tmReportFlags_e clmn) const
 	switch (clmn)
 	{	case vi_tmSortByName:
 			result = max_len_name_;
-			title_len = std::size(TitleName) - 1U;
+			title_len = TitleName.length();
 			break;
 		case vi_tmSortBySpeed:
 			result = max_len_average_;
-			title_len = std::size(TitleAverage) - 1U;
+			title_len = TitleAverage.length();
 			break;
 		case vi_tmSortByTime:
 			result = max_len_total_;
-			title_len = std::size(TitleTotal) - 1U;
+			title_len = TitleTotal.length();
 			break;
 		case vi_tmSortByAmount:
 			result = max_len_amount_;
-			title_len = std::size(TitleAmount) - 1U;
+			title_len = TitleAmount.length();
 			break;
 		default:
 			assert(false);
@@ -397,7 +399,7 @@ std::size_t formatter_t::width_column(vi_tmReportFlags_e clmn) const
 	}
 
 	if (to_sort_flag(flags_) == clmn)
-	{	title_len += (flags_ & vi_tmSortAscending ? std::size(Ascending): std::size(Descending)) - 1U;
+	{	title_len += (flags_ & vi_tmSortAscending ? Ascending.length(): Descending.length());
 	}
 	result = std::max(title_len, result);
 
