@@ -53,7 +53,7 @@ namespace
 	constexpr auto TitleAverage = "Avg."sv;
 	constexpr auto TitleTotal = "Sum."sv;
 	constexpr auto TitleCV = "CV"sv;
-	constexpr auto TitleAmount = "Amt."sv;
+	constexpr auto TitleAmount = "Cnt."sv;
 	constexpr auto TitleMin = "Min."sv;
 	constexpr auto TitleMax = "Max."sv;
 	constexpr auto Ascending = " [^]"sv;
@@ -447,17 +447,17 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 		std::setw(width_column(vi_tmSortByName)) << item_column(vi_tmSortByName) << ": " <<
 		std::right << std::setfill(' ') <<
 #if VI_TM_STAT_USE_BASE || VI_TM_STAT_USE_FILTER
-		std::setw(width_column(vi_tmSortBySpeed)) << item_column(vi_tmSortBySpeed) << " " <<
+		"" << std::setw(width_column(vi_tmSortBySpeed)) << item_column(vi_tmSortBySpeed) << " " <<
 #endif
 #if VI_TM_STAT_USE_FILTER
-		std::setw(max_len_cv_) << TitleCV << " " <<
-#endif
-#if VI_TM_STAT_USE_MINMAX
-		"(" << std::setw(max_len_min_) << TitleMin << " - " << std::setw(max_len_max_) << TitleMax << ") " <<
+		"+/- " << std::setw(max_len_cv_) << TitleCV << " " <<
 #endif
 #if VI_TM_STAT_USE_BASE
-		"[" << std::setw(width_column(vi_tmSortByTime)) << item_column(vi_tmSortByTime) << " / " <<
-		std::setw(width_column(vi_tmSortByAmount)) << item_column(vi_tmSortByAmount) << "]" <<
+		"~= " << std::setw(width_column(vi_tmSortByTime)) << item_column(vi_tmSortByTime) << " / " <<
+		std::setw(width_column(vi_tmSortByAmount)) << item_column(vi_tmSortByAmount) << " " <<
+#endif
+#if VI_TM_STAT_USE_MINMAX
+		"[" << std::setw(max_len_min_) << TitleMin << " - " << std::setw(max_len_max_) << TitleMax << "] " <<
 #endif
 		"\n";
 	return fn(str.str().c_str(), data);
@@ -475,17 +475,17 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 		std::setw(width_column(vi_tmSortByName)) << i.name_ << ": " <<
 		std::right << std::setfill(' ') <<
 #if VI_TM_STAT_USE_BASE || VI_TM_STAT_USE_FILTER
-		std::setw(width_column(vi_tmSortBySpeed)) << i.average_txt_ << " " <<
+		"" << std::setw(width_column(vi_tmSortBySpeed)) << i.average_txt_ << " " <<
 #endif
 #if VI_TM_STAT_USE_FILTER
-		std::setw(max_len_cv_) << i.cv_txt_ << " " <<
-#endif
-#if VI_TM_STAT_USE_MINMAX
-		"(" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << ") " <<
+		(i.cv_txt_.empty()? "    ": "+/- ") << std::setw(max_len_cv_) << i.cv_txt_ << " " <<
 #endif
 #if VI_TM_STAT_USE_BASE
-		"[" << std::setw(width_column(vi_tmSortByTime)) << i.sum_txt_ << " / " <<
-		std::setw(width_column(vi_tmSortByAmount)) << i.amt_ << "]" <<
+		"~= " << std::setw(width_column(vi_tmSortByTime)) << i.sum_txt_ << " / " <<
+		std::setw(width_column(vi_tmSortByAmount)) << i.amt_ << " " <<
+#endif
+#if VI_TM_STAT_USE_MINMAX
+		"[" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << "] " <<
 #endif
 		"\n";
 	return fn(str.str().c_str(), data);

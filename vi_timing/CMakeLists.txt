@@ -2,17 +2,9 @@ cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
 project(vi_timing)
 
-if(NOT DEFINED VI_ROOT_DIR)
-	set(VI_ROOT_DIR ${PROJECT_SOURCE_DIR}/..)
-endif()
-
-if(NOT DEFINED VI_OUT_DIR)
-	get_filename_component(VI_OUT_DIR "${VI_ROOT_DIR}/lib/." DIRECTORY)
-endif()
-
-if((NOT DEFINED VI_TM_BUILD_SHARED) AND (BUILD_SHARED_LIBS))
-    set(VI_TM_BUILD_SHARED ON)
-endif()
+option(VI_TM_BUILD_SHARED "Build vi_timing as shared library" OFF)
+set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
+set(VI_OUT_DIR "${VI_ROOT_DIR}/lib/" CACHE PATH "Output directory for libraries")
 
 ### Files #####################################################################
 set(SOURCE_FILES)
