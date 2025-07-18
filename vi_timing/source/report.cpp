@@ -269,7 +269,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 
 // amt_, sum_ and sum_txt_
 #if VI_TM_STAT_USE_BASE
-	amt_ = meas.amt_;
+	amt_ = meas.cnt_;
 	try
 	{	std::ostringstream str_stream;
 		str_stream.imbue(std::locale(str_stream.getloc(), new misc::space_out));
@@ -292,12 +292,12 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 
 // mean, limit, cv_ and cv_txt_
 #if VI_TM_STAT_USE_FILTER
-	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.flt_amt_);
-	const auto mean_ticks = meas.flt_mean_ - correction_ticks;
+	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.flt_cnt_);
+	const auto mean_ticks = meas.flt_avg_ - correction_ticks;
 
 	if (meas.flt_calls_ >= 2) // To calculate the measurement spread, at least two measurements must be taken.
-	{	assert(meas.flt_amt_ >= static_cast<VI_TM_FP>(2)); // The first two measurements cannot be filtered out.
-		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_amt_ - static_cast<VI_TM_FP>(1))) / mean_ticks;
+	{	assert(meas.flt_cnt_ >= static_cast<VI_TM_FP>(2)); // The first two measurements cannot be filtered out.
+		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_cnt_ - static_cast<VI_TM_FP>(1))) / mean_ticks;
 		if (const auto cv_pct = std::round(cv_ * 100.0); cv_pct < 1.0)
 		{	cv_txt_ = "<1%"; // Coefficient of Variation (CV) is too low.
 		}
@@ -307,14 +307,14 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 		else
 		{	cv_txt_ = misc::to_string(cv_pct, 2, 0);
 			assert(cv_txt_.back() == ' '); // In these conditions, the last character is always a space.
-			assert(cv_txt_[cv_txt.size() - 2] == ' ');
+			assert(cv_txt_[cv_txt_.size() - 2] == ' ');
 			cv_txt_.resize(cv_txt_.size() - 2);
 			cv_txt_ += '%';
 		}
 	}
 #elif VI_TM_STAT_USE_BASE
-	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(static_cast<VI_TM_FP>(meas.amt_));
-	const auto mean_ticks = total_ticks / static_cast<double>(meas.amt_);
+	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(static_cast<VI_TM_FP>(meas.cnt_));
+	const auto mean_ticks = total_ticks / static_cast<double>(meas.cnt_);
 #endif
 
 // average_, average_txt_ and amt_txt_

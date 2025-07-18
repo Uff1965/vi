@@ -201,13 +201,13 @@ typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Call
 typedef struct vi_tmMeasurementStats_t
 {	VI_TM_SIZE calls_;		// The number of times the measurement was invoked.
 #if VI_TM_STAT_USE_BASE
-	VI_TM_SIZE amt_;		// The number of all measured events, including discarded ones.
+	VI_TM_SIZE cnt_;		// The number of all measured events, including discarded ones.
 	VI_TM_TDIFF sum_;		// Total time spent measuring all events, in ticks.
 #endif
 #if VI_TM_STAT_USE_FILTER
 	VI_TM_SIZE flt_calls_;	// Filtered! Number of invokes processed.
-	VI_TM_FP flt_amt_;		// Filtered! Number of events counted.
-	VI_TM_FP flt_mean_;		// Filtered! Current mean (average) time taken per processed events. In ticks.
+	VI_TM_FP flt_cnt_;		// Filtered! Number of events counted.
+	VI_TM_FP flt_avg_;		// Filtered! Current average time taken per processed events. In ticks.
 	VI_TM_FP flt_ss_;		// Filtered! Current sum of squares. In ticks.
 #endif
 #if VI_TM_STAT_USE_MINMAX

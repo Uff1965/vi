@@ -87,14 +87,14 @@ namespace
 				std::right << std::scientific <<
 				" calls = " << std::setw(8) << meas.calls_ << "," <<
 #if VI_TM_STAT_USE_BASE
-				" cnt = " << std::setw(8) << meas.amt_ << ","
+				" cnt = " << std::setw(8) << meas.cnt_ << ","
 				" sum = " << std::setw(15) << meas.sum_ << "," <<
 #endif
 #if VI_TM_STAT_USE_FILTER
 				std::setprecision(3) << std::defaultfloat << 
 				" flt_calls = " << std::setw(8) << meas.flt_calls_ << ","
-				" flt_cnt = " << std::setw(8) << meas.flt_amt_ << ","
-				" flt_avg = " << std::setw(8) << meas.flt_mean_ << ","
+				" flt_cnt = " << std::setw(8) << meas.flt_cnt_ << ","
+				" flt_avg = " << std::setw(8) << meas.flt_avg_ << ","
 				" flt_ss = " << std::setw(8) << meas.flt_ss_ <<
 #endif
 #if VI_TM_STAT_USE_MINMAX
@@ -346,12 +346,12 @@ namespace
 		vi_tmMeasurementStats_t raw;
 		vi_tmMeasurementGet(m, nullptr, &raw);
 #if VI_TM_STAT_USE_BASE
-		assert(raw.amt_ == CNT + CNT);
+		assert(raw.cnt_ == CNT + CNT);
 #endif
 		assert(raw.calls_ == CNT + CNT / MULT);
 #if VI_TM_STAT_USE_FILTER
-		assert(std::abs(raw.flt_mean_ - MEAN) / MEAN < 0.01);
-		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_amt_) / MEAN - CV) < 0.01);
+		assert(std::abs(raw.flt_avg_ - MEAN) / MEAN < 0.01);
+		assert(std::abs(std::sqrt(raw.flt_ss_ / raw.flt_cnt_) / MEAN - CV) < 0.01);
 #endif
 		std::cout << "Test normal_distribution - done" << std::endl;
 	}
