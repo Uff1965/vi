@@ -87,14 +87,14 @@ namespace
 				std::right << std::scientific <<
 				" calls = " << std::setw(8) << meas.calls_ << "," <<
 #if VI_TM_STAT_USE_BASE
-				" amt = " << std::setw(8) << meas.amt_ << ","
+				" cnt = " << std::setw(8) << meas.amt_ << ","
 				" sum = " << std::setw(15) << meas.sum_ << "," <<
 #endif
 #if VI_TM_STAT_USE_FILTER
 				std::setprecision(3) << std::defaultfloat << 
 				" flt_calls = " << std::setw(8) << meas.flt_calls_ << ","
-				" flt_amt = " << std::setw(8) << meas.flt_amt_ << ","
-				" flt_mean = " << std::setw(8) << meas.flt_mean_ << ","
+				" flt_cnt = " << std::setw(8) << meas.flt_amt_ << ","
+				" flt_avg = " << std::setw(8) << meas.flt_mean_ << ","
 				" flt_ss = " << std::setw(8) << meas.flt_ss_ <<
 #endif
 #if VI_TM_STAT_USE_MINMAX

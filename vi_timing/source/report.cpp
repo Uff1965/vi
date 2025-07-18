@@ -51,13 +51,13 @@ namespace
 	constexpr auto TitleNumber = "#"sv;
 	constexpr auto TitleName = "Name"sv;
 	constexpr auto TitleAverage = "Avg."sv;
-	constexpr auto TitleTotal = "Sum."sv;
+	constexpr auto TitleTotal = "Total"sv;
 	constexpr auto TitleCV = "CV"sv;
 	constexpr auto TitleAmount = "Cnt."sv;
 	constexpr auto TitleMin = "Min."sv;
 	constexpr auto TitleMax = "Max."sv;
-	constexpr auto Ascending = " [^]"sv;
-	constexpr auto Descending = " [v]"sv;
+	constexpr auto Ascending = " (^)"sv;
+	constexpr auto Descending = " (v)"sv;
 	constexpr auto Insignificant = "<ins>"sv; // insignificant
 	constexpr auto Excessive = "<exc>"sv; // excessively
 	constexpr auto NotAvailable = ""sv;
@@ -299,7 +299,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	{	assert(meas.flt_amt_ >= static_cast<VI_TM_FP>(2)); // The first two measurements cannot be filtered out.
 		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_amt_ - static_cast<VI_TM_FP>(1))) / mean_ticks;
 		if (const auto cv_pct = std::round(cv_ * 100.0); cv_pct < 1.0)
-		{	cv_txt_ = "<1 %"; // Coefficient of Variation (CV) is too low.
+		{	cv_txt_ = "<1%"; // Coefficient of Variation (CV) is too low.
 		}
 		else if (cv_pct >= 100.0)
 		{	cv_txt_ = Excessive; // Coefficient of Variation (CV) is too high.
@@ -307,7 +307,9 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 		else
 		{	cv_txt_ = misc::to_string(cv_pct, 2, 0);
 			assert(cv_txt_.back() == ' '); // In these conditions, the last character is always a space.
-			cv_txt_.back() = '%'; // Replace last space with '%'.
+			assert(cv_txt_[cv_txt.size() - 2] == ' ');
+			cv_txt_.resize(cv_txt_.size() - 2);
+			cv_txt_ += '%';
 		}
 	}
 #elif VI_TM_STAT_USE_BASE
@@ -460,6 +462,8 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 		"[" << std::setw(max_len_min_) << TitleMin << " - " << std::setw(max_len_max_) << TitleMax << "] " <<
 #endif
 		"\n";
+	const std::size_t len = str.tellp();
+	str << std::setfill('-') << std::setw(len - 1) << "\n";
 	return fn(str.str().c_str(), data);
 }
 
