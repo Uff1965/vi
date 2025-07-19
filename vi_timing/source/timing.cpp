@@ -158,13 +158,13 @@ private:
 	VI_THREADSAFE_ONLY(adaptive_mutex_t storage_guard_);
 public:
 	vi_tmMeasurementsJournal_t(const vi_tmMeasurementsJournal_t &) = delete;
-	vi_tmMeasurementsJournal_t &operator=(const vi_tmMeasurementsJournal_t &) = delete;
+	vi_tmMeasurementsJournal_t& operator=(const vi_tmMeasurementsJournal_t &) = delete;
 	explicit vi_tmMeasurementsJournal_t(bool need_report = false);
 	~vi_tmMeasurementsJournal_t();
 	int init();
 	int finit();
 	auto& try_emplace(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
-	int for_each_measurement(vi_tmMeasEnumCb_t fn, void *data); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
+	int for_each_measurement(vi_tmMeasEnumCb_t fn, void *ctx); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
 	void clear();
 	// Global journal management functions.
 	static int global_init(); // Initialize the global journal.
@@ -230,12 +230,12 @@ inline auto& vi_tmMeasurementsJournal_t::try_emplace(const char *name)
 	return *storage_.try_emplace(name).first;
 }
 
-int vi_tmMeasurementsJournal_t::for_each_measurement(vi_tmMeasEnumCb_t fn, void *data)
+int vi_tmMeasurementsJournal_t::for_each_measurement(vi_tmMeasEnumCb_t fn, void *ctx)
 {	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
 	{	if (!it.first.empty())
-		{	if (const auto breaker = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), data))
+		{	if (const auto breaker = std::invoke(fn, static_cast<VI_TM_HMEAS>(&it), ctx))
 			{	return breaker;
 			}
 		}
@@ -413,11 +413,11 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT dst, const vi_tmMeasurementStats_t* VI_RESTRICT src) noexcept
-{	if(!verify(!!dst && !!src && dst != src) && !!src->calls_)
+{	assert(!!dst && !!src);
+	if(!dst || !src || dst == src || !src->calls_)
 	{	return;
 	}
 
-	assert(!!dst && !!src);
 	assert(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(dst));
 	assert(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(src));
 
@@ -474,16 +474,16 @@ void VI_TM_CALL vi_tmJournalReset(VI_TM_HJOUR journal) noexcept
 {	vi_tmMeasurementEnumerate(journal, [](VI_TM_HMEAS m, void *) { vi_tmMeasurementReset(m); return 0; }, nullptr);
 }
 
-int VI_TM_CALL vi_tmMeasurementEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCb_t fn, void *data)
-{	return vi_tmMeasurementsJournal_t::from_handle(journal).for_each_measurement(fn, data);
+int VI_TM_CALL vi_tmMeasurementEnumerate(VI_TM_HJOUR journal, vi_tmMeasEnumCb_t fn, void *ctx)
+{	return vi_tmMeasurementsJournal_t::from_handle(journal).for_each_measurement(fn, ctx);
 }
 
 VI_TM_HMEAS VI_TM_CALL vi_tmMeasurement(VI_TM_HJOUR journal, const char *name)
 {	return static_cast<VI_TM_HMEAS>(&vi_tmMeasurementsJournal_t::from_handle(journal).try_emplace(name));
 }
 
-void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE amount) noexcept
-{	if (verify(meas)) { meas->second.add(tick_diff, amount); }
+void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS meas, VI_TM_TDIFF tick_diff, VI_TM_SIZE cnt) noexcept
+{	if (verify(meas)) { meas->second.add(tick_diff, cnt); }
 }
 
 void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS VI_RESTRICT meas, const vi_tmMeasurementStats_t * VI_RESTRICT src) noexcept

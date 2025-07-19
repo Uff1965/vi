@@ -63,7 +63,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_THREADSAFE 1
 #endif
 
-// Set VI_TM_STAT_USE_BASE macro to FALSE to skip basic statistics collection (amount, sum).
+// Set VI_TM_STAT_USE_BASE macro to FALSE to skip basic statistics collection (cnt, sum).
 // Library rebuild required
 #ifndef VI_TM_STAT_USE_BASE
 #	define VI_TM_STAT_USE_BASE 1
@@ -188,8 +188,8 @@ typedef uint64_t VI_TM_TICK; // !!! UNSIGNED !!! Represents a tick count (typica
 typedef VI_TM_TICK VI_TM_TDIFF; // !!! UNSIGNED !!! Represents a difference between two tick counts (duration).
 typedef struct vi_tmMeasurement_t *VI_TM_HMEAS; // Opaque handle to a measurement entry.
 typedef struct vi_tmMeasurementsJournal_t *VI_TM_HJOUR; // Opaque handle to a measurements journal.
-typedef int (VI_TM_CALL *vi_tmMeasEnumCb_t)(VI_TM_HMEAS meas, void* data); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
-typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* data); // Callback type for report function. ABI must be compatible with std::fputs!
+typedef int (VI_TM_CALL *vi_tmMeasEnumCb_t)(VI_TM_HMEAS meas, void* ctx); // Callback type for enumerating measurements; returning non-zero aborts enumeration.
+typedef int (VI_SYS_CALL *vi_tmReportCb_t)(const char* str, void* ctx); // Callback type for report function. ABI must be compatible with std::fputs!
 
 // vi_tmMeasurementStats_t: Structure holding statistics for a timing measurement.
 // This structure is used to store the number of calls, total time spent, and other statistical data for a measurement.
@@ -292,7 +292,10 @@ extern "C" {
 	/// Creates a new journal object and returns a handle to it.
 	/// </summary>
 	/// <returns>A handle to the newly created journal object, or nullptr if memory allocation fails.</returns>
-	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(unsigned flags VI_DEF(0U), void *reserved VI_DEF(NULL));
+	VI_TM_API VI_NODISCARD VI_TM_HJOUR VI_TM_CALL vi_tmJournalCreate(
+		unsigned flags VI_DEF(0U),
+		void* reserved VI_DEF(NULL)
+	);
 
 	/// <summary>
 	/// Resets but does not delete all entries in the journal. All entry handles remain valid.
@@ -315,16 +318,23 @@ extern "C" {
 	/// <param name="j">The handle to the journal containing the measurement.</param>
 	/// <param name="name">The name of the measurement entry to retrieve.</param>
 	/// <returns>A handle to the specified measurement entry within the journal.</returns>
-	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasurement(VI_TM_HJOUR j, const char* name);
+	VI_TM_API VI_NODISCARD VI_TM_HMEAS VI_TM_CALL vi_tmMeasurement(
+		VI_TM_HJOUR j,
+		const char *name
+	);
 
 	/// <summary>
 	/// Invokes a callback function for each measurement entry in the journal, allowing early interruption.
 	/// </summary>
 	/// <param name="j">The handle to the journal containing the measurements.</param>
 	/// <param name="fn">A callback function to be called for each measurement. It receives a handle to the measurement and the user-provided data pointer.</param>
-	/// <param name="data">A pointer to user-defined data that is passed to the callback function.</param>
+	/// <param name="ctx">A pointer to user-defined data that is passed to the callback function.</param>
 	/// <returns>Returns 0 if all measurements were processed. If the callback returns a non-zero value, iteration stops and that value is returned.</returns>
-	VI_TM_API int VI_TM_CALL vi_tmMeasurementEnumerate(VI_TM_HJOUR j, vi_tmMeasEnumCb_t fn, void* data);
+	VI_TM_API int VI_TM_CALL vi_tmMeasurementEnumerate(
+		VI_TM_HJOUR j,
+		vi_tmMeasEnumCb_t fn,
+		void* ctx
+	);
 
 	/// <summary>
 	/// Performs a measurement replenishment operation by adding the total duration and number of measured events.
@@ -333,7 +343,11 @@ extern "C" {
 	/// <param name="dur">The duration value to add to the measurement.</param>
 	/// <param name="cnt">The number of measured events.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE cnt VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementAdd(
+		VI_TM_HMEAS m,
+		VI_TM_TDIFF dur,
+		VI_TM_SIZE cnt VI_DEF(1)
+	) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the given source measurement stats into the specified measurement handle.
@@ -341,7 +355,10 @@ extern "C" {
     /// <param name="m">A handle to the measurement object to be updated.</param>
     /// <param name="src">Pointer to the source measurement statistics to merge.</param>
     /// <returns>This function does not return a value.</returns>
-    VI_TM_API void VI_TM_CALL vi_tmMeasurementMerge(VI_TM_HMEAS VI_RESTRICT m, const vi_tmMeasurementStats_t* VI_RESTRICT src) VI_NOEXCEPT;
+    VI_TM_API void VI_TM_CALL vi_tmMeasurementMerge(
+		VI_TM_HMEAS VI_RESTRICT m,
+		const vi_tmMeasurementStats_t* VI_RESTRICT src
+	) VI_NOEXCEPT;
 
     /// <summary>
     /// Retrieves measurement information from a VI_TM_HMEAS object, including its name and statistics.
@@ -350,7 +367,11 @@ extern "C" {
     /// <param name="name">Pointer to a string pointer that will receive the name of the measurement. Can be nullptr if not needed.</param>
     /// <param name="dst">Pointer to a vi_tmMeasurementStats_t structure that will receive the measurement statistics. Can be nullptr if not needed.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(VI_TM_HMEAS VI_RESTRICT m, const char **name, vi_tmMeasurementStats_t* VI_RESTRICT dst);
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementGet(
+		VI_TM_HMEAS VI_RESTRICT m,
+		const char **name,
+		vi_tmMeasurementStats_t* VI_RESTRICT dst
+	);
 	
 	/// <summary>
 	/// Resets the measurement state for the specified measurement handle. The handle remains valid.
@@ -360,13 +381,17 @@ extern "C" {
 	VI_TM_API void VI_TM_CALL vi_tmMeasurementReset(VI_TM_HMEAS m);
 
     /// <summary>
-    /// Updates the given measurement statistics structure by adding a duration and amount.
+    /// Updates the given measurement statistics structure by adding a duration and count.
     /// </summary>
     /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
     /// <param name="dur">The duration value to add to the statistics.</param>
     /// <param name="cnt">The number of measured events.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE cnt VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsAdd(
+		vi_tmMeasurementStats_t *dst,
+		VI_TM_TDIFF dur,
+		VI_TM_SIZE cnt VI_DEF(1)
+	) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the source measurement statistics structure into the destination.
@@ -374,7 +399,10 @@ extern "C" {
     /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
     /// <param name="src">Pointer to the source measurement statistics structure to merge.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT dst, const vi_tmMeasurementStats_t* VI_RESTRICT src) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsMerge(
+		vi_tmMeasurementStats_t* VI_RESTRICT dst,
+		const vi_tmMeasurementStats_t* VI_RESTRICT src
+	) VI_NOEXCEPT;
 
 	/// <summary>
 	/// Resets the given measurement statistics structure to its initial state.
@@ -403,7 +431,7 @@ extern "C" {
     /// Default report callback function. Writes the given string to the specified output stream.
     /// </summary>
     /// <param name="str">The string to output.</param>
-    /// <param name="data">A pointer to a FILE* stream. If nullptr, defaults to stdout.</param>
+	/// <param name="ignored"> A pointer to user-defined data, which is ignored in this default implementation.</param>
     /// <returns>On success, returns a non-negative value.</returns>
     VI_TM_API int VI_SYS_CALL vi_tmReportCb(const char *str, void *ignored VI_DEF(NULL));
 
@@ -413,9 +441,14 @@ extern "C" {
 	/// <param name="j">The handle to the journal whose data will be reported.</param>
 	/// <param name="flags">Flags that control the formatting and content of the report.</param>
 	/// <param name="cb">A callback function used to output each line of the report. If nullptr, defaults to writing to a FILE* stream.</param>
-	/// <param name="data">A pointer to user data passed to the callback function. If fn is nullptr and data is nullptr, defaults to stdout.</param>
+	/// <param name="ctx">A pointer to user data passed to the callback function. If fn is nullptr and ctx is nullptr, defaults to stdout.</param>
 	/// <returns>The total number of characters written by the report, or a negative value if an error occurs.</returns>
-	VI_TM_API int VI_TM_CALL vi_tmReport(VI_TM_HJOUR j, unsigned flags VI_DEF(0), vi_tmReportCb_t cb VI_DEF(vi_tmReportCb), void* data VI_DEF(NULL));
+	VI_TM_API int VI_TM_CALL vi_tmReport(
+		VI_TM_HJOUR j,
+		unsigned flags VI_DEF(0),
+		vi_tmReportCb_t cb VI_DEF(vi_tmReportCb),
+		void* ctx VI_DEF(NULL)
+	);
 
 	/// <summary>
 	/// Performs a CPU warming routine by running computationally intensive tasks across multiple threads for a specified duration.

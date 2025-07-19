@@ -171,8 +171,8 @@ namespace
 		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
-		int print_header(const vi_tmReportCb_t fn, void *data) const;
-		int print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *data) const;
+		int print_header(const vi_tmReportCb_t fn, void *ctx) const;
+		int print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *ctx) const;
 
 		std::size_t width_column(vi_tmReportFlags_e clmn) const;
 		std::string item_column(vi_tmReportFlags_e clmn) const;
@@ -197,7 +197,7 @@ namespace
 		return result;
 	}
 
-	int print_props(vi_tmReportCb_t fn, void *data, unsigned flags)
+	int print_props(vi_tmReportCb_t fn, void *ctx, unsigned flags)
 	{	assert(!!fn);
 		int result = 0;
 		if (flags & vi_tmShowMask)
@@ -230,7 +230,7 @@ namespace
 			}
 
 			str << '\n';
-			result += fn(str.str().c_str(), data);
+			result += fn(str.str().c_str(), ctx);
 		}
 
 		return result;
@@ -258,7 +258,7 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 :	name_{ name }
 {	
 	if (!verify(VI_EXIT_SUCCESS == vi_tmMeasurementStatsIsValid(&meas)) || 0 == meas.calls_)
-	{	return; // If the measurement is invalid or has no amount, we do not create a metering_t.
+	{	return; // If the measurement is invalid or has no calls, we do not create a metering_t.
 	}
 
 	const auto &props = misc::properties_t::props();
@@ -436,7 +436,7 @@ std::string formatter_t::item_column(vi_tmReportFlags_e clmn) const
 	return result;
 }
 
-int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
+int formatter_t::print_header(const vi_tmReportCb_t fn, void *ctx) const
 {	
 	if (flags_ & vi_tmHideHeader)
 	{	return 0;
@@ -464,10 +464,10 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *data) const
 		"\n";
 	const std::size_t len = str.tellp();
 	str << std::setfill('-') << std::setw(len - 1) << "\n";
-	return fn(str.str().c_str(), data);
+	return fn(str.str().c_str(), ctx);
 }
 
-int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *data) const
+int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *ctx) const
 {	std::ostringstream str;
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
@@ -492,23 +492,23 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 		"[" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << "] " <<
 #endif
 		"\n";
-	return fn(str.str().c_str(), data);
+	return fn(str.str().c_str(), ctx);
 }
 
-int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmReportCb_t fn, void *data)
-{	assert(!data || !!fn); // If data is not null, then fn must be valid.
+int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmReportCb_t fn, void *ctx)
+{	assert(!ctx || !!fn); // If data is not null, then fn must be valid.
 	if (nullptr == fn)
 		fn = vi_tmReportCb; // Default callback function.
 
-	int result = print_props(fn, data, flags);
+	int result = print_props(fn, ctx, flags);
 
 	std::vector<metering_t> metering_entries = get_meterings(journal_handle, flags);
 	const formatter_t formatter{ metering_entries, flags };
-	result += formatter.print_header(fn, data);
+	result += formatter.print_header(fn, ctx);
 
 	std::sort(metering_entries.begin(), metering_entries.end(), comparator_t{ flags });
 	for (const auto &itm : metering_entries)
-	{	result += formatter.print_metering(itm, fn, data);
+	{	result += formatter.print_metering(itm, fn, ctx);
 	}
 
 	return result;

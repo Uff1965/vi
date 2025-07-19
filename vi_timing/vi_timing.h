@@ -150,7 +150,7 @@ namespace vi_tm
 		{	return 0U != cnt_;
 		}
 		void start(VI_TM_SIZE cnt = 1U) noexcept
-		{	assert(!is_active() && 0U != cnt); // Ensure that the measurer is not already running and that a valid amount is provided.
+		{	assert(!is_active() && 0U != cnt); // Ensure that the measurer is not already running and that a valid cnt is provided.
 			cnt_ = cnt;
 			start_ = vi_tmGetTicks(); // Reset start time.
 		}
@@ -183,7 +183,7 @@ namespace vi_tm
 	// It stores the pointer to the named measurer entry in a static variable. Therefore, it cannot 
 	// be called with different measurement names.
 #	define VI_TM(...) \
-		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, VI_TM_SIZE amount = 1) -> vi_tm::measurer_t { \
+		const auto VI_UNIC_ID(_vi_tm_) = [] (const char* name, VI_TM_SIZE cnt = 1) -> vi_tm::measurer_t { \
 			static const auto meas = vi_tmMeasurement(VI_TM_HGLOBAL, name); /* Static, so as not to waste resources on repeated searches for measurements by name. */ \
 			VI_TM_DEBUG_ONLY \
 			(	const char* registered_name = nullptr; \
@@ -191,7 +191,7 @@ namespace vi_tm
 				assert(registered_name && 0 == std::strcmp(name, registered_name) && \
 					"One VI_TM macro cannot be reused with a different name value!"); \
 			) \
-			return vi_tm::measurer_t{meas, amount}; \
+			return vi_tm::measurer_t{meas, cnt}; \
 		}(__VA_ARGS__)
 
 	// This macro is used to create a measurer_t object with the function name as the measurement name.

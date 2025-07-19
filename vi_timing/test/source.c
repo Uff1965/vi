@@ -13,9 +13,9 @@
 
 // Consider inspecting the first argument of the 'vi_tmMeasurementAdd' function call.
 
-static inline void finish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE amount)
+static inline void finish(VI_TM_HMEAS measure, VI_TM_TICK start, VI_TM_SIZE cnt)
 {	const VI_TM_TICK finish = vi_tmGetTicks();
-	vi_tmMeasurementAdd(measure, finish - start, amount);
+	vi_tmMeasurementAdd(measure, finish - start, cnt);
 }
 
 void bar_c(void)
