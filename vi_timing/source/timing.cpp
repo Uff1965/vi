@@ -128,7 +128,7 @@ namespace
 		{	vi_tmMeasurementStatsReset(&stats_);
 		}
 		void add(VI_TM_TDIFF val, VI_TM_SIZE cnt) noexcept;
-		void merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept;
+		void merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) VI_RESTRICT noexcept;
 		vi_tmMeasurementStats_t get() const noexcept;
 		void reset() noexcept;
 #pragma warning(suppress: 4324)
@@ -182,7 +182,7 @@ inline void meterage_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
 	vi_tmMeasurementStatsAdd(&stats_, v, n);
 }
 
-inline void meterage_t::merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) noexcept
+inline void meterage_t::merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) VI_RESTRICT noexcept
 {	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsMerge(&stats_, &src);
 }
