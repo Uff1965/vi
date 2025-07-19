@@ -33,6 +33,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <functional>
 #include <iomanip>
 #include <numeric>
 #include <sstream>
@@ -151,6 +152,8 @@ namespace
 		}
 	};
 
+	using prn_t = std::function<int(const char*)>;
+
 	struct formatter_t
 	{	static constexpr auto UNDERSCORE = '.';
 		const std::size_t max_len_number_ = 0U;
@@ -171,8 +174,8 @@ namespace
 		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
-		int print_header(const vi_tmReportCb_t fn, void *ctx) const;
-		int print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *ctx) const;
+		int print_header(prn_t fn) const;
+		int print_metering(const metering_t &i, prn_t fn) const;
 
 		std::size_t width_column(vi_tmReportFlags_e clmn) const;
 		std::string item_column(vi_tmReportFlags_e clmn) const;
@@ -197,7 +200,7 @@ namespace
 		return result;
 	}
 
-	int print_props(vi_tmReportCb_t fn, void *ctx, unsigned flags)
+	int print_props(prn_t fn, unsigned flags)
 	{	assert(!!fn);
 		int result = 0;
 		if (flags & vi_tmShowMask)
@@ -230,7 +233,7 @@ namespace
 			}
 
 			str << '\n';
-			result += fn(str.str().c_str(), ctx);
+			result += fn(str.str().c_str());
 		}
 
 		return result;
@@ -436,7 +439,7 @@ std::string formatter_t::item_column(vi_tmReportFlags_e clmn) const
 	return result;
 }
 
-int formatter_t::print_header(const vi_tmReportCb_t fn, void *ctx) const
+int formatter_t::print_header(prn_t fn) const
 {	
 	if (flags_ & vi_tmHideHeader)
 	{	return 0;
@@ -464,10 +467,10 @@ int formatter_t::print_header(const vi_tmReportCb_t fn, void *ctx) const
 		"\n";
 	const std::size_t len = str.tellp();
 	str << std::setfill('-') << std::setw(len - 1) << "\n";
-	return fn(str.str().c_str(), ctx);
+	return fn(str.str().c_str());
 }
 
-int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, void *ctx) const
+int formatter_t::print_metering(const metering_t &i, prn_t fn) const
 {	std::ostringstream str;
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
@@ -492,7 +495,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 		"[" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << "] " <<
 #endif
 		"\n";
-	return fn(str.str().c_str(), ctx);
+	return fn(str.str().c_str());
 }
 
 int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmReportCb_t fn, void *ctx)
@@ -500,15 +503,16 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRepo
 	if (nullptr == fn)
 		fn = vi_tmReportCb; // Default callback function.
 
-	int result = print_props(fn, ctx, flags);
+	prn_t prn = [fn, ctx](const char *str) { return fn(str, ctx); };
+	int result = print_props(prn, flags);
 
 	std::vector<metering_t> metering_entries = get_meterings(journal_handle, flags);
 	const formatter_t formatter{ metering_entries, flags };
-	result += formatter.print_header(fn, ctx);
+	result += formatter.print_header(prn);
 
 	std::sort(metering_entries.begin(), metering_entries.end(), comparator_t{ flags });
 	for (const auto &itm : metering_entries)
-	{	result += formatter.print_metering(itm, fn, ctx);
+	{	result += formatter.print_metering(itm, prn);
 	}
 
 	return result;
