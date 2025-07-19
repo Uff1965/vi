@@ -107,9 +107,9 @@ namespace
 
 // Checking for FMA support by the compiler/platform
 #if defined(__FMA__) || (defined(_MSC_VER) && (defined(__AVX2__) || defined(__AVX512F__)))
-    #define FMA(x, y, z) std::fma((x), (y), (z))
+	#define FMA(x, y, z) std::fma((x), (y), (z))
 #else
-    #define FMA(x, y, z) ((x) * (y) + (z))
+	#define FMA(x, y, z) ((x) * (y) + (z))
 #endif
 
 namespace
