@@ -31,7 +31,7 @@ source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(OUTPUT_NAME_SUFFIX "")
-if(BUILD_SHARED_LIBS)
+if(VI_TM_BUILD_SHARED)
     string(APPEND OUTPUT_NAME_SUFFIX "s")
 endif()
 
