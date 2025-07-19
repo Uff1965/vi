@@ -31,7 +31,8 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_VERSION_MINOR 1	// 0 - 999
 #	define VI_TM_VERSION_PATCH 0	// 0 - 9999
 
-#	include <stdint.h>
+#	include <stdint.h> // uint64_t
+#	include <stddef.h> // size_t
 
 //*******************************************************************************************************************
 // Library configuration options:
