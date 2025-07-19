@@ -331,9 +331,9 @@ extern "C" {
 	/// </summary>
 	/// <param name="m">A handle to the measurement to be updated.</param>
 	/// <param name="dur">The duration value to add to the measurement.</param>
-	/// <param name="amt">The number of measured events.</param>
+	/// <param name="cnt">The number of measured events.</param>
 	/// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementAdd(VI_TM_HMEAS m, VI_TM_TDIFF dur, VI_TM_SIZE cnt VI_DEF(1)) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the given source measurement stats into the specified measurement handle.
@@ -364,9 +364,9 @@ extern "C" {
     /// </summary>
     /// <param name="dst">Pointer to the destination measurement statistics structure to update.</param>
     /// <param name="dur">The duration value to add to the statistics.</param>
-    /// <param name="amt">The number of measured events.</param>
+    /// <param name="cnt">The number of measured events.</param>
     /// <returns>This function does not return a value.</returns>
-	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE amt VI_DEF(1)) VI_NOEXCEPT;
+	VI_TM_API void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *dst, VI_TM_TDIFF dur, VI_TM_SIZE cnt VI_DEF(1)) VI_NOEXCEPT;
 
     /// <summary>
     /// Merges the statistics from the source measurement statistics structure into the destination.

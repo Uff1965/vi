@@ -116,22 +116,22 @@ namespace vi_tm
 	// Unlike the API, this class is not thread-safe!!!
 	class measurer_t
 	{	VI_TM_HMEAS meas_ = nullptr;
-		VI_TM_SIZE amt_ = 0U;
+		VI_TM_SIZE cnt_ = 0U;
 		VI_TM_TICK start_ = 0U; // Order matters!!! 'start_' must be initialized last!
 	public:
 		measurer_t() = delete;
 		measurer_t(const measurer_t &) = delete;
 		measurer_t(measurer_t &&src) noexcept
 		:	meas_{ std::exchange(src.meas_, nullptr) },
-			amt_{ std::exchange(src.amt_, 0U) },
+			cnt_{ std::exchange(src.cnt_, 0U) },
 			start_{ src.start_ }
 		{	assert(meas_);
 		}
-		measurer_t(VI_TM_HMEAS m, VI_TM_SIZE amt = 1) noexcept
+		measurer_t(VI_TM_HMEAS m, VI_TM_SIZE cnt = 1) noexcept
 		:	meas_{ m },
-			amt_{ amt }
+			cnt_{ cnt }
 		{	assert(meas_);
-			if (amt_)
+			if (cnt_)
 			{	start_ = vi_tmGetTicks();
 			}
 		}
@@ -140,28 +140,28 @@ namespace vi_tm
 		measurer_t &operator=(measurer_t &&src) noexcept
 		{	if (this != &src)
 			{	meas_ = std::exchange(src.meas_, nullptr);
-				amt_ = std::exchange(src.amt_, 0U);
+				cnt_ = std::exchange(src.cnt_, 0U);
 				start_ = src.start_;
 			}
 			assert(meas_);
 			return *this;
 		};
 		bool is_active() const noexcept
-		{	return 0U != amt_;
+		{	return 0U != cnt_;
 		}
-		void start(VI_TM_SIZE amt = 1U) noexcept
-		{	assert(!is_active() && 0U != amt); // Ensure that the measurer is not already running and that a valid amount is provided.
-			amt_ = amt;
+		void start(VI_TM_SIZE cnt = 1U) noexcept
+		{	assert(!is_active() && 0U != cnt); // Ensure that the measurer is not already running and that a valid amount is provided.
+			cnt_ = cnt;
 			start_ = vi_tmGetTicks(); // Reset start time.
 		}
 		void stop() noexcept // Stop the measurer without saved time.
-		{	amt_ = 0U;
+		{	cnt_ = 0U;
 		}
 		void finish()
 		{	if (is_active())
 			{	const auto finish = vi_tmGetTicks();
-				vi_tmMeasurementAdd(meas_, finish - start_, amt_);
-				amt_ = 0;
+				vi_tmMeasurementAdd(meas_, finish - start_, cnt_);
+				cnt_ = 0;
 			}
 		}
 	}; // class measurer_t

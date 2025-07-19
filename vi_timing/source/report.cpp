@@ -81,8 +81,8 @@ namespace
 	struct metering_t
 	{	std::string name_; // Name of the measured.
 		std::size_t calls_{};
-		std::size_t amt_{}; // Number of measured units
-		std::string amt_txt_{ "0" };
+		std::size_t cnt_{}; // Number of measured units
+		std::string cnt_txt_{ "0" };
 		duration_t<DURATION_PREC, DURATION_DEC> sum_{}; // seconds
 		std::string sum_txt_{ NotAvailable };
 		duration_t<DURATION_PREC, DURATION_DEC> average_{}; // seconds
@@ -104,16 +104,16 @@ namespace
 	template<vi_tmReportFlags_e E> auto make_tuple(const metering_t &v);
 
 	template<> auto make_tuple<vi_tmSortByName>(const metering_t &v)
-	{	return std::tie( v.name_, v.average_, v.sum_, v.amt_ );
+	{	return std::tie( v.name_, v.average_, v.sum_, v.cnt_ );
 	}
 	template<> auto make_tuple<vi_tmSortBySpeed>(const metering_t &v)
-	{	return std::tie( v.average_, v.sum_, v.amt_, v.name_ );
+	{	return std::tie( v.average_, v.sum_, v.cnt_, v.name_ );
 	}
 	template<> auto make_tuple<vi_tmSortByTime>(const metering_t &v)
-	{	return std::tie( v.sum_, v.average_, v.amt_, v.name_ );
+	{	return std::tie( v.sum_, v.average_, v.cnt_, v.name_ );
 	}
 	template<> auto make_tuple<vi_tmSortByAmount>(const metering_t &v)
-	{	return std::tie( v.amt_, v.average_, v.sum_, v.name_ );
+	{	return std::tie( v.cnt_, v.average_, v.sum_, v.name_ );
 	}
 
 	template<vi_tmReportFlags_e E> bool less(const metering_t &l, const metering_t &r)
@@ -267,14 +267,14 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 // calls_
 	calls_ = meas.calls_;
 
-// amt_, sum_ and sum_txt_
+// cnt_, sum_ and sum_txt_
 #if VI_TM_STAT_USE_BASE
-	amt_ = meas.cnt_;
+	cnt_ = meas.cnt_;
 	try
 	{	std::ostringstream str_stream;
 		str_stream.imbue(std::locale(str_stream.getloc(), new misc::space_out));
-		str_stream << amt_;
-		amt_txt_ = str_stream.str();
+		str_stream << cnt_;
+		cnt_txt_ = str_stream.str();
 	}
 	catch (const std::exception &)
 	{	assert(false);
@@ -290,14 +290,14 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	}
 #endif
 
-// mean, limit, cv_ and cv_txt_
+// average, limit, cv_ and cv_txt_
 #if VI_TM_STAT_USE_FILTER
 	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(meas.flt_cnt_);
-	const auto mean_ticks = meas.flt_avg_ - correction_ticks;
+	const auto avg_ticks = meas.flt_avg_ - correction_ticks;
 
 	if (meas.flt_calls_ >= 2) // To calculate the measurement spread, at least two measurements must be taken.
 	{	assert(meas.flt_cnt_ >= static_cast<VI_TM_FP>(2)); // The first two measurements cannot be filtered out.
-		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_cnt_ - static_cast<VI_TM_FP>(1))) / mean_ticks;
+		cv_ = std::sqrt(meas.flt_ss_ / (meas.flt_cnt_ - static_cast<VI_TM_FP>(1))) / avg_ticks;
 		if (const auto cv_pct = std::round(cv_ * 100.0); cv_pct < 1.0)
 		{	cv_txt_ = "<1%"; // Coefficient of Variation (CV) is too low.
 		}
@@ -314,16 +314,16 @@ metering_t::metering_t(const char *name, const vi_tmMeasurementStats_t &meas, un
 	}
 #elif VI_TM_STAT_USE_BASE
 	const auto limit_ticks = props.clock_resolution_ticks_ / std::sqrt(static_cast<VI_TM_FP>(meas.cnt_));
-	const auto mean_ticks = total_ticks / static_cast<double>(meas.cnt_);
+	const auto avg_ticks = total_ticks / static_cast<double>(meas.cnt_);
 #endif
 
-// average_, average_txt_ and amt_txt_
+// average_, average_txt_ and cnt_txt_
 #if VI_TM_STAT_USE_BASE || VI_TM_STAT_USE_FILTER
-	if (mean_ticks <= std::max(limit_ticks, props.clock_resolution_ticks_ * 1e-2))
+	if (avg_ticks <= std::max(limit_ticks, props.clock_resolution_ticks_ * 1e-2))
 	{	average_txt_ = Insignificant;
 	}
 	else
-	{	average_ = props.seconds_per_tick_ * mean_ticks;
+	{	average_ = props.seconds_per_tick_ * avg_ticks;
 		average_txt_ = to_string(average_);
 	}
 #endif
@@ -370,7 +370,7 @@ formatter_t::formatter_t(const std::vector<metering_t> &itms, unsigned flags)
 #endif
 #if VI_TM_STAT_USE_BASE || VI_TM_STAT_USE_FILTER
 		max_len_average_ = std::max(max_len_average_, itm.average_txt_.length());
-		max_len_amount_ = std::max(max_len_amount_, itm.amt_txt_.length());
+		max_len_amount_ = std::max(max_len_amount_, itm.cnt_txt_.length());
 #endif
 	}
 }
@@ -486,7 +486,7 @@ int formatter_t::print_metering(const metering_t &i, const vi_tmReportCb_t fn, v
 #endif
 #if VI_TM_STAT_USE_BASE
 		"~= " << std::setw(width_column(vi_tmSortByTime)) << i.sum_txt_ << " / " <<
-		std::setw(width_column(vi_tmSortByAmount)) << i.amt_ << " " <<
+		std::setw(width_column(vi_tmSortByAmount)) << i.cnt_ << " " <<
 #endif
 #if VI_TM_STAT_USE_MINMAX
 		"[" << std::setw(max_len_min_) << i.min_txt_ << " - " << std::setw(max_len_max_) << i.max_txt_ << "] " <<
