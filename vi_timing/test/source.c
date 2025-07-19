@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdio.h> // For fputs and stdout
 #include <threads.h>
 
 // Consider inspecting the first argument of the 'vi_tmMeasurementAdd' function call.

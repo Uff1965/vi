@@ -32,11 +32,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_VERSION_PATCH 0	// 0 - 9999
 
 #	include <stdint.h>
-#	include <stdio.h> // For fputs and stdout
-
-#if !defined(__cplusplus) && (__STDC_VERSION__ < 202311L)
-#	include <stdalign.h> // For alignas in C-files.
-#endif
 
 //*******************************************************************************************************************
 // Library configuration options:
@@ -46,6 +41,18 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 // Library rebuild required
 #if !defined(VI_TM_DEBUG) && !defined(NDEBUG)
 #	define VI_TM_DEBUG 1 // Enable debug mode.
+#endif
+
+// Used high-performance timing methods (e.g., platform-specific optimizations like ASM).
+// Set the VI_TM_USE_STDCLOCK macro to TRUE to switch to standard C11 `timespec_get()`.
+// Requires library rebuild.
+#ifndef VI_TM_USE_STDCLOCK
+#	define VI_TM_USE_STDCLOCK 0
+#endif
+
+// If VI_TM_SHARED macro is TRUE, the library is a shared library.
+#ifndef VI_TM_SHARED
+#	define VI_TM_SHARED 0
 #endif
 
 // Set VI_TM_THREADSAFE to FALSE to disable thread safety.
@@ -74,71 +81,59 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TM_STAT_USE_MINMAX 0
 #endif
 
-// Used high-performance timing methods (e.g., platform-specific optimizations like ASM).
-// Set the VI_TM_USE_STDCLOCK macro to TRUE to switch to standard C11 `timespec_get()`.
-// Requires library rebuild.
-#ifndef VI_TM_USE_STDCLOCK
-#	define VI_TM_USE_STDCLOCK 0
-#endif
-
-// If VI_TM_SHARED macro is TRUE, the library is a shared library.
-#ifndef VI_TM_SHARED
-#	define VI_TM_SHARED 0
-#endif
-
-// If VI_TM_EXPORTS defined, the library is built as a DLL and exports its functions.
+// If VI_TM_EXPORTS defined, the library is built as a shared and exports its functions.
 
 //*******************************************************************************************************************
 
 // Define: VI_SYS_CALL, VI_TM_CALL and VI_TM_API vvvvvvvvvvvvvv
-#	if defined(_MSC_VER)
-#		ifdef _M_IX86 // x86 architecture
-#			define VI_SYS_CALL __cdecl
-#			define VI_TM_CALL __fastcall
-#		else
-#			define VI_SYS_CALL
-#			define VI_TM_CALL
-#		endif
-
-#		ifdef VI_TM_EXPORTS
-#			define VI_TM_API __declspec(dllexport)
-#		elif VI_TM_SHARED
-#			define VI_TM_API __declspec(dllimport)
-
-#			if VI_TM_DEBUG
-#				pragma comment(lib, "vi_timing_sd.lib")
-#			else
-#				pragma comment(lib, "vi_timing_s.lib")
-#			endif
-#		else
-#			define VI_TM_API
-
-#			if VI_TM_DEBUG
-#				pragma comment(lib, "vi_timing_d.lib")
-#			else
-#				pragma comment(lib, "vi_timing.lib")
-#			endif
-#		endif
-#	elif defined (__GNUC__) || defined(__clang__)
-#		ifdef __i386__
-#			define VI_SYS_CALL __attribute__((cdecl))
-#			define VI_TM_CALL __attribute__((fastcall))
-#		else
-#			define VI_SYS_CALL
-#			define VI_TM_CALL
-#		endif
-
-#		ifdef VI_TM_EXPORTS
-#			define VI_TM_API __attribute__((visibility("default")))
-#		else
-#			define VI_TM_API
-#		endif
+#if defined(_MSC_VER)
+#	ifdef _M_IX86 // x86 architecture
+#		define VI_SYS_CALL __cdecl
+#		define VI_TM_CALL __fastcall
 #	else
 #		define VI_SYS_CALL
-#		define VI_TM_DISABLE "Unknown compiler!"
 #		define VI_TM_CALL
+#	endif
+
+#	ifdef VI_TM_EXPORTS
+#		define VI_TM_API __declspec(dllexport)
+#	elif VI_TM_SHARED
+#		define VI_TM_API __declspec(dllimport)
+
+#		if VI_TM_DEBUG
+#			pragma comment(lib, "vi_timing_sd.lib")
+#		else
+#			pragma comment(lib, "vi_timing_s.lib")
+#		endif
+#	else
+#		define VI_TM_API
+
+#		if VI_TM_DEBUG
+#			pragma comment(lib, "vi_timing_d.lib")
+#		else
+#			pragma comment(lib, "vi_timing.lib")
+#		endif
+#	endif
+#elif defined (__GNUC__) || defined(__clang__)
+#	ifdef __i386__
+#		define VI_SYS_CALL __attribute__((cdecl))
+#		define VI_TM_CALL __attribute__((fastcall))
+#	else
+#		define VI_SYS_CALL
+#		define VI_TM_CALL
+#	endif
+
+#	ifdef VI_TM_EXPORTS
+#		define VI_TM_API __attribute__((visibility("default")))
+#	else
 #		define VI_TM_API
 #	endif
+#else
+#	define VI_SYS_CALL
+#	define VI_TM_DISABLE "Unknown compiler!"
+#	define VI_TM_CALL
+#	define VI_TM_API
+#endif
 // Define: VI_FUNCNAME, VI_SYS_CALL, VI_TM_CALL and VI_TM_API ^^^^^^^^^^^^^^^^^^^^^^^
 
 // Auxiliary macros: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -151,39 +146,39 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 //   VI_OPTIMIZE_OFF
 //		... unoptimized code section
 //   VI_OPTIMIZE_ON
-#	if defined(_MSC_VER)
-#		define VI_FUNCNAME __FUNCSIG__
-#		define VI_RESTRICT __restrict
-#		define VI_NOINLINE		__declspec(noinline)
-#		define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
-#		define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
-#	elif defined(__clang__)
-#		define VI_FUNCNAME __PRETTY_FUNCTION__
-#		define VI_RESTRICT __restrict__
-#		define VI_NOINLINE		[[gnu::noinline]]
-#		define VI_OPTIMIZE_OFF	_Pragma("clang optimize push") \
-								_Pragma("clang optimize off")
-#		define VI_OPTIMIZE_ON	_Pragma("clang optimize pop")
-#	elif defined(__GNUC__)
-#		define VI_FUNCNAME __PRETTY_FUNCTION__
-#		define VI_RESTRICT __restrict__
-#		define VI_NOINLINE		[[gnu::noinline]]
-#		define VI_OPTIMIZE_OFF	_Pragma("GCC push_options") \
-								_Pragma("GCC optimize(\"O0\")")
-#		define VI_OPTIMIZE_ON	_Pragma("GCC pop_options")
-#	else
-#		define VI_FUNCNAME __func__
-#		define VI_RESTRICT
-#		define VI_NOINLINE
-#		define VI_OPTIMIZE_OFF
-#		define VI_OPTIMIZE_ON
-#	endif
+#if defined(_MSC_VER)
+#	define VI_FUNCNAME __FUNCSIG__
+#	define VI_RESTRICT __restrict
+#	define VI_NOINLINE		__declspec(noinline)
+#	define VI_OPTIMIZE_OFF	_Pragma("optimize(\"\", off)")
+#	define VI_OPTIMIZE_ON	_Pragma("optimize(\"\", on)")
+#elif defined(__clang__)
+#	define VI_FUNCNAME __PRETTY_FUNCTION__
+#	define VI_RESTRICT __restrict__
+#	define VI_NOINLINE		[[gnu::noinline]]
+#	define VI_OPTIMIZE_OFF	_Pragma("clang optimize push") \
+							_Pragma("clang optimize off")
+#	define VI_OPTIMIZE_ON	_Pragma("clang optimize pop")
+#elif defined(__GNUC__)
+#	define VI_FUNCNAME __PRETTY_FUNCTION__
+#	define VI_RESTRICT __restrict__
+#	define VI_NOINLINE		[[gnu::noinline]]
+#	define VI_OPTIMIZE_OFF	_Pragma("GCC push_options") \
+							_Pragma("GCC optimize(\"O0\")")
+#	define VI_OPTIMIZE_ON	_Pragma("GCC pop_options")
+#else
+#	define VI_FUNCNAME __func__
+#	define VI_RESTRICT
+#	define VI_NOINLINE
+#	define VI_OPTIMIZE_OFF
+#	define VI_OPTIMIZE_ON
+#endif
  
 // Stringification and token-pasting macros for unique identifier generation.
-#	define VI_ID __LINE__ // An identifier based on the line number does not significantly reduce applicability compared to __COUNTER__, but it does facilitate debugging.
-#	define VI_STR_CONCAT_AUX( a, b ) a##b
-#	define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
-#	define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, VI_ID )
+#define VI_ID __LINE__ // An identifier based on the line number does not significantly reduce applicability compared to __COUNTER__, but it does facilitate debugging.
+#define VI_STR_CONCAT_AUX( a, b ) a##b
+#define VI_STR_CONCAT( a, b ) VI_STR_CONCAT_AUX( a, b )
+#define VI_UNIC_ID( prefix ) VI_STR_CONCAT( prefix, VI_ID )
 // Auxiliary macros: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 typedef double VI_TM_FP; // Floating-point type used for timing calculations, typically double precision.
@@ -262,7 +257,7 @@ typedef enum vi_tmReportFlags_e
 
 #define VI_TM_HGLOBAL ((VI_TM_HJOUR)-1) // Global journal handle, used for global measurements.
 
-#	ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #	define VI_NODISCARD [[nodiscard]]
 #	define VI_NOEXCEPT noexcept
