@@ -94,7 +94,7 @@ namespace
 		{	((static_cast<void>(Is), std::invoke(F, args...)), ...);
 		}
 		else
-		{	volatile return_t results[] {(static_cast<void>(Is), std::invoke(F, args...))...};
+		{	volatile return_t results[sizeof...(Is)] {(static_cast<void>(Is), std::invoke(F, args...))...};
 			return results[sizeof...(Is) - 1U]; // Return the last result.
 		}
 	}

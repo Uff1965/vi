@@ -293,10 +293,10 @@ namespace
 		{	const auto unit = *static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT));
 			const auto m = vi_tmMeasurement(journal.get(), "Sample");
 			for (auto x : samples_simple)
-			{	vi_tmMeasurementAdd(m, static_cast<VI_TM_TDIFF>(x / unit));
+			{	vi_tmMeasurementAdd(m, x / static_cast<VI_TM_TDIFF>(unit));
 			}
 			for (auto x : samples_multiple)
-			{	vi_tmMeasurementAdd(m, M * static_cast<VI_TM_TDIFF>(x / unit), M);
+			{	vi_tmMeasurementAdd(m, M * x / static_cast<VI_TM_TDIFF>(unit), M);
 			}
 		}
 		std::cout << "RAW:\n";

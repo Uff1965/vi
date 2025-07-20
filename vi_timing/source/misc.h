@@ -11,7 +11,7 @@
 #	include <source_location>
 #endif
 
-#define verify(v) [](bool b) noexcept { assert(b); return b; }(v) // Define for displaying the __FILE__ and __LINE__ during debugging.
+#define verify(v) [](bool b) constexpr noexcept { assert(b); return b; }(v) // Define for displaying the __FILE__ and __LINE__ during debugging.
 
 namespace misc
 {

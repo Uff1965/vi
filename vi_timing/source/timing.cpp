@@ -35,7 +35,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <cmath> // std::sqrt
 #include <cstdint> // std::uint64_t, std::size_t
 #include <cstring>
-#include <functional> // std::invoke
 #include <memory> // std::unique_ptr
 #include <mutex> // std::mutex, std::lock_guard
 #include <numeric> // std::accumulate
@@ -164,7 +163,8 @@ public:
 	int init();
 	int finit();
 	auto& try_emplace(const char *name); // Get a reference to the measurement by name, creating it if it does not exist.
-	int for_each_measurement(std::function<int(storage_t::value_type&)> fn); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
+	template<typename F>
+	int for_each_measurement(const F &fn); // Calls the function fn for each measurement in the journal, while this function returns 0. Returns the return code of the function fn if it returned a nonzero value, or 0 if all measurements were processed.
 	void clear();
 	// Global journal management functions.
 	static int global_init(); // Initialize the global journal.
@@ -230,7 +230,8 @@ inline auto& vi_tmMeasurementsJournal_t::try_emplace(const char *name)
 	return *storage_.try_emplace(name).first;
 }
 
-int vi_tmMeasurementsJournal_t::for_each_measurement(std::function<int(storage_t::value_type&)> fn)
+template<typename F>
+int vi_tmMeasurementsJournal_t::for_each_measurement(const F &fn)
 {	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
@@ -414,7 +415,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 
 void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT dst, const vi_tmMeasurementStats_t* VI_RESTRICT src) noexcept
 {	assert(!!dst && !!src);
-	if(!dst || !src || dst == src || !src->calls_)
+	if(nullptr == dst || nullptr == src || dst == src || 0U == src->calls_)
 	{	return;
 	}
 

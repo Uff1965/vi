@@ -33,7 +33,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <functional>
 #include <iomanip>
 #include <numeric>
 #include <sstream>
@@ -42,7 +41,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #include <vector>
 
 #ifdef _WIN32
-#	include <windows.h> // For GetStdHandle(STD_OUTPUT_HANDLE)
+#	include <windows.h> // For GetStdHandle(STD_OUTPUT_HANDLE) and OutputDebugString.
 #endif
 
 using namespace std::literals;
@@ -152,8 +151,6 @@ namespace
 		}
 	};
 
-	using prn_t = std::function<int(const char*)>;
-
 	struct formatter_t
 	{	static constexpr auto UNDERSCORE = '.';
 		const std::size_t max_len_number_ = 0U;
@@ -174,8 +171,10 @@ namespace
 		mutable std::size_t n_{ 0 };
 
 		formatter_t(const std::vector<metering_t> &itms, unsigned flags);
-		int print_header(prn_t fn) const;
-		int print_metering(const metering_t &i, prn_t fn) const;
+		template<typename F>
+		int print_header( const F &fn) const;
+		template<typename F>
+		int print_metering(const metering_t &i, const F &fn) const;
 
 		std::size_t width_column(vi_tmReportFlags_e clmn) const;
 		std::string item_column(vi_tmReportFlags_e clmn) const;
@@ -200,9 +199,9 @@ namespace
 		return result;
 	}
 
-	int print_props(prn_t fn, unsigned flags)
-	{	assert(!!fn);
-		int result = 0;
+	template<typename F>
+	int print_props(const F &fn, unsigned flags)
+	{	int result = 0;
 		if (flags & vi_tmShowMask)
 		{	std::ostringstream str;
 			auto &props = misc::properties_t::props();
@@ -439,9 +438,9 @@ std::string formatter_t::item_column(vi_tmReportFlags_e clmn) const
 	return result;
 }
 
-int formatter_t::print_header(prn_t fn) const
-{	
-	if (flags_ & vi_tmHideHeader)
+template<typename F>
+int formatter_t::print_header(const F &fn) const
+{	if (flags_ & vi_tmHideHeader)
 	{	return 0;
 	}
 
@@ -470,12 +469,15 @@ int formatter_t::print_header(prn_t fn) const
 	return fn(str.str().c_str());
 }
 
-int formatter_t::print_metering(const metering_t &i, prn_t fn) const
+template<typename F>
+int formatter_t::print_metering(const metering_t &i, const F &fn) const
 {	std::ostringstream str;
 	str.imbue(std::locale(str.getloc(), new misc::space_out));
 
 	n_++;
-	const char fill = ((0U != guideline_interval_) && (0U == n_ % static_cast<std::size_t>(guideline_interval_))) ? UNDERSCORE : ' ';
+	const char fill = ((0U != guideline_interval_) &&
+		(0U == n_ % static_cast<std::size_t>(guideline_interval_))) ? UNDERSCORE : ' ';
+
 	str <<
 		std::setw(max_len_number_) << n_ << ". " << 
 		std::left << std::setfill(fill) <<
@@ -499,18 +501,18 @@ int formatter_t::print_metering(const metering_t &i, prn_t fn) const
 }
 
 int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmReportCb_t fn, void *ctx)
-{	assert(!ctx || !!fn); // If data is not null, then fn must be valid.
+{	assert(!ctx || !!fn);
 	if (nullptr == fn)
-		fn = vi_tmReportCb; // Default callback function.
+	{	return 0;
+	}
 
-	prn_t prn = [fn, ctx](const char *str) { return fn(str, ctx); };
-	int result = print_props(prn, flags);
-
-	std::vector<metering_t> metering_entries = get_meterings(journal_handle, flags);
-	const formatter_t formatter{ metering_entries, flags };
-	result += formatter.print_header(prn);
-
+	auto metering_entries = get_meterings(journal_handle, flags);
 	std::sort(metering_entries.begin(), metering_entries.end(), comparator_t{ flags });
+	const formatter_t formatter{ metering_entries, flags };
+	const auto prn = [fn, ctx](const char *str) { return fn(str, ctx); };
+
+	int result = print_props(prn, flags);
+	result += formatter.print_header(prn);
 	for (const auto &itm : metering_entries)
 	{	result += formatter.print_metering(itm, prn);
 	}
@@ -519,11 +521,15 @@ int VI_TM_CALL vi_tmReport(VI_TM_HJOUR journal_handle, unsigned flags, vi_tmRepo
 }
 
 int VI_SYS_CALL vi_tmReportCb(const char *str, void* stream)
-{	(void)verify(nullptr == stream); // The output stream must be from the same RTL library as the output function!
+{	assert(nullptr == stream); // The output stream must be from the same RTL library as the output function!
+	(void)stream;
 #ifdef _WIN32
-	if (nullptr == GetStdHandle(STD_OUTPUT_HANDLE)) // If the standard output handle is not available, return 0.
-	{	return 0; // In /SUBSYSTEM:WINDOWS, stdout does not work by default.
+	if (auto h = ::GetStdHandle(STD_OUTPUT_HANDLE); nullptr == h || INVALID_HANDLE_VALUE == h) // In /SUBSYSTEM:WINDOWS, stdout does not work by default.
+	{	::OutputDebugStringA(str); // Output to the debug console.
+		return 0;
 	}
 #endif
-	return fputs(str, stdout); // stdout!!!
+	const auto result = fputs(str, stdout); // stdout!!!
+	assert(result >= 0);
+	return result;
 }
