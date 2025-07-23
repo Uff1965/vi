@@ -7,9 +7,9 @@
 #define PROJECT_VERSION_MINOR 
 #define PROJECT_VERSION_PATCH 
 
-#define GIT_DESCRIBE "v0.5.0-0-gda24613-dirty"
-#define GIT_COMMIT "da2461383bcab9bdfc3cdc2f271028336e32fc6f"
-#define GIT_DATETIME "2025-07-20 10:18:48 +0300"
+#define GIT_DESCRIBE "v0.5.0-2-gd3b8591-dirty"
+#define GIT_COMMIT "d3b85918c485fba4de3dcec7b9900d2fcb6ea074"
+#define GIT_DATETIME "2025-07-23 13:28:39 +0300"
 #define GIT_IS_DIRTY 1
 #define GIT_VERSION_NUMBER "0.5.0"
 

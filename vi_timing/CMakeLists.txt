@@ -1,29 +1,28 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-add_custom_command(
-    OUTPUT "${CMAKE_BINARY_DIR}/version.h"
-    COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}/source/version.h.in -DDST="${CMAKE_BINARY_DIR}/version.h" -P "${CMAKE_SOURCE_DIR}/GenerateVersion.cmake"
-    DEPENDS "${CMAKE_SOURCE_DIR}/../.git/HEAD"
-            "${CMAKE_SOURCE_DIR}/../.git/refs/tags"
-            "${CMAKE_SOURCE_DIR}/../.git/packed-refs"
-    COMMENT "Generating version.h from a Git-tag"
-    VERBATIM
-)
+message("*** CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}")
+message("*** CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_custom_target(generate_version_header DEPENDS "${CMAKE_BINARY_DIR}/version.h")
+#set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+#    "${CMAKE_SOURCE_DIR}/.git/HEAD"
+#    "${CMAKE_SOURCE_DIR}/.git_tag"
+#    "${CMAKE_SOURCE_DIR}/.git/refs/tags"
+#    "${CMAKE_SOURCE_DIR}/.git/packed-refs"
+#)
+
+set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" CACHE INTERNAL "Path to version.h.in.")
+set(DST "${CMAKE_CURRENT_SOURCE_DIR}/version.h" CACHE INTERNAL "Path to version.h")
+
+include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake")
 
 
 project(vi_timing VERSION ${GIT_VERSION_NUMBER})
-
-add_dependencies(vi_timing generate_version_header)
 
 message("*** PROJECT_VERSION = ${PROJECT_VERSION}")
 message("*** PROJECT_VERSION_MAJOR = ${PROJECT_VERSION_MAJOR}")
 message("*** PROJECT_VERSION_MINOR = ${PROJECT_VERSION_MINOR}")
 message("*** PROJECT_VERSION_PATCH = ${PROJECT_VERSION_PATCH}")
-
-configure_file("source/version.h.in" "${CMAKE_BINARY_DIR}/include/version.h" @ONLY)
-
+message("*** PROJECT_VERSION_TWEAK = ${PROJECT_VERSION_TWEAK}")
 
 option(VI_TM_BUILD_SHARED "Build vi_timing as shared library" OFF)
 set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
@@ -76,18 +75,6 @@ endif()
 
 add_library(${PROJECT_NAME} ${TYPE_LIBRARY} ${SOURCE_FILES})
 
-
-#add_custom_command(
-#    TARGET ${PROJECT_NAME} POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E echo "**** $<TARGET_FILE:${PROJECT_NAME}> ****"
-#)
-
-#add_custom_command(
-#    TARGET ${PROJECT_NAME} POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E create_symlink
-#            $<TARGET_FILE:myapp>
-#            ${CMAKE_BINARY_DIR}/myapp_latest
-#)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
