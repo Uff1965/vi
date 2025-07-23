@@ -1,28 +1,18 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-message("*** CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}")
-message("*** CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
-
-#set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-#    "${CMAKE_SOURCE_DIR}/.git/HEAD"
-#    "${CMAKE_SOURCE_DIR}/.git_tag"
-#    "${CMAKE_SOURCE_DIR}/.git/refs/tags"
-#    "${CMAKE_SOURCE_DIR}/.git/packed-refs"
-#)
-
-set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" CACHE INTERNAL "Path to version.h.in.")
-set(DST "${CMAKE_CURRENT_SOURCE_DIR}/version.h" CACHE INTERNAL "Path to version.h")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/.git/HEAD"
+    "${CMAKE_SOURCE_DIR}/.git_tag"
+#directory!    "${CMAKE_SOURCE_DIR}/.git/refs/tags"
+    "${CMAKE_SOURCE_DIR}/.git/packed-refs"
+)
 
 include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake")
 
 
 project(vi_timing VERSION ${GIT_VERSION_NUMBER})
 
-message("*** PROJECT_VERSION = ${PROJECT_VERSION}")
-message("*** PROJECT_VERSION_MAJOR = ${PROJECT_VERSION_MAJOR}")
-message("*** PROJECT_VERSION_MINOR = ${PROJECT_VERSION_MINOR}")
-message("*** PROJECT_VERSION_PATCH = ${PROJECT_VERSION_PATCH}")
-message("*** PROJECT_VERSION_TWEAK = ${PROJECT_VERSION_TWEAK}")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/version.h" @ONLY)
 
 option(VI_TM_BUILD_SHARED "Build vi_timing as shared library" OFF)
 set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
