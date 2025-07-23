@@ -99,9 +99,9 @@ namespace
 		bool try_lock() noexcept { return !locked_.test_and_set(std::memory_order_acquire); }
 	};
 }
-#	define VI_THREADSAFE_ONLY(t) t
+#	define VI_TM_THREADSAFE_ONLY(t) t
 #else
-#	define VI_THREADSAFE_ONLY(t)
+#	define VI_TM_THREADSAFE_ONLY(t)
 #endif
 
 // Checking for FMA support by the compiler/platform
@@ -121,7 +121,7 @@ namespace
 	class alignas(std::hardware_constructive_interference_size) meterage_t
 	{	static_assert(std::is_standard_layout_v<vi_tmMeasurementStats_t>);
 		vi_tmMeasurementStats_t stats_;
-		VI_THREADSAFE_ONLY(mutable adaptive_mutex_t mtx_);
+		VI_TM_THREADSAFE_ONLY(mutable adaptive_mutex_t mtx_);
 	public:
 		meterage_t() noexcept
 		{	vi_tmMeasurementStatsReset(&stats_);
@@ -154,7 +154,7 @@ private:
 	static inline std::size_t global_initialized_ = 0U;
 	storage_t storage_;
 	bool need_report_ = false;
-	VI_THREADSAFE_ONLY(adaptive_mutex_t storage_guard_);
+	VI_TM_THREADSAFE_ONLY(adaptive_mutex_t storage_guard_);
 public:
 	vi_tmMeasurementsJournal_t(const vi_tmMeasurementsJournal_t &) = delete;
 	vi_tmMeasurementsJournal_t& operator=(const vi_tmMeasurementsJournal_t &) = delete;
@@ -173,22 +173,22 @@ public:
 };
 
 inline void meterage_t::reset() noexcept
-{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+{	VI_TM_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsReset(&stats_);
 }
 
 inline void meterage_t::add(VI_TM_TDIFF v, VI_TM_SIZE n) noexcept
-{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+{	VI_TM_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsAdd(&stats_, v, n);
 }
 
 inline void meterage_t::merge(const vi_tmMeasurementStats_t & VI_RESTRICT src) VI_RESTRICT noexcept
-{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+{	VI_TM_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	vi_tmMeasurementStatsMerge(&stats_, &src);
 }
 
 inline vi_tmMeasurementStats_t meterage_t::get() const noexcept
-{	VI_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
+{	VI_TM_THREADSAFE_ONLY(std::lock_guard lg(mtx_));
 	return stats_;
 }
 
@@ -226,13 +226,13 @@ int vi_tmMeasurementsJournal_t::finit()
 
 inline auto& vi_tmMeasurementsJournal_t::try_emplace(const char *name)
 {	assert(name);
-	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+	VI_TM_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	return *storage_.try_emplace(name).first;
 }
 
 template<typename F>
 int vi_tmMeasurementsJournal_t::for_each_measurement(const F &fn)
-{	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+{	VI_TM_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	need_report_ = false; // No need to report. The user probebly make a report himself.
 	for (auto &it : storage_)
 	{	if (!it.first.empty())
@@ -245,7 +245,7 @@ int vi_tmMeasurementsJournal_t::for_each_measurement(const F &fn)
 }
 
 void vi_tmMeasurementsJournal_t::clear()
-{	VI_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
+{	VI_TM_THREADSAFE_ONLY(std::lock_guard lock{ storage_guard_ });
 	storage_.clear();
 }
 
@@ -414,8 +414,7 @@ void VI_TM_CALL vi_tmMeasurementStatsAdd(vi_tmMeasurementStats_t *meas, VI_TM_TD
 }
 
 void VI_TM_CALL vi_tmMeasurementStatsMerge(vi_tmMeasurementStats_t* VI_RESTRICT dst, const vi_tmMeasurementStats_t* VI_RESTRICT src) noexcept
-{	assert(!!dst && !!src);
-	if(nullptr == dst || nullptr == src || dst == src || 0U == src->calls_)
+{	if(!verify(nullptr != dst) || !verify(nullptr != src) || dst == src || 0U == src->calls_)
 	{	return;
 	}
 

@@ -43,10 +43,66 @@
   </SuppressVersion>
   <vi_timing_test>
     <FileName>main.cpp</FileName>
+    <ErrorCode>V112</ErrorCode>
+    <Message>Dangerous magic number _ used: ..._string(n % _);.</Message>
+    <CodePrev>288494528</CodePrev>
+    <CodeCurrent>1996613832</CodeCurrent>
+    <CodeNext>2022650086</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
+    <ErrorCode>V206</ErrorCode>
+    <Message>Explicit conversion from 'void *' to 'unsigned int *'.</Message>
+    <CodePrev>62709626</CodePrev>
+    <CodeCurrent>2383884856</CodeCurrent>
+    <CodeNext>2717788440</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
+    <ErrorCode>V206</ErrorCode>
+    <Message>Explicit conversion from 'void *' to 'unsigned int *'.</Message>
+    <CodePrev>2383884856</CodePrev>
+    <CodeCurrent>2717788440</CodeCurrent>
+    <CodeNext>125</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
     <ErrorCode>V2564</ErrorCode>
     <Message>There should be no 'integral to floating' implicit cast. Consider inspecting the left operand 'x' of the operator '/'.</Message>
     <CodePrev>1288143715</CodePrev>
     <CodeCurrent>959451666</CodeCurrent>
     <CodeNext>125</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
+    <ErrorCode>V2571</ErrorCode>
+    <Message>Pointer to void should not be converted to a pointer to object. Consider inspecting the expression: 'static_cast&lt; data_t * &gt; (data)'.</Message>
+    <CodePrev>3372985926</CodePrev>
+    <CodeCurrent>2798701414</CodeCurrent>
+    <CodeNext>285984911</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
+    <ErrorCode>V2571</ErrorCode>
+    <Message>Pointer to void should not be converted to a pointer to object. Consider inspecting the expression: 'static_cast&lt; data_t * &gt; (data)'.</Message>
+    <CodePrev>3642238334</CodePrev>
+    <CodeCurrent>2798701414</CodeCurrent>
+    <CodeNext>1117165</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
+    <ErrorCode>V2573</ErrorCode>
+    <Message>Identifiers that contain '__' or start with '_[A-Z]' are reserved. Consider inspecting the '_CRTDBG_MAP_ALLOC' identifier.</Message>
+    <CodePrev>2547421855</CodePrev>
+    <CodeCurrent>1902589</CodeCurrent>
+    <CodeNext>561870</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>vi_timing.h</FileName>
+    <ErrorCode>V2528</ErrorCode>
+    <Message>The comma operator should not be used.</Message>
+    <CodePrev>352093075</CodePrev>
+    <CodeCurrent>3083378062</CodeCurrent>
+    <CodeNext>3531866631</CodeNext>
   </vi_timing_test>
 </NewDataSet>

@@ -221,33 +221,6 @@ namespace
 			"\tBuild number: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n";
 	}
 
-	void test_warming()
-	{	std::cout << "\nTest test_warming:\n";
-	
-		std::this_thread::sleep_for(1s);
-
-		{	VI_TM("Warming(0)");
-			vi_Warming(0, 20000);
-		}
-
-		std::this_thread::sleep_for(1s);
-
-		{	VI_TM("Warming(4)");
-			vi_Warming(4, 10000);
-		}
-
-		std::this_thread::sleep_for(1s);
-
-		{	VI_TM("Warming(1)");
-			vi_Warming(1, 10000);
-		}
-
-		std::this_thread::sleep_for(1s);
-
-		assert(0 == errno);
-		std::cout << "Test test_warming - done" << std::endl;
-	}
-
 	void prn_clock_properties()
 	{	std::cout << "\nClock properties:";
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_RESOLUTION)))
@@ -331,7 +304,7 @@ namespace
 			vi_tmMeasurementAdd(m, static_cast<VI_TM_TICK>(std::round(v)), 1);
 		}
 
-		std::normal_distribution distM(MEAN * MULT, CV * MEAN * MULT);
+		std::normal_distribution distM(MEAN * static_cast<double>(MULT), CV * MEAN * static_cast<double>(MULT));
 		for (int i = 0; i < CNT / MULT; ++i)
 		{	const auto v = distM(gen);
 			assert(v >= 0);
@@ -491,7 +464,6 @@ int main()
 	//foo_c();
 
 	//test_busy();
-	//// test_warming();
 	//test_misc();
 	test_empty();
 	//test_sleep();

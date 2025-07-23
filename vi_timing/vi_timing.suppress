@@ -42,6 +42,22 @@
     <IsPrimary>false</IsPrimary>
   </SuppressVersion>
   <vi_timing>
+    <FileName>misc.cpp</FileName>
+    <ErrorCode>V1007</ErrorCode>
+    <Message>The value from the potentially uninitialized optional 'prev' is used. Probably it is a mistake.</Message>
+    <CodePrev>125</CodePrev>
+    <CodeCurrent>1512322387</CodeCurrent>
+    <CodeNext>125</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>props.cpp</FileName>
+    <ErrorCode>V2528</ErrorCode>
+    <Message>The comma operator should not be used.</Message>
+    <CodePrev>539</CodePrev>
+    <CodeCurrent>427922012</CodeCurrent>
+    <CodeNext>4112831390</CodeNext>
+  </vi_timing>
+  <vi_timing>
     <FileName>props.cpp</FileName>
     <ErrorCode>V2528</ErrorCode>
     <Message>The comma operator should not be used.</Message>
@@ -64,6 +80,14 @@
     <CodePrev>3448356004</CodePrev>
     <CodeCurrent>2853118424</CodeCurrent>
     <CodeNext>3903532008</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>report.cpp</FileName>
+    <ErrorCode>V2571</ErrorCode>
+    <Message>Pointer to void should not be converted to a pointer to object. Consider inspecting the expression: 'static_cast&lt; data_t * &gt; (callback_data)'.</Message>
+    <CodePrev>3448356004</CodePrev>
+    <CodeCurrent>3687785824</CodeCurrent>
+    <CodeNext>1586164615</CodeNext>
   </vi_timing>
   <vi_timing>
     <FileName>timing.cpp</FileName>
@@ -93,9 +117,25 @@
     <FileName>timing.cpp</FileName>
     <ErrorCode>V2550</ErrorCode>
     <Message>Floating-point expressions should not be directly tested for equality or inequality. It is better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>25677816</CodePrev>
+    <CodeCurrent>1686279134</CodeCurrent>
+    <CodeNext>2042128961</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2550</ErrorCode>
+    <Message>Floating-point expressions should not be directly tested for equality or inequality. It is better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
     <CodePrev>100</CodePrev>
     <CodeCurrent>2450030656</CodeCurrent>
     <CodeNext>1528316927</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V2550</ErrorCode>
+    <Message>Floating-point expressions should not be directly tested for equality or inequality. It is better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>100</CodePrev>
+    <CodeCurrent>2450032448</CodeCurrent>
+    <CodeNext>10020437</CodeNext>
   </vi_timing>
   <vi_timing>
     <FileName>timing.cpp</FileName>
@@ -149,8 +189,24 @@
     <FileName>timing.cpp</FileName>
     <ErrorCode>V550</ErrorCode>
     <Message>An odd precise comparison. It's probably better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>25677816</CodePrev>
+    <CodeCurrent>1686279134</CodeCurrent>
+    <CodeNext>2042128961</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V550</ErrorCode>
+    <Message>An odd precise comparison. It's probably better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
     <CodePrev>100</CodePrev>
     <CodeCurrent>2450030656</CodeCurrent>
     <CodeNext>1528316927</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>timing.cpp</FileName>
+    <ErrorCode>V550</ErrorCode>
+    <Message>An odd precise comparison. It's probably better to use a comparison with defined precision: fabs(A - B) &lt; Epsilon.</Message>
+    <CodePrev>100</CodePrev>
+    <CodeCurrent>2450032448</CodeCurrent>
+    <CodeNext>10020437</CodeNext>
   </vi_timing>
 </NewDataSet>

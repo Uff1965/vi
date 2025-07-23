@@ -1,6 +1,27 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(vi_timing)
+add_custom_command(
+    OUTPUT "${CMAKE_BINARY_DIR}/version.h"
+    COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}/source/version.h.in -DDST="${CMAKE_BINARY_DIR}/version.h" -P "${CMAKE_SOURCE_DIR}/GenerateVersion.cmake"
+    DEPENDS "${CMAKE_SOURCE_DIR}/../.git/HEAD"
+    COMMENT "Generating version.h from a Git-tag"
+    VERBATIM
+)
+
+add_custom_target(generate_version_header DEPENDS "${CMAKE_BINARY_DIR}/version.h")
+
+
+project(vi_timing VERSION ${GIT_VERSION_NUMBER})
+
+add_dependencies(vi_timing generate_version_header)
+
+message("*** PROJECT_VERSION = ${PROJECT_VERSION}")
+message("*** PROJECT_VERSION_MAJOR = ${PROJECT_VERSION_MAJOR}")
+message("*** PROJECT_VERSION_MINOR = ${PROJECT_VERSION_MINOR}")
+message("*** PROJECT_VERSION_PATCH = ${PROJECT_VERSION_PATCH}")
+
+configure_file("source/version.h.in" "${CMAKE_BINARY_DIR}/include/version.h" @ONLY)
+
 
 option(VI_TM_BUILD_SHARED "Build vi_timing as shared library" OFF)
 set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
@@ -53,6 +74,19 @@ endif()
 
 add_library(${PROJECT_NAME} ${TYPE_LIBRARY} ${SOURCE_FILES})
 
+
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "**** $<TARGET_FILE:${PROJECT_NAME}> ****"
+)
+
+#add_custom_command(
+#    TARGET ${PROJECT_NAME} POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E create_symlink
+#            $<TARGET_FILE:myapp>
+#            ${CMAKE_BINARY_DIR}/myapp_latest
+#)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
   C_STANDARD 17
@@ -63,6 +97,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
   OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}"
   OUTPUT_NAME_DEBUG "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d"
+#  OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}.${VI_TM_GIT_TAG}"
+#  OUTPUT_NAME_DEBUG "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d.${VI_TM_GIT_TAG}"
 
   LIBRARY_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   LIBRARY_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
@@ -93,10 +129,10 @@ if(VI_TM_BUILD_SHARED)
     )
 endif()
 
-target_precompile_headers(${PROJECT_NAME}
-PRIVATE
-    "source/pch.hpp"
-)
+#target_precompile_headers(${PROJECT_NAME}
+#PRIVATE
+#    "source/pch.hpp"
+#)
 
 if (WIN32)
     set_source_files_properties("source/timing.cpp" PROPERTIES
@@ -108,19 +144,21 @@ if (WIN32)
     PRIVATE
       WIN32_LEAN_AND_MEAN # Exclude rarely-used stuff from Windows headers.
       NOMINMAX # WinAPI
+      WIN32 # Define WIN32 for Windows builds.
+      _WINDOWS # Define _WINDOWS for Windows builds.
       $<$<CONFIG:Debug>: _DEBUG> # Microsoft debug RTL
     )
 
     target_compile_options(${PROJECT_NAME}
     PRIVATE
-    /MP /nologo # Enable multi-processor compilation, disable logo.
-    /W4 # Set warning level 4.
-    /EHsc # Enable C++ exceptions.
-    /arch:AVX2 # Enable use AVX2 instruction set.
-    /Zi # Generate debug info
-    /Zc:__cplusplus # By default, Visual Studio always returns the value 199711L for the __cplusplus preprocessor macro.
-    $<$<CONFIG:Release>: /O2 /Oi /GL /Gy> # Optimize for speed, inline functions, enable link-time code generation, enable function-level linking.
-    $<$<CONFIG:Debug>: /Od /RTC1> # Enable runtime checks, debug info, no optimizations.
+        /MP /nologo # Enable multi-processor compilation, disable logo.
+        /W4 # Set warning level 4.
+        /EHsc # Enable C++ exceptions.
+        /arch:AVX2 # Enable use AVX2 instruction set.
+        /Zi # Generate debug info
+        /Zc:__cplusplus # By default, Visual Studio always returns the value 199711L for the __cplusplus preprocessor macro.
+        $<$<CONFIG:Release>: /Ox /GL> # Ox include /O2 /Ob2 /Og /Oi /Ot /Oy /Gs /GF /Gy
+        $<$<CONFIG:Debug>: /Od /RTC1 /Zi /Ob0> # Enable runtime checks, debug info, no optimizations, disable function inlining.
     )
 
     if(VI_TM_BUILD_SHARED)
@@ -155,20 +193,21 @@ endif()
 if (WIN32)
   target_link_options(${PROJECT_NAME}
   PRIVATE
-    /SUBSYSTEM:WINDOWS /DEBUG
-    $<$<CONFIG:Release>: /INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF>
-    $<$<CONFIG:Debug>:   /INCREMENTAL>
+    /SUBSYSTEM:WINDOWS # Set subsystem to Windows
+    /DEBUG # Generate debug info.
+    $<$<CONFIG:Release>: /INCREMENTAL:NO /LTCG /OPT:REF /OPT:ICF> # Disable incremental linking, link-time code generation, and optimize for size.
+    $<$<CONFIG:Debug>:   /INCREMENTAL> # Enable incremental linking for Debug builds.
   )
 elseif (UNIX)
   target_link_options(${PROJECT_NAME}
   PRIVATE
-    -Wl,--exclude-libs,ALL
+    -Wl,--exclude-libs,ALL # Exclude all static libraries from the shared library.
   )
 
   target_link_libraries(${PROJECT_NAME}
   PRIVATE
-    rt
-    atomic
+    rt # Link against the real-time library for clock_gettime, etc.
+    atomic # Link against the atomic library for atomic operations.
   )
 endif()
 
