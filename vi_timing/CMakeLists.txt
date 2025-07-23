@@ -4,6 +4,8 @@ add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/version.h"
     COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}/source/version.h.in -DDST="${CMAKE_BINARY_DIR}/version.h" -P "${CMAKE_SOURCE_DIR}/GenerateVersion.cmake"
     DEPENDS "${CMAKE_SOURCE_DIR}/../.git/HEAD"
+            "${CMAKE_SOURCE_DIR}/../.git/refs/tags"
+            "${CMAKE_SOURCE_DIR}/../.git/packed-refs"
     COMMENT "Generating version.h from a Git-tag"
     VERBATIM
 )
@@ -75,10 +77,10 @@ endif()
 add_library(${PROJECT_NAME} ${TYPE_LIBRARY} ${SOURCE_FILES})
 
 
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "**** $<TARGET_FILE:${PROJECT_NAME}> ****"
-)
+#add_custom_command(
+#    TARGET ${PROJECT_NAME} POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E echo "**** $<TARGET_FILE:${PROJECT_NAME}> ****"
+#)
 
 #add_custom_command(
 #    TARGET ${PROJECT_NAME} POST_BUILD
