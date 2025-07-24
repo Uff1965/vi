@@ -27,7 +27,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 \********************************************************************/
 
 #include "../vi_timing_c.h"
-#include "build_number_maker.h"
+#include "version.h"
 #include "misc.h"
 
 #include <algorithm>

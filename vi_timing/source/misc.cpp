@@ -28,7 +28,7 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 
 #include "misc.h"
 
-#include "build_number_maker.h"
+#include "version.h"
 #include "../vi_timing_c.h"
 
 #ifdef _WIN32

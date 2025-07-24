@@ -1,49 +1,58 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake")
-
-project(vi_timing VERSION ${GIT_VERSION_NUMBER})
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/version.h" @ONLY)
+include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake") # Include the script to generate version information.
 
 option(VI_TM_BUILD_SHARED "Build vi_timing as shared library" OFF)
-set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
+
 set(VI_OUT_DIR "${VI_ROOT_DIR}/lib/" CACHE PATH "Output directory for libraries")
+set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
+set(VI_TM_INTERFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH "Directory with API header files.")
+set(VI_TM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/source" CACHE PATH "Directory with source code.")
+
+project(vi_timing VERSION ${GIT_VERSION_NUMBER}) # Set project name and version based on the generated version information.
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" "${VI_TM_SOURCE_DIR}/version.h" @ONLY) # Configure the version header file with the generated version information.
+
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/.git/HEAD"
+    "${CMAKE_SOURCE_DIR}/.git/packed-refs"
+)
 
 ### Files #####################################################################
-set(SOURCE_FILES)
+set(SOURCE_FILES) # Initialize the list of source files.
 
 if(MSVC)
     set(FILE_GROUP
-      "${VI_ROOT_DIR}/vi_timing/vi_timing.pvsconfig"
-      "${VI_ROOT_DIR}/vi_timing/vi_timing.suppress"
+      "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.pvsconfig"
+      "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.suppress"
+      "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
     )
     source_group("Extras" FILES ${FILE_GROUP})
-    list(APPEND SOURCE_FILES ${FILE_GROUP})
+    list(APPEND SOURCE_FILES ${FILE_GROUP}) # Add Visual Studio specific files to the source list.
 endif()
 
 set(FILE_GROUP
-  "${VI_ROOT_DIR}/vi_timing/vi_timing.h"
-  "${VI_ROOT_DIR}/vi_timing/vi_timing_c.h"
-  "${VI_ROOT_DIR}/vi_timing/vi_timing_proxy.h"
+  "${VI_TM_INTERFACE_DIR}/vi_timing.h"
+  "${VI_TM_INTERFACE_DIR}/vi_timing_c.h"
+  "${VI_TM_INTERFACE_DIR}/vi_timing_proxy.h"
 )
 source_group("Interface files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "source/build_number_maker.h"
-  "source/misc.h"
+  "${VI_TM_SOURCE_DIR}/version.h"
+  "${VI_TM_SOURCE_DIR}/misc.h"
 )
 source_group("Header files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
 
 set(FILE_GROUP
-  "source/build_number_maker.cpp"
-  "source/clock.cpp"
-  "source/misc.cpp"
-  "source/props.cpp"
-  "source/report.cpp"
-  "source/timing.cpp"
+  "${VI_TM_SOURCE_DIR}/version.cpp"
+  "${VI_TM_SOURCE_DIR}/clock.cpp"
+  "${VI_TM_SOURCE_DIR}/misc.cpp"
+  "${VI_TM_SOURCE_DIR}/props.cpp"
+  "${VI_TM_SOURCE_DIR}/report.cpp"
+  "${VI_TM_SOURCE_DIR}/timing.cpp"
 )
 source_group("Source files" FILES ${FILE_GROUP})
 list(APPEND SOURCE_FILES ${FILE_GROUP})
@@ -102,11 +111,11 @@ endif()
 
 #target_precompile_headers(${PROJECT_NAME}
 #PRIVATE
-#    "source/pch.hpp"
+#    "VI_TM_SOURCE_DIR}/pch.hpp"
 #)
 
 if (WIN32)
-    set_source_files_properties("source/timing.cpp" PROPERTIES
+    set_source_files_properties("VI_TM_SOURCE_DIR}/timing.cpp" PROPERTIES
         COMPILE_FLAGS "/fp:fast" # Enable fast floating-point model for 'timing.cpp'
         SKIP_PRECOMPILE_HEADERS ON
     )
@@ -146,7 +155,7 @@ if (WIN32)
         )
     endif()
 elseif (UNIX)
-  set_source_files_properties("source/timing.cpp" PROPERTIES
+  set_source_files_properties("VI_TM_SOURCE_DIR}/timing.cpp" PROPERTIES
     COMPILE_FLAGS "-ffast-math" # Allow floating-point optimizations that may violate strict IEEE or ISO rules for 'timing.cpp'.
     SKIP_PRECOMPILE_HEADERS ON
   )

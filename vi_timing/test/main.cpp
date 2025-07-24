@@ -11,7 +11,7 @@
 
 #include "vi_timing/vi_timing_proxy.h"
 #if !VI_TM_SHARED
-#	include "../source/build_number_maker.h"
+#	include "../source/version.h"
 #endif
 
 #include <algorithm>
