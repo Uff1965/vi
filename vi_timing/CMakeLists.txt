@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${CMAKE_SOURCE_DIR}/.git/HEAD"
-    "${CMAKE_SOURCE_DIR}/.git_tag"
-#directory!    "${CMAKE_SOURCE_DIR}/.git/refs/tags"
-    "${CMAKE_SOURCE_DIR}/.git/packed-refs"
-)
-
 include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake")
-
 
 project(vi_timing VERSION ${GIT_VERSION_NUMBER})
 
