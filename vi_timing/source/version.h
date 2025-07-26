@@ -8,10 +8,10 @@ inline constexpr unsigned int VI_TM_VERSION_MAJOR = 0;
 inline constexpr unsigned int VI_TM_VERSION_MINOR = 10;
 inline constexpr unsigned int VI_TM_VERSION_PATCH = 0;
 
-inline constexpr char GIT_DESCRIBE[] = "v0.10.0-4-gd714b0b-dirty";
-inline constexpr char GIT_COMMIT[] = "d714b0b1463772f031549d55e294b240d2b8fdbd";
-inline constexpr char GIT_DATETIME[] = "2025-07-26 18:17:04 +0300";
-inline constexpr int GIT_IS_DIRTY = 1;
+inline constexpr char GIT_DESCRIBE[] = "v0.10.0-5-g980964a";
+inline constexpr char GIT_COMMIT[] = "980964afa81331a2eb1aeed637ecf97af49ef047";
+inline constexpr char GIT_DATETIME[] = "2025-07-26 22:15:41 +0300";
+inline constexpr int GIT_IS_DIRTY = 0;
 
 namespace misc
 {
