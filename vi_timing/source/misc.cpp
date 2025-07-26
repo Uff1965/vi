@@ -382,23 +382,21 @@ int  VI_TM_CALL vi_Warming(unsigned int threads_qty, unsigned int ms)
 // - info: The type of information to retrieve (see vi_tmInfo_e).
 // Returns: A pointer to the requested static data (type depends on info), or nullptr if the info type is not recognized.
 const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
-{	switch (info)
+{	using namespace misc;
+	switch (info)
 	{
-		case VI_TM_INFO_VER:
-		{	// Returns a pointer to the version number (unsigned).
-			static const unsigned ver = (VI_TM_VERSION_MAJOR * 1000U + VI_TM_VERSION_MINOR) * 10000U + VI_TM_VERSION_PATCH;
+		case VI_TM_INFO_VER: // Returns a pointer to the version number (unsigned).
+		{	static constexpr unsigned ver = (VI_TM_VERSION_MAJOR * 1000U + VI_TM_VERSION_MINOR) * 10000U + VI_TM_VERSION_PATCH;
 			return &ver;
 		}
 
-		case VI_TM_INFO_BUILDNUMBER:
-		{	// Returns a pointer to the build number (unsigned).
-			static const unsigned build = misc::build_number_get();
+		case VI_TM_INFO_BUILDNUMBER: // Returns a pointer to the build number (unsigned).
+		{	static const unsigned build = build_number_get();
 			return &build;
 		}
 
-		case VI_TM_INFO_VERSION:
-		{	// Returns a pointer to a static string containing the full version (major.minor.patch.buildType libraryType).
-			static const auto version = []
+		case VI_TM_INFO_VERSION: // Returns a pointer to a static string containing the full version (major.minor.patch.buildType libraryType).
+		{	static const auto version = []
 				{	static_assert(VI_TM_VERSION_MAJOR <= 99 && VI_TM_VERSION_MINOR <= 999 && VI_TM_VERSION_PATCH <= 9999);
 					std::array<char, "99.999.9999.YYMMDDHHmm"sv.size() + sizeof(CONFIG[0]) + " "sv.size() + TYPE.size() + 1> result;
 					[[maybe_unused]] const auto sz = snprintf
@@ -408,7 +406,7 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 						VI_TM_VERSION_MAJOR,
 						VI_TM_VERSION_MINOR,
 						VI_TM_VERSION_PATCH,
-						misc::build_number_get(),
+						build_number_get(),
 						CONFIG[0],
 						TYPE.data()
 					);
@@ -418,47 +416,48 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 			return version.data();
 		}
 
-		case VI_TM_INFO_BUILDTYPE:
-			// Returns a pointer to the build type string ("Release" or "Debug").
+		case VI_TM_INFO_BUILDTYPE: // Returns a pointer to the build type string ("Release" or "Debug").
 			return CONFIG.data();
 
-		case VI_TM_INFO_LIBRARYTYPE:
-			// Returns a pointer to the library type string ("shared" or "static").
+		case VI_TM_INFO_LIBRARYTYPE: // Returns a pointer to the library type string ("shared" or "static").
 			return TYPE.data();
 
-		case VI_TM_INFO_RESOLUTION:
-		{	// Returns a pointer to the clock resolution in ticks (double).
-			static const double resolution = misc::properties_t::props().clock_resolution_ticks_;
+		case VI_TM_INFO_GIT_DESCRIBE: // Returns a pointer to the Git describe string (e.g., "v0.10.0-3-g96b37d4-dirty").
+			return GIT_DESCRIBE;
+
+		case VI_TM_INFO_GIT_COMMIT: // Returns a pointer to the Git commit hash (e.g., "96b37d49d235140e86f6f6c246bc7f166ab773aa").
+			return GIT_COMMIT;
+
+		case VI_TM_INFO_GIT_DATETIME: // Returns a pointer to the Git commit date and time string (e.g., "2025-07-26 18:17:04 +0300").
+			return GIT_DATETIME;
+
+		case VI_TM_INFO_RESOLUTION: // Returns a pointer to the clock resolution in ticks (double).
+		{	static const double resolution = properties_t::props().clock_resolution_ticks_;
 			return &resolution;
 		}
 
-		case VI_TM_INFO_DURATION:
-		{	// Returns a pointer to the measure duration with cache in seconds (double).
-			static const double duration = misc::properties_t::props().duration_threadsafe_.count();
+		case VI_TM_INFO_DURATION: // Returns a pointer to the measure duration with cache in seconds (double).
+		{	static const double duration = properties_t::props().duration_threadsafe_.count();
 			return &duration;
 		}
 
-		case VI_TM_INFO_DURATION_EX:
-		{	// Returns a pointer to the extended measure duration in seconds (double).
-			static const double duration_ex = misc::properties_t::props().duration_ex_threadsafe_.count();
+		case VI_TM_INFO_DURATION_EX: // Returns a pointer to the extended measure duration in seconds (double).
+		{	static const double duration_ex = properties_t::props().duration_ex_threadsafe_.count();
 			return &duration_ex;
 		}
 
-		case VI_TM_INFO_OVERHEAD:
-		{	// Returns a pointer to the clock overhead in ticks (double).
-			static const double overhead = misc::properties_t::props().clock_overhead_ticks_;
+		case VI_TM_INFO_OVERHEAD: // Returns a pointer to the clock overhead in ticks (double).
+		{	static const double overhead = properties_t::props().clock_overhead_ticks_;
 			return &overhead;
 		}
 
-		case VI_TM_INFO_UNIT:
-		{	// Returns a pointer to the seconds per tick (double).
-			static const double unit = misc::properties_t::props().seconds_per_tick_.count();
+		case VI_TM_INFO_UNIT: // Returns a pointer to the seconds per tick (double).
+		{	static const double unit = properties_t::props().seconds_per_tick_.count();
 			return &unit;
 		}
 
-		default:
-			// If the info type is not recognized, assert and return nullptr.
-			static_assert(VI_TM_INFO_COUNT_ == 10, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
+		default: // If the info type is not recognized, assert and return nullptr.
+			static_assert(VI_TM_INFO_COUNT_ == 13, "Not all vi_tmInfo_e enum values are processed in the function vi_tmStaticInfo.");
 			assert(false); // If we reach this point, the info type is not recognized.
 			return nullptr;
 	}

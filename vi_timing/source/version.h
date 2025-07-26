@@ -4,15 +4,14 @@
 
 #include <cstdint>
 
-#define VI_TM_VERSION "0.10.0"
-#define VI_TM_VERSION_MAJOR 0
-#define VI_TM_VERSION_MINOR 10
-#define VI_TM_VERSION_PATCH 0
+inline constexpr unsigned int VI_TM_VERSION_MAJOR = 0;
+inline constexpr unsigned int VI_TM_VERSION_MINOR = 10;
+inline constexpr unsigned int VI_TM_VERSION_PATCH = 0;
 
-#define GIT_DESCRIBE "v0.10.0-3-g96b37d4-dirty"
-#define GIT_COMMIT "96b37d49d235140e86f6f6c246bc7f166ab773aa"
-#define GIT_DATETIME "2025-07-26 13:56:02 +0300"
-#define GIT_IS_DIRTY 1
+inline constexpr char GIT_DESCRIBE[] = "v0.10.0-4-gd714b0b-dirty";
+inline constexpr char GIT_COMMIT[] = "d714b0b1463772f031549d55e294b240d2b8fdbd";
+inline constexpr char GIT_DATETIME[] = "2025-07-26 18:17:04 +0300";
+inline constexpr int GIT_IS_DIRTY = 1;
 
 namespace misc
 {

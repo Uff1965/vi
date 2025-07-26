@@ -4,15 +4,14 @@
 
 #include <cstdint>
 
-#define VI_TM_VERSION "@PROJECT_VERSION@"
-#define VI_TM_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
-#define VI_TM_VERSION_MINOR @PROJECT_VERSION_MINOR@
-#define VI_TM_VERSION_PATCH @PROJECT_VERSION_PATCH@
+inline constexpr unsigned int VI_TM_VERSION_MAJOR = @PROJECT_VERSION_MAJOR@;
+inline constexpr unsigned int VI_TM_VERSION_MINOR = @PROJECT_VERSION_MINOR@;
+inline constexpr unsigned int VI_TM_VERSION_PATCH = @PROJECT_VERSION_PATCH@;
 
-#define GIT_DESCRIBE "@GIT_DESCRIBE@"
-#define GIT_COMMIT "@GIT_COMMIT@"
-#define GIT_DATETIME "@GIT_DATETIME@"
-#define GIT_IS_DIRTY @GIT_IS_DIRTY@
+inline constexpr char GIT_DESCRIBE[] = "@GIT_DESCRIBE@";
+inline constexpr char GIT_COMMIT[] = "@GIT_COMMIT@";
+inline constexpr char GIT_DATETIME[] = "@GIT_DATETIME@";
+inline constexpr int GIT_IS_DIRTY = @GIT_IS_DIRTY@;
 
 namespace misc
 {

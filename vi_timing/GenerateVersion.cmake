@@ -5,7 +5,7 @@ message(STATUS "***** Generating version information...")
 find_package(Git QUIET)
 if(GIT_FOUND)
 	execute_process(
-		COMMAND ${GIT_EXECUTABLE} describe --tags --long --always --dirty
+		COMMAND ${GIT_EXECUTABLE} describe --tags --long --always --abbrev --dirty --broken
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 		OUTPUT_VARIABLE GIT_DESCRIBE
 		OUTPUT_STRIP_TRAILING_WHITESPACE

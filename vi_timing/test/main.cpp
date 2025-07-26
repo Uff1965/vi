@@ -216,9 +216,12 @@ namespace
 		std::cout <<
 			"Information about the \'vi_timing\' library:\n"
 			"\tVersion: " << VI_TM_FULLVERSION << "\n"
-			"\tBuild type: " << static_cast<const char *>(vi_tmStaticInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
+			"\tBuild type: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_BUILDTYPE)) << "\n"
 			"\tVer: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_VER)) << "\n"
-			"\tBuild number: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n";
+			"\tBuild number: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n"
+			"\tGit describe: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_GIT_DESCRIBE)) << "\n"
+			"\tGit commit hash: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_GIT_COMMIT)) << "\n"
+			"\tGit commit date and time: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_GIT_DATETIME)) << "\n";
 	}
 
 	void prn_clock_properties()

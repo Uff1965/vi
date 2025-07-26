@@ -213,18 +213,20 @@ typedef struct vi_tmMeasurementStats_t
 // Each value corresponds to a specific static information query, such as version, build type, or timing characteristics.
 // The return type for each enum value is indicated in the comment.
 typedef enum vi_tmInfo_e
-{	VI_TM_INFO_VER,         // const unsigned*: Version number of the library.
-	VI_TM_INFO_BUILDNUMBER, // const unsigned*: Build number of the library.
-	VI_TM_INFO_VERSION,     // const char*: Full version string of the library.
-	VI_TM_INFO_BUILDTYPE,   // const char*: Build type, either "Release" or "Debug".
-	VI_TM_INFO_LIBRARYTYPE, // const char*: Library type, either "Shared" or "Static".
-	VI_TM_INFO_RESOLUTION,  // const double*: Clock resolution in ticks.
-	VI_TM_INFO_DURATION,    // const double*: Measure duration with cache in seconds.
-	VI_TM_INFO_DURATION_EX, // const double*: Measure duration in seconds.
-	VI_TM_INFO_OVERHEAD,    // const double*: Clock overhead in ticks.
-	VI_TM_INFO_UNIT,        // const double*: Seconds per tick (time unit).
-
-	VI_TM_INFO_COUNT_,      // Number of information types.
+{	VI_TM_INFO_VER,          // const unsigned*: Version number of the library.
+	VI_TM_INFO_BUILDNUMBER,  // const unsigned*: Build number of the library.
+	VI_TM_INFO_VERSION,      // const char*: Full version string of the library.
+	VI_TM_INFO_BUILDTYPE,    // const char*: Build type, either "Release" or "Debug".
+	VI_TM_INFO_LIBRARYTYPE,  // const char*: Library type, either "Shared" or "Static".
+	VI_TM_INFO_RESOLUTION,   // const double*: Clock resolution in ticks.
+	VI_TM_INFO_DURATION,     // const double*: Measure duration with cache in seconds.
+	VI_TM_INFO_DURATION_EX,  // const double*: Measure duration in seconds.
+	VI_TM_INFO_OVERHEAD,     // const double*: Clock overhead in ticks.
+	VI_TM_INFO_UNIT,         // const double*: Seconds per tick (time unit).
+	VI_TM_INFO_GIT_DESCRIBE, // const char*: Git describe string, e.g., "v0.10.0-3-g96b37d4-dirty".
+	VI_TM_INFO_GIT_COMMIT,   // const char*: Git commit hash, e.g., "96b37d49d235140e86f6f6c246bc7f166ab773aa".
+	VI_TM_INFO_GIT_DATETIME, // const char*: Git commit date and time, e.g., "2025-07-26 13:56:02 +0300".
+	VI_TM_INFO_COUNT_,       // Number of information types.
 } vi_tmInfo_e;
 
 // vi_tmReportFlags_e: Flags for controlling the formatting and content of timing reports.
