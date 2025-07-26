@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake") # Include the script to generate version information.
-
 option(VI_TM_BUILD_SHARED "Build vi_timing as shared library" OFF)
 
 set(VI_OUT_DIR "${VI_ROOT_DIR}/lib/" CACHE PATH "Output directory for libraries")
 set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
 set(VI_TM_INTERFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH "Directory with API header files.")
 set(VI_TM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/source" CACHE PATH "Directory with source code.")
+
+include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake") # Include the script to generate version information.
 
 project(vi_timing VERSION ${GIT_VERSION_NUMBER}) # Set project name and version based on the generated version information.
 
@@ -66,6 +66,8 @@ endif()
 
 add_library(${PROJECT_NAME} ${TYPE_LIBRARY} ${SOURCE_FILES})
 
+set(VI_TM_OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}")
+set(VI_TM_OUTPUT_NAME_DEBUG "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d")
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 17
@@ -75,10 +77,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
   DEFINE_SYMBOL "VI_TM_EXPORTS"
 
-  OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}"
-  OUTPUT_NAME_DEBUG "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d"
-#  OUTPUT_NAME_RELEASE "${PROJECT_NAME}$<$<BOOL:${OUTPUT_NAME_SUFFIX}>:_>${OUTPUT_NAME_SUFFIX}.${VI_TM_GIT_TAG}"
-#  OUTPUT_NAME_DEBUG "${PROJECT_NAME}_${OUTPUT_NAME_SUFFIX}d.${VI_TM_GIT_TAG}"
+  OUTPUT_NAME_RELEASE "${VI_TM_OUTPUT_NAME_RELEASE}"
+  OUTPUT_NAME_DEBUG "${VI_TM_OUTPUT_NAME_DEBUG}"
 
   LIBRARY_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   LIBRARY_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
