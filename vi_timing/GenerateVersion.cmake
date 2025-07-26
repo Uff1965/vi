@@ -2,13 +2,6 @@ cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
 message(STATUS "***** Generating version information...")
 
-#set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-#    "${CMAKE_SOURCE_DIR}/.git/HEAD"
-##    "${CMAKE_SOURCE_DIR}/.git_tag"
-##directory!     "${CMAKE_SOURCE_DIR}/.git/refs/tags"
-#    "${CMAKE_SOURCE_DIR}/.git/packed-refs"
-#)
-
 find_package(Git QUIET)
 if(GIT_FOUND)
 	execute_process(

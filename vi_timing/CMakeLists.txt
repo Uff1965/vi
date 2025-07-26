@@ -23,6 +23,7 @@ set(SOURCE_FILES) # Initialize the list of source files.
 
 if(MSVC)
     set(FILE_GROUP
+      "${CMAKE_CURRENT_SOURCE_DIR}/GenerateVersion.cmake"
       "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.pvsconfig"
       "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.suppress"
       "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"

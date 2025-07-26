@@ -27,10 +27,6 @@ If not, see <https://www.gnu.org/licenses/gpl-3.0.html#license-text>.
 #	define VI_TIMING_VI_TIMING_C_H
 #	pragma once
 
-#	define VI_TM_VERSION_MAJOR 0	// 0 - 99
-#	define VI_TM_VERSION_MINOR 1	// 0 - 999
-#	define VI_TM_VERSION_PATCH 0	// 0 - 9999
-
 #	include <stdint.h> // uint64_t
 #	include <stddef.h> // size_t
 
