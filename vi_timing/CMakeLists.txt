@@ -11,7 +11,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake") # Include the script 
 
 project(vi_timing VERSION ${GIT_VERSION_NUMBER} ) # Set project name and version based on the generated version information.
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" "${VI_TM_SOURCE_DIR}/version.h" @ONLY) # Configure the version header file with the generated version information.
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.in" "${CMAKE_CURRENT_SOURCE_DIR}/version.out" @ONLY)
 
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/.git/HEAD"
@@ -26,7 +26,8 @@ if(MSVC)
       "${CMAKE_CURRENT_SOURCE_DIR}/GenerateVersion.cmake"
       "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.pvsconfig"
       "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.suppress"
-      "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
+      "${CMAKE_CURRENT_SOURCE_DIR}/version.in"
+      "${CMAKE_CURRENT_SOURCE_DIR}/version.out"
     )
     source_group("Extras" FILES ${FILE_GROUP})
     list(APPEND SOURCE_FILES ${FILE_GROUP}) # Add Visual Studio specific files to the source list.

@@ -1,0 +1,6 @@
+constexpr unsigned VI_TM_VERSION_MAJOR = 0+0U;
+constexpr unsigned VI_TM_VERSION_MINOR = 1+0U;
+constexpr unsigned VI_TM_VERSION_PATCH = 1+0U;
+constexpr std::string_view VI_TM_GIT_DESCRIBE = "v0.1.1-2-ge665728-dirty";
+constexpr std::string_view VI_TM_GIT_COMMIT = "e66572816ccf776406a361e511a4d065559146dd";
+constexpr std::string_view VI_TM_GIT_DATETIME = "2025-07-27 23:06:38 +0300";
