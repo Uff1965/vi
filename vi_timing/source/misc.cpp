@@ -423,13 +423,13 @@ const void* VI_TM_CALL vi_tmStaticInfo(vi_tmInfo_e info)
 			return TYPE.data();
 
 		case VI_TM_INFO_GIT_DESCRIBE: // Returns a pointer to the Git describe string (e.g., "v0.10.0-3-g96b37d4-dirty").
-			return GIT_DESCRIBE;
+			return VI_TM_GIT_DESCRIBE.data();
 
 		case VI_TM_INFO_GIT_COMMIT: // Returns a pointer to the Git commit hash (e.g., "96b37d49d235140e86f6f6c246bc7f166ab773aa").
-			return GIT_COMMIT;
+			return VI_TM_GIT_COMMIT.data();
 
 		case VI_TM_INFO_GIT_DATETIME: // Returns a pointer to the Git commit date and time string (e.g., "2025-07-26 18:17:04 +0300").
-			return GIT_DATETIME;
+			return VI_TM_GIT_DATETIME.data();
 
 		case VI_TM_INFO_RESOLUTION: // Returns a pointer to the clock resolution in ticks (double).
 		{	static const double resolution = properties_t::props().clock_resolution_ticks_;

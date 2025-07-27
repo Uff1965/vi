@@ -6,17 +6,18 @@
 #	pragma once
 
 #include <cstdint>
+#include <string_view>
 
 namespace misc
 {
-	inline constexpr unsigned int VI_TM_VERSION_MAJOR = 0;
-	inline constexpr unsigned int VI_TM_VERSION_MINOR = 1;
-	inline constexpr unsigned int VI_TM_VERSION_PATCH = 0;
+	inline constexpr unsigned int VI_TM_VERSION_MAJOR = 0U;
+	inline constexpr unsigned int VI_TM_VERSION_MINOR = 7U;
+	inline constexpr unsigned int VI_TM_VERSION_PATCH = 0U;
 
-	inline constexpr char GIT_DESCRIBE[] = "v0.1.0-0-g484dd87-dirty";
-	inline constexpr char GIT_COMMIT[] = "484dd87d1c64b3f2942e52424ddb37620de764ef";
-	inline constexpr char GIT_DATETIME[] = "2025-07-26 22:19:51 +0300";
-	inline constexpr int GIT_IS_DIRTY = 1;
+	inline constexpr std::string_view VI_TM_GIT_DESCRIBE = "v0.7.0-7-g717286d-dirty";
+	inline constexpr std::string_view VI_TM_GIT_COMMIT = "717286d547969c2ef1281a396d907f0284af0ccb";
+	inline constexpr std::string_view VI_TM_GIT_DATETIME = "2025-07-26 23:02:06 +0300";
+	inline constexpr bool VI_TM_GIT_IS_DIRTY = 0 != 1;
 
 	// Build Number Generator: Formats the build number using the compilation date and time. Example: 2506170933U.
 	// Updates the global variable based on the last compilation time.
