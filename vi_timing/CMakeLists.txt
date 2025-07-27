@@ -13,12 +13,13 @@ project(vi_timing VERSION ${GIT_VERSION_NUMBER}) # Set project name and version 
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" "${VI_TM_SOURCE_DIR}/version.h" @ONLY) # Configure the version header file with the generated version information.
 
+ensure_file_has_content("${CMAKE_CURRENT_BINARY_DIR}/vi_timing_git_stamp.txt" ${GIT_DESCRIBE})
+
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/.git/HEAD"
     "${CMAKE_SOURCE_DIR}/.git/packed-refs"
+    "${CMAKE_CURRENT_BINARY_DIR}/vi_timing_git_stamp.txt"
 )
-
-ensure_file_has_content("${CMAKE_CURRENT_BINARY_DIR}/vi_timing_git_stamp.txt" ${GIT_DESCRIBE})
 
 ### Files #####################################################################
 set(SOURCE_FILES) # Initialize the list of source files.
