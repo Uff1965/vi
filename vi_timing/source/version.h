@@ -7,8 +7,8 @@
 
 namespace misc
 {
-#if __has_include("version.out")
-#	include "version.out" // Include the generated version data.
+#if __has_include("../version.out")
+#	include "../version.out" // Include the generated version data.
 #else
 	constexpr unsigned VI_TM_VERSION_MAJOR = 0U;
 	constexpr unsigned VI_TM_VERSION_MINOR = 0U;
