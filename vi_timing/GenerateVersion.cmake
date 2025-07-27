@@ -44,6 +44,7 @@ else()
 endif()
 
 function(ensure_file_has_content target_file expected_content)
+	message(STATUS "***** In ensure_file_has_content("${expected_content}")")
     if(EXISTS "${target_file}")
         file(READ "${target_file}" existing_content)
         if(NOT existing_content STREQUAL expected_content)

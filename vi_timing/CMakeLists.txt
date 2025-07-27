@@ -8,7 +8,6 @@ set(VI_TM_INTERFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH "Directory with
 set(VI_TM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/source" CACHE PATH "Directory with source code.")
 
 include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake") # Include the script to generate version information.
-ensure_file_has_content("${CMAKE_CURRENT_BINARY_DIR}/vi_timing_git_stamp.txt" ${GIT_DESCRIBE})
 
 project(vi_timing VERSION ${GIT_VERSION_NUMBER}) # Set project name and version based on the generated version information.
 
@@ -18,6 +17,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/.git/HEAD"
     "${CMAKE_SOURCE_DIR}/.git/packed-refs"
 )
+
+ensure_file_has_content("${CMAKE_CURRENT_BINARY_DIR}/vi_timing_git_stamp.txt" ${GIT_DESCRIBE})
 
 ### Files #####################################################################
 set(SOURCE_FILES) # Initialize the list of source files.
