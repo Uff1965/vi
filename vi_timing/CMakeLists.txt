@@ -9,7 +9,7 @@ set(VI_TM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/source" CACHE PATH "Directory 
 
 include("${CMAKE_CURRENT_LIST_DIR}/GenerateVersion.cmake") # Include the script to generate version information.
 
-project(vi_timing VERSION ${GIT_VERSION_NUMBER}) # Set project name and version based on the generated version information.
+project(vi_timing VERSION ${GIT_VERSION_NUMBER} ) # Set project name and version based on the generated version information.
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/version.h.in" "${VI_TM_SOURCE_DIR}/version.h" @ONLY) # Configure the version header file with the generated version information.
 
@@ -87,6 +87,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_RELEASE	"${VI_OUT_DIR}"
   RUNTIME_OUTPUT_DIRECTORY_DEBUG	"${VI_OUT_DIR}"
+
+  VERSION    ${PROJECT_VERSION}
+  SOVERSION  ${PROJECT_VERSION_MAJOR}
 
   POSITION_INDEPENDENT_CODE ON # Position Independent Code (-fPIC) for shared libraries on UNIX.
 )
