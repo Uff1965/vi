@@ -61,9 +61,25 @@
     <FileName>main.cpp</FileName>
     <ErrorCode>V206</ErrorCode>
     <Message>Explicit conversion from 'void *' to 'unsigned int *'.</Message>
+    <CodePrev>62709626</CodePrev>
+    <CodeCurrent>2383884856</CodeCurrent>
+    <CodeNext>3506377873</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
+    <ErrorCode>V206</ErrorCode>
+    <Message>Explicit conversion from 'void *' to 'unsigned int *'.</Message>
     <CodePrev>2383884856</CodePrev>
     <CodeCurrent>2717788440</CodeCurrent>
     <CodeNext>125</CodeNext>
+  </vi_timing_test>
+  <vi_timing_test>
+    <FileName>main.cpp</FileName>
+    <ErrorCode>V206</ErrorCode>
+    <Message>Explicit conversion from 'void *' to 'unsigned int *'.</Message>
+    <CodePrev>2383884856</CodePrev>
+    <CodeCurrent>3506377873</CodeCurrent>
+    <CodeNext>122715198</CodeNext>
   </vi_timing_test>
   <vi_timing_test>
     <FileName>main.cpp</FileName>

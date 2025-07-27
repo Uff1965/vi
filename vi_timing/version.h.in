@@ -10,13 +10,13 @@
 
 namespace misc
 {
-	inline constexpr unsigned VI_TM_VERSION_MAJOR = @PROJECT_VERSION_MAJOR@+0U;
-	inline constexpr unsigned VI_TM_VERSION_MINOR = @PROJECT_VERSION_MINOR@+0U;
-	inline constexpr unsigned VI_TM_VERSION_PATCH = @PROJECT_VERSION_PATCH@+0U;
+	constexpr unsigned VI_TM_VERSION_MAJOR = @PROJECT_VERSION_MAJOR@+0U;
+	constexpr unsigned VI_TM_VERSION_MINOR = @PROJECT_VERSION_MINOR@+0U;
+	constexpr unsigned VI_TM_VERSION_PATCH = @PROJECT_VERSION_PATCH@+0U;
 
-	inline constexpr std::string_view VI_TM_GIT_DESCRIBE = "@GIT_DESCRIBE@";
-	inline constexpr std::string_view VI_TM_GIT_COMMIT = "@GIT_COMMIT@";
-	inline constexpr std::string_view VI_TM_GIT_DATETIME = "@GIT_DATETIME@";
+	constexpr std::string_view VI_TM_GIT_DESCRIBE = "@GIT_DESCRIBE@";
+	constexpr std::string_view VI_TM_GIT_COMMIT = "@GIT_COMMIT@";
+	constexpr std::string_view VI_TM_GIT_DATETIME = "@GIT_DATETIME@";
 
 	// Build Number Generator: Formats the build number using the compilation date and time. Example: 2506170933U.
 	// Updates the global variable based on the last compilation time.
