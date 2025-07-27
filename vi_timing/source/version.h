@@ -10,17 +10,17 @@
 
 namespace misc
 {
-	inline constexpr unsigned int VI_TM_VERSION_MAJOR = 0+0U;
-	inline constexpr unsigned int VI_TM_VERSION_MINOR = 1+0U;
-	inline constexpr unsigned int VI_TM_VERSION_PATCH = +0U;
+	inline constexpr unsigned VI_TM_VERSION_MAJOR = 0+0U;
+	inline constexpr unsigned VI_TM_VERSION_MINOR = 1+0U;
+	inline constexpr unsigned VI_TM_VERSION_PATCH = +0U;
 
-	inline constexpr std::string_view VI_TM_GIT_DESCRIBE = "v0.1-0-gde20bb2-dirty";
-	inline constexpr std::string_view VI_TM_GIT_COMMIT = "de20bb2fd36a1f0f34452660b13850b47ebe2ce2";
-	inline constexpr std::string_view VI_TM_GIT_DATETIME = "2025-07-27 13:11:01 +0300";
+	inline constexpr std::string_view VI_TM_GIT_DESCRIBE = "v0.1-1-g0f2e129-dirty";
+	inline constexpr std::string_view VI_TM_GIT_COMMIT = "0f2e129f1a4cde1bbd9bc1def6a809d293912f80";
+	inline constexpr std::string_view VI_TM_GIT_DATETIME = "2025-07-27 15:36:53 +0300";
 
 	// Build Number Generator: Formats the build number using the compilation date and time. Example: 2506170933U.
 	// Updates the global variable based on the last compilation time.
-	unsigned build_number_updater(const char(&date)[12], const char(&time)[9]);
+	std::uint32_t build_number_updater(const char(&date)[12], const char(&time)[9]);
 	// Next line will be called in each translation unit.
 	static const std::uint32_t dummy_build_number_updater = build_number_updater(__DATE__, __TIME__);
 
