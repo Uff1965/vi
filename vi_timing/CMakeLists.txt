@@ -27,7 +27,6 @@ if(MSVC)
       "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.pvsconfig"
       "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.suppress"
       "${CMAKE_CURRENT_SOURCE_DIR}/version.in"
-      "${CMAKE_CURRENT_SOURCE_DIR}/version.out"
     )
     source_group("Extras" FILES ${FILE_GROUP})
     list(APPEND SOURCE_FILES ${FILE_GROUP}) # Add Visual Studio specific files to the source list.
