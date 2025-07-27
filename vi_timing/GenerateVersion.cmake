@@ -25,20 +25,16 @@ if(GIT_FOUND)
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 
-	string(FIND "${GIT_DESCRIBE}" "-dirty" DIRTY_POS)
-	if(DIRTY_POS EQUAL -1)
-		set(GIT_IS_DIRTY 0)
+	string(REGEX MATCH "^(v\\.?)?(([0-9]+)(\\.([0-9]+))?(\\.([0-9]+))?(\\.([0-9]+))?)-.*" MATCHED "${GIT_DESCRIBE}")
+	if(MATCHED)
+		set(GIT_VERSION_NUMBER "${CMAKE_MATCH_2}")
 	else()
-		set(GIT_IS_DIRTY 1)
+		set(GIT_VERSION_NUMBER "0.0.0")
 	endif()
-
-	string(REGEX MATCH "[0-9]+(\\.[0-9]+)?(\\.[0-9]+)?(\\.[0-9]+)?" GIT_VERSION_NUMBER "${GIT_DESCRIBE}")
-
 else()
 	# Резервные значения
 	set(GIT_DESCRIBE "")
 	set(GIT_COMMIT "unknown")
 	set(GIT_DATETIME "unknown")
-	set(GIT_IS_DIRTY 0)
 	set(GIT_VERSION_NUMBER "0.0.0")
 endif()
