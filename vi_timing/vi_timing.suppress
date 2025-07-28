@@ -50,6 +50,30 @@
     <CodeNext>125</CodeNext>
   </vi_timing>
   <vi_timing>
+    <FileName>misc.cpp</FileName>
+    <ErrorCode>V723</ErrorCode>
+    <Message>Function returns a pointer to the internal string buffer of a local object, which will be destroyed: return VI_TM_GIT_DATETIME.data();</Message>
+    <CodePrev>3456008126</CodePrev>
+    <CodeCurrent>1745145226</CodeCurrent>
+    <CodeNext>0</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>misc.cpp</FileName>
+    <ErrorCode>V723</ErrorCode>
+    <Message>Function returns a pointer to the internal string buffer of a local object, which will be destroyed: return VI_TM_GIT_DESCRIBE.data();</Message>
+    <CodePrev>3215021472</CodePrev>
+    <CodeCurrent>1745183626</CodeCurrent>
+    <CodeNext>0</CodeNext>
+  </vi_timing>
+  <vi_timing>
+    <FileName>misc.cpp</FileName>
+    <ErrorCode>V723</ErrorCode>
+    <Message>Function returns a pointer to the internal string buffer of a local object, which will be destroyed: return VI_TM_GIT_COMMIT.data();</Message>
+    <CodePrev>3843594432</CodePrev>
+    <CodeCurrent>3657551019</CodeCurrent>
+    <CodeNext>0</CodeNext>
+  </vi_timing>
+  <vi_timing>
     <FileName>props.cpp</FileName>
     <ErrorCode>V2528</ErrorCode>
     <Message>The comma operator should not be used.</Message>
