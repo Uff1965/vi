@@ -227,19 +227,19 @@ namespace
 	void prn_clock_properties()
 	{	std::cout << "\nClock properties:";
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_RESOLUTION)))
-		{	std::cout << "\nResolution: " << std::setprecision(3) << *ptr << " ticks";
+		{	std::cout << "\n\tResolution: " << std::setprecision(3) << *ptr << " ticks";
 		}
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION)))
-		{	std::cout << "\nDuration: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		{	std::cout << "\n\tDuration: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_DURATION_EX)))
-		{	std::cout << "\nDuration ex: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		{	std::cout << "\n\tDuration ex: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_OVERHEAD)))
-		{	std::cout << "\nAdditive: " << std::setprecision(3) << *ptr << " ticks";
+		{	std::cout << "\n\tAdditive: " << std::setprecision(3) << *ptr << " ticks";
 		}
 		if (auto ptr = static_cast<const double *>(vi_tmStaticInfo(VI_TM_INFO_UNIT)))
-		{	std::cout << "\nTick: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
+		{	std::cout << "\n\tTick: " << std::setprecision(3) << 1e9 * *ptr << " ns.";
 		}
 		std::cout << "\nClock properties - done" << std::endl;
 	}
