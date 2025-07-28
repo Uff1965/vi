@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-message(STATUS "***** Generating version information...")
-
 find_package(Git QUIET)
 if(GIT_FOUND)
 	execute_process(
@@ -32,7 +30,6 @@ if(GIT_FOUND)
 		set(GIT_VERSION_NUMBER "0.0.0")
 	endif()
 else()
-	# Резервные значения
 	set(GIT_DESCRIBE "")
 	set(GIT_COMMIT "unknown")
 	set(GIT_DATETIME "unknown")
