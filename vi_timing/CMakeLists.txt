@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
 option(VI_TM_BUILD_SHARED "Build vi_timing as shared library" OFF)
 
-set(VI_OUT_DIR "${VI_ROOT_DIR}/lib/" CACHE PATH "Output directory for libraries")
 set(VI_ROOT_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to root directory (usual 'vi/').")
+set(VI_OUT_DIR "${VI_ROOT_DIR}/lib/" CACHE PATH "Output directory for libraries")
 set(VI_TM_INTERFACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH "Directory with API header files.")
 set(VI_TM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/source" CACHE PATH "Directory with source code.")
 
