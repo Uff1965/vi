@@ -220,7 +220,7 @@ namespace
 			//"\tVer: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_VER)) << "\n"
 			//"\tBuild number: " << *static_cast<const unsigned *>(vi_tmStaticInfo(VI_TM_INFO_BUILDNUMBER)) << "\n"
 			"\tGit describe: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_GIT_DESCRIBE)) << "\n"
-			"\tGit commit hash: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_GIT_COMMIT)) << "\n"
+			//"\tGit commit hash: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_GIT_COMMIT)) << "\n"
 			"\tGit commit date and time: " << static_cast<const char*>(vi_tmStaticInfo(VI_TM_INFO_GIT_DATETIME)) << "\n";
 	}
 
