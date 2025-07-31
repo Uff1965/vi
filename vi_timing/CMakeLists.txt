@@ -28,6 +28,7 @@ if(MSVC)
       "${CMAKE_CURRENT_SOURCE_DIR}/vi_timing.suppress"
       "${CMAKE_CURRENT_SOURCE_DIR}/version.in"
       "${VI_TM_SOURCE_DIR}/version.out"
+      "${VI_ROOT_DIR}/LICENSE.txt"
     )
     source_group("Extras" FILES ${FILE_GROUP})
     list(APPEND SOURCE_FILES ${FILE_GROUP}) # Add Visual Studio specific files to the source list.
