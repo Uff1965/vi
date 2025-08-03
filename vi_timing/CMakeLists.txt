@@ -150,14 +150,14 @@ if (WIN32)
     if(VI_TM_BUILD_SHARED)
         target_compile_options(${PROJECT_NAME}
         PRIVATE
-        $<$<CONFIG:Release>: /MT>
-        $<$<CONFIG:Debug>:   /MTd>
+            $<$<CONFIG:Release>: /MT>
+            $<$<CONFIG:Debug>:   /MTd>
         )
     else()
         target_compile_options(${PROJECT_NAME}
         PRIVATE
-        $<$<CONFIG:Release>: /MD>
-        $<$<CONFIG:Debug>:   /MDd>
+            $<$<CONFIG:Release>: /MD>
+            $<$<CONFIG:Debug>:   /MDd>
         )
     endif()
 elseif (UNIX)

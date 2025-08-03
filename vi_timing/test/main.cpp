@@ -30,6 +30,12 @@
 using namespace std::literals;
 namespace ch = std::chrono;
 
+#if _MSC_VER
+#	define MS_WARN(s) _Pragma(VI_STRINGIZE(warning(s)))
+#else
+#	define MS_WARN(s)
+#endif
+
 namespace
 {
 #ifdef NDEBUG
@@ -209,7 +215,7 @@ namespace
 	void prn_header()
 	{	const auto tm = ch::system_clock::to_time_t(ch::system_clock::now());
 
-#pragma warning(suppress: 4996) // Suppress MSVC warning: 'localtime': This function or variable may be unsafe.
+MS_WARN(suppress: 4996) // Suppress MSVC warning: 'localtime': This function or variable may be unsafe.
 		std::cout << "\nStart: " << std::put_time(std::localtime(&tm), "%F %T.\n") <<
 			std::endl;
 
